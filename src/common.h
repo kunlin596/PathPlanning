@@ -5,6 +5,7 @@
 #include <iostream>
 #include <array>
 #include <boost/format.hpp>
+#include "helpers.h"
 
 namespace pathplanning {
 

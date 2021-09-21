@@ -8,7 +8,7 @@
 
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
-#include "helpers.h"
+#include "common.h"
 #include "planner.h"
 #include "json.hpp"
 #include "spline.h"
