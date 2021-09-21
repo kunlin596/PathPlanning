@@ -106,8 +106,8 @@ int main() {
           const size_t prevPathSize = prevPath.size();
 
           // Previous path's end s and d values
-          double endPathS = j[1]["end_path_s"];
-          double endPathD = j[1]["end_path_d"];
+          double endPathSValue = j[1]["end_path_s"];
+          double endPathDValue = j[1]["end_path_d"];
 
           // Sensor Fusion Data, a list of all other cars on the same side
           //   of the road.
@@ -168,11 +168,11 @@ int main() {
           Path newPath = GeneratePath(
             laneIdReference,
             laneIdReference,
+            speedReference,
             currCarState,
             prevPath,
             naviMap,
-            2,
-            speedReference
+            2
           );
 
           // Path newPath = GeneratePath(currCarState, naviMap);

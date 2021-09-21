@@ -109,11 +109,11 @@ Path GeneratePath(const CarState &carState, const NaviMap &naviMap);
 Path GeneratePath(
   int currLaneId,
   int targetLandId,
+  double speedReference,
   const CarState &carState,
   const Path &prevPath,
   const NaviMap &naviMap,
-  int numPreservedWaypoints = 2,
-  double speedReference = 80.0
+  int numPreservedWaypoints = 2
 );
 
 } // end of pathplanning

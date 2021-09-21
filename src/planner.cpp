@@ -105,11 +105,11 @@ Path GeneratePath(const CarState &carState, const NaviMap &naviMap) {
 Path GeneratePath(
   int currLaneId,
   int targetLandId,
+  double speedReference,
   const CarState &carState,
   const Path &prevPath,
   const NaviMap &naviMap,
-  int numPreservedWaypoints,
-  double speedReference
+  int numPreservedWaypoints
 )
 {
   // Create a list of widely spaced (x, y) points, evenly spaced at 30m
