@@ -52,8 +52,7 @@ Path GeneratePath(const CarState &carState, const NaviMap &naviMap);
  * Generate path using spline line fitting
  */
 Path GeneratePath(
-  int currLaneId,
-  int targetLandId,
+  int targetLaneId,
   double speedReference,
   const CarState &carState,
   const Path &prevPath,

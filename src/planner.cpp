@@ -103,8 +103,7 @@ Path GeneratePath(const CarState &carState, const NaviMap &naviMap) {
 
 
 Path GeneratePath(
-  int currLaneId,
-  int targetLandId,
+  int targetLaneId,
   double speedReference,
   const CarState &carState,
   const Path &prevPath,
@@ -176,7 +175,7 @@ Path GeneratePath(
   constexpr double laneWidth = 4.0; // in meter
   constexpr double halfLaneWidth = 2.0; // in meter
   std::vector<double> targetSValueIntervalsDelta = {30, 60, 90}; // in meter
-  double targetDValue = halfLaneWidth + targetLandId * laneWidth;
+  double targetDValue = halfLaneWidth + targetLaneId * laneWidth;
 
   for (double targetSValueDelta : targetSValueIntervalsDelta) {
     std::vector<double> xy = getXY(

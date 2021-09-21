@@ -85,14 +85,13 @@ int main() {
         if (event == "telemetry") {
           // j[1] is the data JSON object
 
+          //
           // Main car's localization Data
+          //
+
           CarState currCarState(
-            {
-              j[1]["x"], j[1]["y"], deg2rad(j[1]["yaw"])
-            },
-            {
-              j[1]["s"], j[1]["d"]
-            },
+            {j[1]["x"], j[1]["y"], deg2rad(j[1]["yaw"])},
+            {j[1]["s"], j[1]["d"]},
             j[1]["speed"]
           );
           BOOST_LOG_TRIVIAL(info) << currCarState;
@@ -111,14 +110,20 @@ int main() {
 
           // Sensor Fusion Data, a list of all other cars on the same side
           //   of the road.
-          const std::vector<std::vector<double>> sensorFusion = j[1]["sensor_fusion"];
+          const ProbeData sensorFusion = j[1]["sensor_fusion"];
 
+          //
+          // Behavior generation
+          //
+          BehaviorState nextBehaviorState(laneIdReference, speedReference);
+
+          //
+          // Path generation based on next behavior
+          //
           json msgJson;
-
           Path newPath = GeneratePath(
-            laneIdReference,
-            laneIdReference,
-            speedReference,
+            nextBehaviorState.laneId,
+            nextBehaviorState.speed,
             currCarState,
             prevPath,
             naviMap,

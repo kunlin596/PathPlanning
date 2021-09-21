@@ -41,7 +41,7 @@ struct NaviMap {
 
 using Path = std::vector<std::array<double, 2>>;
 
-using ProbeData = std::vector<std::array<double, 2>>;
+using ProbeData = std::vector<std::vector<double>>;
 
 inline std::ostream& operator<< (std::ostream &out, const std::array<double, 2> &array) {
   out << (boost::format("[%.3f, %.3f]") % array[0] % array[1]).str();
@@ -65,10 +65,13 @@ inline std::ostream& operator<< (std::ostream &out, const pathplanning::CarState
 struct BehaviorState {
   int laneId;
   double speed;
+
+  BehaviorState(int laneId, double speed)
+    : laneId(laneId)
+    , speed(speed)
+  {}
 };
 
-
-  
 }
 
 #endif
