@@ -17,6 +17,6 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     link_directories(/usr/local/Cellar/libuv/1.11.0/lib)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
-set(sources src/helpers.cpp src/planner.cpp src/main.cpp)
+set(sources src/helpers.cpp src/planner.cpp src/behaviorplanner.cpp src/main.cpp)
 add_executable(path_planning ${sources})
 target_link_libraries(path_planning z ssl uv uWS Boost::log)
