@@ -200,9 +200,7 @@ Path GeneratePath(
   Path newPath;
 
   // Start with all often previous path points from last time
-  for (size_t i = 0; i < prevPath.size(); ++i) {
-    newPath.push_back(prevPath[i]);
-  }
+  std::copy(prevPath.begin(), prevPath.end(), std::back_inserter(newPath));
 
   // Calculate how to break up spline points so that we travel at our desired
   // reference velocity
@@ -218,7 +216,7 @@ Path GeneratePath(
   // here we will always output 50 points.
 
   // double numSegments = targetDist / (timeInterval * speedReference);
-  double numSegments = targetDist / (timeInterval * 50 / 2.24);
+  double numSegments = targetDist / (timeInterval * speedReference / 2.24); // in meter
   double segmentXLength = targetX / numSegments;
 
   // BOOST_LOG_TRIVIAL(debug)

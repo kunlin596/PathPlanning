@@ -32,7 +32,9 @@ inline double rad2deg(double x) { return x * 180 / pi(); }
 double distance(double x1, double y1, double x2, double y2);
 
 // Calculate closest waypoint to current x, y position
-int ClosestWaypoint(double x, double y, const vector<double> &maps_x, const vector<double> &maps_y);
+int ClosestWaypoint(
+  double x, double y,
+  const vector<double> &maps_x, const vector<double> &maps_y);
 
 // Returns next waypoint of the closest waypoint
 int NextWaypoint(
@@ -52,6 +54,12 @@ vector<double> getXY(
   const vector<double> &maps_s,
   const vector<double> &maps_x,
   const vector<double> &maps_y);
+
+inline double GetDValueFromLandId(int laneId) {
+  static constexpr double laneWidth = 4.0; // meter
+  static constexpr double halfLaneWidth = 2.0; // meter
+  return halfLaneWidth + laneWidth * static_cast<double>(laneId);
+}
 
 } // end of pathplanning
 

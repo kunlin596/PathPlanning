@@ -6,6 +6,7 @@
 #include <array>
 #include <boost/format.hpp>
 #include "helpers.h"
+#include <boost/log/trivial.hpp>
 
 namespace pathplanning {
 
@@ -72,6 +73,13 @@ struct BehaviorState {
     , speed(speed)
   {}
 };
+
+inline std::ostream& operator<< (std::ostream &out, const pathplanning::BehaviorState &state) {
+  out << "BehaviorState=(laneId="
+      << state.laneId
+      << ", speed=" << state.speed << ")";
+  return out;
+}
 
 }
 

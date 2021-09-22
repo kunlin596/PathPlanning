@@ -5,12 +5,45 @@ namespace pathplanning {
 BehaviorState GetNextBehavior(
   const BehaviorState &prevBehaviorState,
   const CarState &currCarState,
+  const Path &prevPath,
   const ProbeData &probeData,
   const NaviMap &naviMap)
 {
-  //
-  // Sensor Fusion
-  //
+  constexpr double distanceToKeep = 30.0; // in meter
+  constexpr double timeInterval = 0.02;
+  constexpr double speedLimit = 49.5; // MPH
+
+  double targetSpeed = 0.0;
+  int targetLaneId = prevBehaviorState.laneId;
+
+
+  const double currS = currCarState.frenetPose[0];
+  const double currD = currCarState.frenetPose[1];
+
+  for (size_t i = 0; i < probeData.size(); ++i) {
+    const double speedX = probeData[i][3];
+    const double speedY = probeData[i][4];
+    const double speed = std::sqrt(speedX * speedX + speedY * speedY);
+    const double s = probeData[i][5] + static_cast<double>(prevPath.size()) * timeInterval * speed;
+    const double d = probeData[i][6];
+
+    // If the the other car is in the same lane
+    // TODO: Replace the range with continous d values to prevent accident
+    if (GetDValueFromLandId(targetLaneId - 1) < (d - 2) and (d + 2) < GetDValueFromLandId(targetLaneId + 1)) {
+      // std::cout << currCarState << std::endl;
+      // std::cout << "  i="  << i << ", s=" << s << ", d=" << d << std::endl;
+      if (s > currS and (s - currS) < distanceToKeep) {
+        targetSpeed = std::min(speed, speedLimit); // speed limit
+        if (prevBehaviorState.speed > targetSpeed) {
+          targetSpeed -= 0.224;
+        }
+        auto state = BehaviorState(prevBehaviorState.laneId, targetSpeed);
+        BOOST_LOG_TRIVIAL(debug) << "Detected car in the front, the distance is less than "
+          << distanceToKeep << "(m), state=" << state;
+        return state;
+      }
+    }
+  }
 
   //
   // Start of behavior planning
@@ -58,7 +91,7 @@ BehaviorState GetNextBehavior(
   //   ref_vel += 0.224;
   // }
 
-  return BehaviorState();
+  return BehaviorState(prevBehaviorState.laneId, std::min(currCarState.speed + 10.0, speedLimit));
 }
 
 }

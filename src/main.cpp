@@ -4,12 +4,12 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <boost/log/trivial.hpp>
 
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "common.h"
 #include "planner.h"
+#include "behaviorplanner.h"
 #include "json.hpp"
 #include "spline.h"
 
@@ -55,16 +55,14 @@ int main() {
   // Lane reference for navigation, initial value is the initial lane,
   // will be updated over time.
   // In this project, the land id can be 0, 1, 2 (3 lanes).
-  int laneIdReference = 1;
-
   // Speed reference for navidation, initial value is the initial speed,
   // will be updated over time, unit is in mile (simulator is using this unit, Orz).
-  double speedReference = 0.0;
+  BehaviorState prevBehaviorState(1, 0.0);
 
   // Main event loop callback when we receive something from the simulator.
   // These parameters are specific to uWS communication.
   h.onMessage(
-    [&naviMap, &laneIdReference, &speedReference] (
+    [&naviMap, &prevBehaviorState] (
       uWS::WebSocket<uWS::SERVER> ws,
       char *data,
       size_t length,
@@ -94,7 +92,7 @@ int main() {
             {j[1]["s"], j[1]["d"]},
             j[1]["speed"]
           );
-          BOOST_LOG_TRIVIAL(info) << currCarState;
+          // BOOST_LOG_TRIVIAL(info) << currCarState;
  
           // Previous path data given to the Planner
           Path prevPath = ConvertXYToPath(
@@ -110,12 +108,17 @@ int main() {
 
           // Sensor Fusion Data, a list of all other cars on the same side
           //   of the road.
-          const ProbeData sensorFusion = j[1]["sensor_fusion"];
+          const ProbeData probeData = j[1]["sensor_fusion"];
 
           //
           // Behavior generation
           //
-          BehaviorState nextBehaviorState(laneIdReference, speedReference);
+          BehaviorState nextBehaviorState = GetNextBehavior(
+              prevBehaviorState,
+              currCarState,
+              prevPath,
+              probeData,
+              naviMap);
 
           //
           // Path generation based on next behavior
@@ -129,6 +132,8 @@ int main() {
             naviMap,
             2
           );
+
+          prevBehaviorState = nextBehaviorState;
 
           // Path newPath = GeneratePath(currCarState, naviMap);
 
