@@ -171,11 +171,8 @@ Path GeneratePath(
     naviMap.y
   );
 
-  // Get 3 anchor points from the frenet
-  constexpr double laneWidth = 4.0; // in meter
-  constexpr double halfLaneWidth = 2.0; // in meter
   std::vector<double> targetSValueIntervalsDelta = {30, 60, 90}; // in meter
-  double targetDValue = halfLaneWidth + targetLaneId * laneWidth;
+  double targetDValue = GetDValueFromLandId(targetLaneId);
 
   for (double targetSValueDelta : targetSValueIntervalsDelta) {
     std::vector<double> xy = getXY(
