@@ -2,7 +2,7 @@
 
 namespace pathplanning {
 
-BehaviorState GetNextBehavior(
+BehaviorState BehaviorPlanner::GetNextBehavior(
   const BehaviorState &prevBehaviorState,
   const CarState &currCarState,
   const Path &prevPath,
@@ -73,7 +73,7 @@ BehaviorState GetNextBehavior(
   }
 
   targetSpeed = std::min(targetSpeed, speedLimit); // Speed limit
-  auto state = BehaviorState(prevBehaviorState.laneId, targetSpeed);
+  auto state = BehaviorState(targetLaneId, targetSpeed);
   BOOST_LOG_TRIVIAL(debug) << state;
   return state;
 }

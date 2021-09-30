@@ -58,11 +58,12 @@ int main() {
   // Speed reference for navidation, initial value is the initial speed,
   // will be updated over time, unit is in mile (simulator is using this unit, Orz).
   BehaviorState prevBehaviorState(1, 0.0);
+  BehaviorPlanner behaviorPlanner;
 
   // Main event loop callback when we receive something from the simulator.
   // These parameters are specific to uWS communication.
   h.onMessage(
-    [&naviMap, &prevBehaviorState] (
+    [&naviMap, &prevBehaviorState, &behaviorPlanner] (
       uWS::WebSocket<uWS::SERVER> ws,
       char *data,
       size_t length,
@@ -116,7 +117,7 @@ int main() {
           //
           // Behavior generation
           //
-          BehaviorState nextBehaviorState = GetNextBehavior(
+          BehaviorState nextBehaviorState = behaviorPlanner.GetNextBehavior(
             prevBehaviorState,
             currCarState,
             prevPath,
