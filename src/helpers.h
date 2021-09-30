@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include "common.h"
 
 // for convenience
 using std::string;
@@ -27,6 +28,50 @@ inline constexpr double pi() { return M_PI; }
 
 inline double deg2rad(double x) { return x * pi() / 180; }
 inline double rad2deg(double x) { return x * 180 / pi(); }
+
+inline std::tuple<std::vector<double>, std::vector<double>>
+ConverPathToXY(const Path &path) {
+  std::vector<double> x;
+  std::vector<double> y;
+  for (const auto &point : path) {
+    x.push_back(point[0]);
+    y.push_back(point[1]);
+  }
+  return std::make_tuple(x, y);
+}
+
+inline Path
+ConvertXYToPath(const std::vector<double> &x, const std::vector<double> &y)
+{
+  Path path;
+  for (size_t i = 0; i < x.size(); ++i) {
+    path.push_back({x[i], y[i]});
+  }
+  return path;
+}
+
+inline void PrintPathSpeed(const Path &path) {
+  std::cout << "speed: ";
+  for (size_t i = 1; i < path.size(); ++i) {
+    const double d = std::sqrt(
+      std::pow(path[i][0] - path[i - 1][0], 2) +
+      std::pow(path[i][1] - path[i - 1][1], 2)
+    );
+    std::cout << d / 0.02 * 2.24 << ", ";
+  }
+  std::cout << std::endl;
+}
+
+inline void PrintPath(const Path &path) {
+  using std::cout;
+  using std::endl;
+  cout << "path: " << endl;
+  for (size_t i = 0; i < path.size(); ++i) {
+    cout << path[i][0] << ", " << path[i][1] << endl;
+  }
+  std::cout << std::endl;
+}
+
 
 // Calculate distance between two points
 double distance(double x1, double y1, double x2, double y2);

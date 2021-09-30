@@ -16,7 +16,8 @@ tk::spline GetSplineFromPath(const Path &path) {
   return tk::spline(x, y);
 }
 
-Eigen::Matrix3d GetTransfom(double angle, double transX, double transY) {
+Eigen::Matrix3d GetTransform(double angle, double transX, double transY) {
+  // Angle should be in radian
   Eigen::Transform<double, 2, Eigen::Isometry> T;
   T.setIdentity();
   T.linear() = Eigen::Rotation2D<double>(angle).matrix();
@@ -24,8 +25,8 @@ Eigen::Matrix3d GetTransfom(double angle, double transX, double transY) {
   return T.matrix();
 }
 
-Eigen::Matrix3d GetTransfom(const std::array<double, 3> &pose) {
-  return GetTransfom(pose[2], pose[0], pose[1]);
+Eigen::Matrix3d GetTransform(const std::array<double, 3> &pose) {
+  return GetTransform(pose[0], pose[1], pose[2]);
 }
 
 std::array<double, 2>
@@ -37,18 +38,17 @@ Transform2D(const std::array<double, 2> &vec, const Eigen::Matrix3d &T) {
 
 std::array<double, 2>
 Transform2D(const std::array<double, 2> &vec, double angle, double transX, double transY) {
-  Eigen::Matrix3d T = GetTransfom(angle, transX, transY);
+  Eigen::Matrix3d T = GetTransform(angle, transX, transY);
   return Transform2D(vec, T);
 }
 
 std::array<double, 2>
 Transform2D(const std::array<double, 2> &vec, std::array<double, 3> &pose) {
-  return Transform2D(vec, pose[2], pose[0], pose[1]);
+  return Transform2D(vec, pose[0], pose[1], pose[2]);
 }
 
 Path
 TransformPath(const Path &path, const Eigen::Matrix3d &T) {
-
   Path transformedPath(path.size());
 
   for (size_t i = 0; i < path.size(); ++i) {
@@ -78,8 +78,8 @@ Path GeneratePath(const CarState &carState) {
   const std::array<double, 3> &pose = carState.euclideanPose;
   for (int i = 0; i < 50; ++i) {
     path.push_back({
-      pose[0] + distDelta * i * std::cos(pose[2]),
-      pose[1] + distDelta * i * std::sin(pose[2])
+      pose[1] + distDelta * i * std::cos(pose[0]),
+      pose[2] + distDelta * i * std::sin(pose[0])
     });
   }
   return path;
@@ -108,19 +108,18 @@ Path GeneratePath(
   const CarState &carState,
   const Path &prevPath,
   const NaviMap &naviMap,
+  const std::array<double, 2> &endPathFrenetPose,
   int numPreservedWaypoints
 )
 {
   // Create a list of widely spaced (x, y) points, evenly spaced at 30m
   // Later we will interpolate these waypoints with a spline and fill it in with
   // more points that control speed.
-  // BOOST_LOG_TRIVIAL(debug)
-  //   << (boost::format("Current car state: %s, speedReference=%.3f")
-  //     % carState % speedReference).str();
+  BOOST_LOG_TRIVIAL(debug) << (boost::format("speedReference=%.3f") % speedReference).str();
 
-  const double &currCarX = carState.euclideanPose[0];
-  const double &currCarY = carState.euclideanPose[1];
-  const double &currCarYaw = carState.euclideanPose[2];
+  const double &currCarYaw = carState.euclideanPose[0];
+  const double &currCarX = carState.euclideanPose[1];
+  const double &currCarY = carState.euclideanPose[2];
 
   Path splineAnchorPoints;
 
@@ -134,8 +133,8 @@ Path GeneratePath(
 
     // Since there is no previous trajectory left,
     // use artificial previous car state
-    double prevCarX = currCarX - std::cos(currCarYaw);
-    double prevCarY = currCarY - std::sin(currCarYaw);
+    double prevCarX = currCarX - std::cos(currCarYaw);  // in radians
+    double prevCarY = currCarY - std::sin(currCarYaw);  // in radians
 
     splineAnchorPoints.push_back({prevCarX, prevCarY});
     splineAnchorPoints.push_back({currCarX, currCarY});
@@ -150,33 +149,38 @@ Path GeneratePath(
     auto lastPoint2 = *(prevPath.end() - 2);
 
     newTrajectoryRefenencePose = {
-      lastPoint[0],
-      lastPoint[1],
-      // Compute the yaw angle from the last two points from previous trajectory
       std::atan2(
         lastPoint[1] - lastPoint2[1],
         lastPoint[0] - lastPoint2[0]
-      )
+      ),
+      lastPoint[0],
+      lastPoint[1]
+      // Compute the yaw angle from the last two points from previous trajectory
     };
 
     splineAnchorPoints.push_back(lastPoint2);
     splineAnchorPoints.push_back(lastPoint);
   }
 
-  std::vector<double> carPositionInFrenet = getFrenet(
-    carState.euclideanPose[0],
-    carState.euclideanPose[1],
-    carState.euclideanPose[2],
+  const std::vector<double> carPositionInFrenet = getFrenet(
+    currCarX,
+    currCarY,
+    currCarYaw,
     naviMap.x,
     naviMap.y
   );
 
-  std::vector<double> targetSValueIntervalsDelta = {30, 60, 90}; // in meter
-  double targetDValue = GetDValueFromLandId(targetLaneId);
+  const std::vector<double> targetSValueDeltas = {30, 60, 90};  // in meter
+  const double targetDValue = GetDValueFromLandId(targetLaneId);
 
-  for (double targetSValueDelta : targetSValueIntervalsDelta) {
+  double expectedEndS = carState.frenetPose[0];
+  if (prevPath.size() > 0) {
+    expectedEndS = endPathFrenetPose[0];
+  }
+
+  for (double targetSValueDelta : targetSValueDeltas) {
     std::vector<double> xy = getXY(
-      carState.frenetPose[0] + targetSValueDelta,
+      expectedEndS + targetSValueDelta,
       targetDValue,
       naviMap.s,
       naviMap.x,
@@ -187,25 +191,38 @@ Path GeneratePath(
 
   // NOTE: Shift the car reference angle to 0 degree
   // Transform the anchor points to car local frame
-  Eigen::Matrix3d T = GetTransfom(newTrajectoryRefenencePose);
+  Eigen::Matrix3d T = GetTransform(newTrajectoryRefenencePose);
   // BOOST_LOG_TRIVIAL(debug)
   //   << "newTrajectoryRefenencePose: \n" << T;
 
+  // PrintPath(splineAnchorPoints);
   splineAnchorPoints = TransformPath(splineAnchorPoints, T.inverse());
+  
 
   // FIXME: Spline fitting will require the points sorted in ascent order,
   // otherwise it will be error
-  tk::spline spline = GetSplineFromPath(splineAnchorPoints);
+  // std::sort(
+  //   splineAnchorPoints.begin(), splineAnchorPoints.end(),
+  //   [] (const std::array<double, 2> &p1, const std::array<double, 2> &p2) {
+  //     return p1[0] < p2[0];
+  //   }
+  // );
+  tk::spline splineFn = GetSplineFromPath(splineAnchorPoints);
+
+  // BOOST_LOG_TRIVIAL(debug) << "Anchor points:";
+  // PrintPath(splineAnchorPoints);
 
   Path newPath;
 
   // Start with all often previous path points from last time
-  std::copy(prevPath.begin(), prevPath.end(), std::back_inserter(newPath));
+  if (prevPath.size() > 0) {
+    std::copy(prevPath.begin(), prevPath.end(), std::back_inserter(newPath));
+  }
 
   // Calculate how to break up spline points so that we travel at our desired
   // reference velocity
   const double targetX = 30.0; // in meter
-  const double targetY = spline(targetX);
+  const double targetY = splineFn(targetX);
   const double targetDist = std::sqrt(targetX * targetX + targetY * targetY);
 
   constexpr size_t totalNumPoints = 50;
@@ -215,9 +232,9 @@ Path GeneratePath(
   // fill up the rest of our path planner after filling it with previous points,
   // here we will always output 50 points.
 
-  // double numSegments = targetDist / (timeInterval * speedReference);
-  double numSegments = targetDist / (timeInterval * speedReference / 2.24); // in meter
-  double segmentXLength = targetX / numSegments;
+  // in meter, 1/2.24 is converting MPH to meters/sec
+  const double numSegments = targetDist / (timeInterval * speedReference / 2.24);
+  const double segmentXLength = targetX / numSegments;
 
   // BOOST_LOG_TRIVIAL(debug)
   //   << (boost::format("numSegments=%s, segmentXLength=%s")
@@ -225,20 +242,32 @@ Path GeneratePath(
   // BOOST_LOG_TRIVIAL(debug)
   //   << "New trajectory:";
   double x = 0.0;
-  for (size_t i = 1; i <= totalNumPoints - prevPath.size(); ++i) {
+  double y = 0.0;
+  const size_t numPointsNeedsToBeGenerated = totalNumPoints - prevPath.size();
+
+  BOOST_LOG_TRIVIAL(debug) << (boost::format("numPointsNeedsToBeGenerated=%.3f, segmentXLength=%.3f")
+      % numPointsNeedsToBeGenerated % segmentXLength).str();
+
+  for (size_t i = 0; i < numPointsNeedsToBeGenerated; ++i) {
     // Break the target distance into N pieces
     // interpolate the hypothenous to be a curve (instead of the straight line)
-    double y = spline(x);
-    x += segmentXLength;
 
-    auto newPathPoint = Transform2D({x, y}, T);
+    x = segmentXLength * (i + 1);
+    y = splineFn(x);
+
+    // Transform the points back to global frame
+    // BOOST_LOG_TRIVIAL(debug) << x << ", " << y;
+    const std::array<double, 2> newPathPoint = Transform2D({x, y}, T);
+    // BOOST_LOG_TRIVIAL(debug) << newPathPoint[0] << ", " << newPathPoint[1];
 
     newPath.push_back(newPathPoint);
-
-    // BOOST_LOG_TRIVIAL(debug)
-    //   << "    x=" << newPathPoint[0]
-    //   << ", y=" << newPathPoint[1];
   }
+
+  // BOOST_LOG_TRIVIAL(debug) << "T=\n" << T;
+  // BOOST_LOG_TRIVIAL(debug) << "PREV:";
+  // PrintPath(prevPath);
+  // BOOST_LOG_TRIVIAL(debug) << "NEXT:";
+  // PrintPath(newPath);
 
   return newPath;
 }

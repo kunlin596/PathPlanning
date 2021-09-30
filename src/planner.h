@@ -11,27 +11,6 @@ namespace pathplanning {
 /// Helper Functions
 ///
 
-inline std::tuple<std::vector<double>, std::vector<double>>
-ConverPathToXY(const Path &path) {
-  std::vector<double> x;
-  std::vector<double> y;
-  for (const auto &point : path) {
-    x.push_back(point[0]);
-    y.push_back(point[1]);
-  }
-  return std::make_tuple(x, y);
-}
-
-inline Path
-ConvertXYToPath(const std::vector<double> &x, const std::vector<double> &y)
-{
-  Path path;
-  for (size_t i = 0; i < x.size(); ++i) {
-    path.push_back({x[i], y[i]});
-  }
-  return path;
-}
-
 ///
 /// Path Generators
 ///
@@ -57,6 +36,7 @@ Path GeneratePath(
   const CarState &carState,
   const Path &prevPath,
   const NaviMap &naviMap,
+  const std::array<double, 2> &endPathFrenetPose,
   int numPreservedWaypoints = 2
 );
 

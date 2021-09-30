@@ -5,7 +5,6 @@
 #include <iostream>
 #include <array>
 #include <boost/format.hpp>
-#include "helpers.h"
 #include <boost/log/trivial.hpp>
 
 namespace pathplanning {
@@ -15,7 +14,7 @@ namespace pathplanning {
 ///
 
 struct CarState {
-  std::array<double, 3> euclideanPose; ///< x, y, theta
+  std::array<double, 3> euclideanPose; ///< theta, x, y 
   std::array<double, 2> frenetPose; ///< s, d
   double speed; ///< car speed, in MPH
 

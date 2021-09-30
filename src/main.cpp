@@ -7,7 +7,7 @@
 
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
-#include "common.h"
+#include "helpers.h"
 #include "planner.h"
 #include "behaviorplanner.h"
 #include "json.hpp"
@@ -80,6 +80,7 @@ int main() {
         auto j = json::parse(s);
 
         std::string event = j[0].get<string>();
+
         if (event == "telemetry") {
           // j[1] is the data JSON object
 
@@ -88,7 +89,7 @@ int main() {
           //
 
           CarState currCarState(
-            {j[1]["x"], j[1]["y"], deg2rad(j[1]["yaw"])},
+            {deg2rad(j[1]["yaw"]), j[1]["x"], j[1]["y"]},
             {j[1]["s"], j[1]["d"]},
             j[1]["speed"]
           );
@@ -103,8 +104,10 @@ int main() {
           const size_t prevPathSize = prevPath.size();
 
           // Previous path's end s and d values
-          double endPathSValue = j[1]["end_path_s"];
-          double endPathDValue = j[1]["end_path_d"];
+          std::array<double, 2> endPathFrenetPose = {
+            j[1]["end_path_s"],
+            j[1]["end_path_d"]
+          };
 
           // Sensor Fusion Data, a list of all other cars on the same side
           //   of the road.
@@ -114,11 +117,13 @@ int main() {
           // Behavior generation
           //
           BehaviorState nextBehaviorState = GetNextBehavior(
-              prevBehaviorState,
-              currCarState,
-              prevPath,
-              probeData,
-              naviMap);
+            prevBehaviorState,
+            currCarState,
+            prevPath,
+            probeData,
+            naviMap,
+            endPathFrenetPose
+          );
 
           //
           // Path generation based on next behavior
@@ -130,6 +135,7 @@ int main() {
             currCarState,
             prevPath,
             naviMap,
+            endPathFrenetPose,
             2
           );
 
