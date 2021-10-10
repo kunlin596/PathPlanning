@@ -63,13 +63,7 @@ inline void PrintPathSpeed(const Path &path) {
 }
 
 inline void PrintPath(const Path &path) {
-  using std::cout;
-  using std::endl;
-  cout << "path: " << endl;
-  for (size_t i = 0; i < path.size(); ++i) {
-    cout << path[i][0] << ", " << path[i][1] << endl;
-  }
-  std::cout << std::endl;
+  std::cout << path << std::endl;
 }
 
 
