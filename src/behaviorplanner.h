@@ -5,20 +5,24 @@
 
 namespace pathplanning {
 
-
 class BehaviorPlanner {
 public:
-  BehaviorPlanner() {};
-  ~BehaviorPlanner() {};
 
-  BehaviorState GetNextBehavior(
+  static std::vector<BehaviorState> GetNextBehavior(
     const BehaviorState &prevBehaviorState,
     const CarState &currCarState,
     const Path &prevPath,
-    const ProbeData &probeData,
+    const SensorFusions &sensorFusions,
     const NaviMap &naviMap,
     const std::array<double, 2> &endPathFrenetPose);
+
+  /**
+   * Get successor states from given state
+   */
+  static std::vector<BehaviorState>
+    GetSuccessorStates(const BehaviorState &state, int laneId);
 };
+
 } // end of pathplanning
 
 #endif
