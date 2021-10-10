@@ -41,11 +41,15 @@ private :
     const Path &prevPath);
 
   Goal _GenerateLCPGoal(
+    int direction, 
+    const double speedReference,
     const SensorFusions &sensorFusions,
     const CarState &carState,
     const Path &prevPath);
 
   Goal _GenerateLCGoal(
+    int direction, 
+    const double speedReference,
     const SensorFusions &sensorFusions,
     const CarState &carState,
     const Path &prevPath);

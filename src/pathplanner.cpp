@@ -122,6 +122,7 @@ Goal GoalGenerator::_GenerateLKGoal(
     expectedSValue = frenetPose[0];
   }
 
+  // Collision Avoidance
   double closestCarSpeed = std::numeric_limits<double>::quiet_NaN();
   double closestCarSValue = std::numeric_limits<double>::max();
 
@@ -133,9 +134,11 @@ Goal GoalGenerator::_GenerateLKGoal(
     // Predict where the car will be in the future
     const double s = sensorFusions[i].frenetPose[0] + static_cast<double>(prevPath.size()) * timeInterval * speed / 2.24;
     const double &d = sensorFusions[i].frenetPose[1];
+
     // If the the other car is in the same lane
     // TODO: Replace the range with continous d values to prevent accident
-    if ((_map.road.GetLaneCenterDValue(targetLaneId - 1) < d) and d < (_map.road.GetLaneCenterDValue(targetLaneId + 1)) ) {
+    if (((_map.road.GetLaneCenterDValue(targetLaneId - 1) + 2.0) < d) and
+      d < (_map.road.GetLaneCenterDValue(targetLaneId + 1) - 2.0)) {
 
       double distance = s - expectedSValue;
 
@@ -159,11 +162,11 @@ Goal GoalGenerator::_GenerateLKGoal(
   targetSpeed = std::min(targetSpeed, speedLimit); // Speed limit
 
   return Goal(targetSpeed, targetLaneId);
-
-
 }
 
 Goal GoalGenerator::_GenerateLCPGoal(
+  int direction,
+  const double speedReference,
   const SensorFusions &sensorFusions,
   const CarState &carState,
   const Path &prevPath)
@@ -172,6 +175,8 @@ Goal GoalGenerator::_GenerateLCPGoal(
 }
 
 Goal GoalGenerator::_GenerateLCGoal(
+  int direction,
+  const double speedReference,
   const SensorFusions &sensorFusions,
   const CarState &carState,
   const Path &prevPath)
@@ -190,6 +195,18 @@ Goal GoalGenerator::GenerateGoal(
     case BehaviorState::kLaneKeeping:
       return _GenerateLKGoal(
         speedReference, sensorFusions, carState, prevPath);
+    case BehaviorState::kLeftLaneChangePreparation:
+      return _GenerateLCPGoal(
+        -1, speedReference, sensorFusions, carState, prevPath);
+    case BehaviorState::kLeftLaneChange:
+      return _GenerateLCGoal(
+        -1, speedReference, sensorFusions, carState, prevPath);
+    case BehaviorState::kRightLaneChangePreparation:
+      return _GenerateLCPGoal(
+        1, speedReference, sensorFusions, carState, prevPath);
+    case BehaviorState::kRightLaneChange:
+      return _GenerateLCGoal(
+        1, speedReference, sensorFusions, carState, prevPath);
   }
 }
 

@@ -146,6 +146,7 @@ int main() {
 
           size_t bestIndex = std::distance(pathCache.begin(), bestPathItr);
 
+          // Update behavior state with new data
           currBehavior.state = std::get<0>(pathCache[bestIndex]);
           currBehavior.targetSpeed = std::get<1>(pathCache[bestIndex]).speed;
           Path newPath = std::get<2>(pathCache[bestIndex]);
