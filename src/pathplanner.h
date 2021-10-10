@@ -10,6 +10,14 @@ namespace pathplanning {
 ///
 /// Helper Functions
 ///
+double ComputeTargetSpeed(
+  const Behavior &currBehavior,
+  const CarState &currCarState,
+  const Path &prevPath,
+  const NaviMap &naviMap,
+  const SensorFusions &sensorFusions,
+  const std::array<double, 2> &endPathFrenetPose,
+  const int targetLaneId);
 
 ///
 /// Path Generators
@@ -31,8 +39,9 @@ Path GeneratePath(const CarState &carState, const NaviMap &naviMap);
  * Generate path using spline line fitting
  */
 Path GeneratePath(
-  int targetLaneId,
-  double speedReference,
+  const BehaviorState nextBehaviorState,
+  const double targetSpeed,
+  const Behavior &prevBehavior,
   const CarState &carState,
   const Path &prevPath,
   const NaviMap &naviMap,

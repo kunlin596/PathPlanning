@@ -8,10 +8,9 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "helpers.h"
-#include "planner.h"
 #include "behaviorplanner.h"
+#include "pathplanner.h"
 #include "json.hpp"
-#include "spline.h"
 
 int main() {
   using nlohmann::json;
@@ -52,18 +51,20 @@ int main() {
     naviMap.dy.push_back(dy);
   }
 
+  naviMap.road.lanes = {Lane(0), Lane(1), Lane(2)};
+
   // Lane reference for navigation, initial value is the initial lane,
   // will be updated over time.
   // In this project, the land id can be 0, 1, 2 (3 lanes).
   // Speed reference for navidation, initial value is the initial speed,
   // will be updated over time, unit is in mile (simulator is using this unit, Orz).
-  BehaviorState prevBehaviorState(1, 0.0);
+  Behavior currBehavior(naviMap.road.lanes[1], 0.0, BehaviorState::kLaneKeeping);
   BehaviorPlanner behaviorPlanner;
 
   // Main event loop callback when we receive something from the simulator.
   // These parameters are specific to uWS communication.
   h.onMessage(
-    [&naviMap, &prevBehaviorState, &behaviorPlanner] (
+    [&naviMap, &currBehavior, &behaviorPlanner] (
       uWS::WebSocket<uWS::SERVER> ws,
       char *data,
       size_t length,
@@ -112,37 +113,63 @@ int main() {
 
           // Sensor Fusion Data, a list of all other cars on the same side
           //   of the road.
-          const ProbeData probeData = j[1]["sensor_fusion"];
+          SensorFusions sensorFusions = SensorFusion::Read(j[1]["sensor_fusion"]);
 
-          //
-          // Behavior generation
-          //
-          BehaviorState nextBehaviorState = behaviorPlanner.GetNextBehavior(
-            prevBehaviorState,
-            currCarState,
-            prevPath,
-            probeData,
-            naviMap,
-            endPathFrenetPose
-          );
+          std::vector<BehaviorState> possibleStates
+            = behaviorPlanner.GetSuccessorStates(currBehavior.state, currBehavior.lane.id);
 
-          //
-          // Path generation based on next behavior
-          //
-          json msgJson;
-          Path newPath = GeneratePath(
-            nextBehaviorState.laneId,
-            nextBehaviorState.speed,
+          std::cout << "Current state: " << currBehavior.state << ", possible next states: ";
+          for (auto state : possibleStates) {
+            std::cout << state << " ";
+          }
+          std::cout << std::endl;
+
+          // Cache of generated path cache, and its cost.
+          std::vector<std::pair<Path, double>> pathCache;
+
+          double targetSpeed = ComputeTargetSpeed(
+            currBehavior,
             currCarState,
             prevPath,
             naviMap,
+            sensorFusions,
             endPathFrenetPose,
-            2
+            currBehavior.lane.id);
+
+          for (const BehaviorState &candidateBehaviorState : possibleStates) {
+            // NOTE: Goal generation is embeded inside path generator
+            // since the goal of this project is just to keep the car running
+            std::cout << "Generating candidate path for behavior=" << candidateBehaviorState << std::endl;
+
+            Path newPath = GeneratePath(
+              candidateBehaviorState,
+              targetSpeed,
+              currBehavior,
+              currCarState,
+              prevPath,
+              naviMap,
+              endPathFrenetPose,
+              2
+            );
+
+            // double score = EvaluatePath(
+            //   newPath,
+            //   currvBehavior,
+            //   sensorFusions
+            // );
+            pathCache.push_back({newPath, 1.0});
+          }
+
+          decltype(pathCache)::iterator bestPathItr = std::min_element(
+            pathCache.begin(), pathCache.end(),
+            [] (const std::pair<Path, double> &e1, const std::pair<Path, double> &e2) {
+              return e1.second > e2.second;
+            }
           );
+          size_t bestIndex = std::distance(pathCache.begin(), bestPathItr);
+          Path newPath = pathCache[bestIndex].first;
 
-          prevBehaviorState = nextBehaviorState;
-
-          // Path newPath = GeneratePath(currCarState, naviMap);
+          json msgJson;
 
           std::vector<double> nextXValues, nextYValues;
           std::tie(nextXValues, nextYValues) = ConverPathToXY(newPath);

@@ -2,7 +2,7 @@ project(Path_Planning)
 
 cmake_minimum_required (VERSION 3.5)
 
-add_definitions(-std=c++11)
+add_definitions(-std=c++2a)
 
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
@@ -17,6 +17,6 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     link_directories(/usr/local/Cellar/libuv/1.11.0/lib)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
-set(sources src/helpers.cpp src/planner.cpp src/behaviorplanner.cpp src/main.cpp)
+set(sources src/helpers.cpp src/pathplanner.cpp src/behaviorplanner.cpp src/main.cpp)
 add_executable(path_planning ${sources})
 target_link_libraries(path_planning z ssl uv uWS Boost::log)
