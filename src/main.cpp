@@ -120,6 +120,38 @@ int main() {
           // Main path generation loop
           //
 
+          // Group sensor fusion results per lane;
+          std::vector<SensorFusions> laneSensorFusions(3);
+          for (const SensorFusion &sensorFusion : sensorFusions) {
+            const double d = sensorFusion.frenetPose[1];
+            if (0.0 <= d and d < 4.0) {
+              laneSensorFusions[0].push_back(sensorFusion);
+            }
+            else if (4.0 <= d and d < 8.0) {
+              laneSensorFusions[1].push_back(sensorFusion);
+            }
+            else if (8.0 <= d and d < 12.0) {
+              laneSensorFusions[2].push_back(sensorFusion);
+            }
+          }
+
+          std::array<double, 3> averSpeeds = { 0.0, 0.0, 0.0 };
+          for (size_t i = 0; i < averSpeeds.size(); ++i) {
+            if (laneSensorFusions[i].size() < 1) {
+              continue;
+            }
+
+            for (const auto &sensorFusion : laneSensorFusions[i]) {
+              averSpeeds[i] += sensorFusion.speed;
+            }
+          }
+
+          for (size_t i = 0; i < averSpeeds.size(); ++i) {
+            averSpeeds[i] /= static_cast<double>(laneSensorFusions[i].size());
+          }
+
+          cout << "Lane averSpeeds=" << averSpeeds << endl;
+
           std::vector<BehaviorState> possibleStates
             = behaviorPlanner.GetSuccessorStates(currBehavior.state, currBehavior.lane.id);
 
@@ -127,9 +159,11 @@ int main() {
           for (const auto &candidateBehaviorState : possibleStates) {
             Goal goal = goalGenerator.GenerateGoal(
               candidateBehaviorState, currBehavior.targetSpeed, sensorFusions, currCarState, prevPath);
-            cout << "goal=" << goal << endl;
+
             Path candidatePath = pathPlanner.GeneratePath(goal, currBehavior);
-            double score = pathPlanner.EvaluatePath();
+            double score = pathPlanner.EvaluatePath(
+              goal, candidatePath, laneSensorFusions, averSpeeds);
+
             pathCache.push_back({
               candidateBehaviorState, goal, candidatePath, score
             });
@@ -148,7 +182,9 @@ int main() {
 
           // Update behavior state with new data
           currBehavior.state = std::get<0>(pathCache[bestIndex]);
-          currBehavior.targetSpeed = std::get<1>(pathCache[bestIndex]).speed;
+          Goal bestGoal = std::get<1>(pathCache[bestIndex]);
+          cout << "Best goal, " << bestGoal << endl;
+          currBehavior.targetSpeed = bestGoal.speed;
           Path newPath = std::get<2>(pathCache[bestIndex]);
 
           json msgJson;

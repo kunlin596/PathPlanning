@@ -53,7 +53,6 @@ private :
     const SensorFusions &sensorFusions,
     const CarState &carState,
     const Path &prevPath);
-
 };
 
 class PathPlanner {
@@ -67,7 +66,10 @@ public:
    */
   Path GeneratePath(const Goal &goal, const Behavior &currentBehavior);
 
-  double EvaluatePath() { return 1.0; }
+  double EvaluatePath(
+    const Goal &goal, const Path &path, const std::vector<SensorFusions> &laneSensorFusions,
+    const std::array<double, 3> &averSpeeds);
+
 
   void UpdateCarState(const CarState &carState) { _carState = carState; }
   void UpdatePathCache(const Path &path) { _prevPath = path; }
@@ -81,6 +83,17 @@ private:
    * @return               [description]
    */
   SensorFusions _Filter(const SensorFusions &sensorFusions, double radius);
+
+  float _ComputeSpeedScore(const Goal goal, const std::array<double, 3> &averSpeeds)
+  {
+    auto maxAverSpeed = std::max_element(averSpeeds.begin(), averSpeeds.end());
+    int maxIndex = std::distance(averSpeeds.begin(), maxAverSpeed);
+
+    if (goal.laneId == maxIndex) {
+      return 1.0;
+    }
+    return 0.0;
+  }
 
   Path _GeneratePath(
     const double targetDValue,

@@ -5,7 +5,6 @@
 #include <iterator>
 
 namespace {
-
 using namespace pathplanning;
 
 tk::spline GetSplineFromPath(const Path &path) {
@@ -98,7 +97,8 @@ Goal GoalGenerator::_GenerateLKGoal(
   const double speedReference,
   const SensorFusions &sensorFusions,
   const CarState &carState,
-  const Path &prevPath) {
+  const Path &prevPath)
+{
 
   static constexpr double distanceToKeep = 30; // in meter
   static constexpr double timeInterval = 0.02;
@@ -171,7 +171,18 @@ Goal GoalGenerator::_GenerateLCPGoal(
   const CarState &carState,
   const Path &prevPath)
 {
-  return Goal(1.0, 1);
+  static constexpr double distanceToKeep = 30; // in meter
+  static constexpr double timeInterval = 0.02;
+  static constexpr double speedLimit = 49.5; // MPH
+
+  double targetSpeed = speedReference;
+  // Target speed is based on the previous behavior speed, not the current car speed.
+  int targetLaneId = carState.lane.id + direction;
+
+  targetSpeed = std::min(targetSpeed, speedLimit); // Speed limit
+  Goal goal(targetSpeed, targetLaneId);
+  goal.lateralShift = static_cast<double>(-direction * 2.0);
+  return goal;
 }
 
 Goal GoalGenerator::_GenerateLCGoal(
@@ -181,7 +192,17 @@ Goal GoalGenerator::_GenerateLCGoal(
   const CarState &carState,
   const Path &prevPath)
 {
-  return Goal(1.0, 1);
+
+  static constexpr double distanceToKeep = 30; // in meter
+  static constexpr double timeInterval = 0.02;
+  static constexpr double speedLimit = 49.5; // MPH
+
+  double targetSpeed = speedReference;
+  // Target speed is based on the previous behavior speed, not the current car speed.
+  int targetLaneId = carState.lane.id + direction;
+
+  targetSpeed = std::min(targetSpeed, speedLimit); // Speed limit
+  return Goal(targetSpeed, targetLaneId);
 }
 
 Goal GoalGenerator::GenerateGoal(
@@ -396,10 +417,20 @@ Path PathPlanner::GeneratePath(const Goal &goal, const Behavior &currBehavior)
   double targetSpeed = goal.speed;
   int targetLaneId = currBehavior.lane.id;
 
-  double targetDValue = _map.road.GetLaneCenterDValue(currBehavior.lane.id);
+  double targetDValue = _map.road.GetLaneCenterDValue(goal.laneId) + goal.lateralShift;
   double targetSValue = 90.0;
 
   return _GeneratePath(targetDValue, targetSValue, targetSpeed);
 }
+
+double PathPlanner::EvaluatePath(
+  const Goal &goal, const Path &path,
+  const std::vector<SensorFusions> &laneSensorFusions,
+  const std::array<double, 3> &averSpeeds)
+{
+  double speedScore = _ComputeSpeedScore(goal, averSpeeds);
+  return speedScore;
+}
+
 
 } // namespace pathplanning

@@ -22,6 +22,7 @@ struct Goal {
 
   double speed;
   int laneId;
+  double lateralShift = 0.0;
 };
 
 
