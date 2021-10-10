@@ -102,21 +102,13 @@ int main() {
           cout << currCarState << endl;
  
           // Previous path data given to the Planner
-          Path prevPath = ConvertXYToPath(
-            j[1]["previous_path_x"],
-            j[1]["previous_path_y"]
-          );
-          cout << prevPath << endl;
-
-          const size_t prevPathSize = prevPath.size();
+          Path prevPath = ConvertXYToPath(j[1]["previous_path_x"], j[1]["previous_path_y"]);
+          // cout << prevPath << endl;
 
           pathPlanner.UpdatePathCache(prevPath);
 
           // Previous path's end s and d values
-          const std::array<double, 2> endPathFrenetPose = {
-            j[1]["end_path_s"],
-            j[1]["end_path_d"]
-          };
+          const std::array<double, 2> endPathFrenetPose = { j[1]["end_path_s"], j[1]["end_path_d"] };
 
           // Sensor Fusion Data, a list of all other cars on the same side
           //   of the road.
@@ -131,23 +123,32 @@ int main() {
           std::vector<BehaviorState> possibleStates
             = behaviorPlanner.GetSuccessorStates(currBehavior.state, currBehavior.lane.id);
 
-          std::vector<std::pair<Path, double>> pathCache;
+          std::vector<std::tuple<BehaviorState, Goal, Path, double>> pathCache;
           for (const auto &candidateBehaviorState : possibleStates) {
-            Goal goal = goalGenerator.GenerateGoal(candidateBehaviorState, sensorFusions, currCarState);
+            Goal goal = goalGenerator.GenerateGoal(
+              candidateBehaviorState, currBehavior.targetSpeed, sensorFusions, currCarState, prevPath);
             cout << "goal=" << goal << endl;
             Path candidatePath = pathPlanner.GeneratePath(goal, currBehavior);
             double score = pathPlanner.EvaluatePath();
-            pathCache.push_back({candidatePath, score});
+            pathCache.push_back({
+              candidateBehaviorState, goal, candidatePath, score
+            });
           }
 
           decltype(pathCache)::iterator bestPathItr = std::min_element(
             pathCache.begin(), pathCache.end(),
-            [] (const std::pair<Path, double> &e1, const std::pair<Path, double> &e2) {
-              return e1.second > e2.second;
+            [] (
+              const std::tuple<BehaviorState, Goal, Path, double> &e1,
+              const std::tuple<BehaviorState, Goal, Path, double> &e2)
+            {
+              return std::get<3>(e1) > std::get<3>(e2);
             });
 
           size_t bestIndex = std::distance(pathCache.begin(), bestPathItr);
-          Path newPath = pathCache[bestIndex].first;
+
+          currBehavior.state = std::get<0>(pathCache[bestIndex]);
+          currBehavior.targetSpeed = std::get<1>(pathCache[bestIndex]).speed;
+          Path newPath = std::get<2>(pathCache[bestIndex]);
 
           json msgJson;
 

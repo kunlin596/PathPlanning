@@ -60,6 +60,20 @@ TransformPath(const Path &path, const Eigen::Matrix3d &T) {
   return transformedPath;
 }
 
+
+std::array<double, 3> GetEndPose(const Path &path) {
+  auto point1 = path[path.size() - 2];
+  auto point2 = path[path.size() - 1];
+  return {
+    std::atan2(
+      point2[1] - point1[1],
+      point2[0] - point1[0]
+    ),
+    point2[0],
+    point2[1]
+  };
+}
+
 }
 
 namespace pathplanning {
@@ -80,27 +94,36 @@ SensorFusions PathPlanner::_Filter(const SensorFusions &sensorFusions, double ra
   return sensorFusions;
 }
 
-Goal GoalGenerator::GenerateGoal(
-  const BehaviorState &behaviorState,
+Goal GoalGenerator::_GenerateLKGoal(
+  const double speedReference,
   const SensorFusions &sensorFusions,
-  const CarState &carState)
-{
+  const CarState &carState,
+  const Path &prevPath) {
+
   static constexpr double distanceToKeep = 30; // in meter
   static constexpr double timeInterval = 0.02;
   static constexpr double speedLimit = 49.5; // MPH
 
+  double targetSpeed = speedReference;
   // Target speed is based on the previous behavior speed, not the current car speed.
-  double targetSpeed = speedLimit;
   int targetLaneId = carState.lane.id;
 
-  const double currS = carState.frenetPose[0];
-  const double currD = carState.frenetPose[1];
+  const double currSValue = carState.frenetPose[0];
+  const double currDValue = carState.frenetPose[1];
 
   // Expected S value of the car if the previous trajectory are executed
-  double expectedS = currS;
+  double expectedSValue = currSValue;
+  if (prevPath.size() > 0) {
+    std::array<double, 3> pose = GetEndPose(prevPath);
+    std::vector<double> frenetPose = getFrenet(
+      pose[1], pose[2], pose[0],
+      _map.x, _map.y);
+
+    expectedSValue = frenetPose[0];
+  }
 
   double closestCarSpeed = std::numeric_limits<double>::quiet_NaN();
-  double closestCarS = std::numeric_limits<double>::max();
+  double closestCarSValue = std::numeric_limits<double>::max();
 
   bool tooClose = false;
 
@@ -108,24 +131,17 @@ Goal GoalGenerator::GenerateGoal(
     // Sensed info for each car
     const double &speed = sensorFusions[i].speed;
     // Predict where the car will be in the future
-    const double s = sensorFusions[i].frenetPose[0];
-    // + static_cast<double>(prevPath.size()) * timeInterval * speed / 2.24;
+    const double s = sensorFusions[i].frenetPose[0] + static_cast<double>(prevPath.size()) * timeInterval * speed / 2.24;
     const double &d = sensorFusions[i].frenetPose[1];
     // If the the other car is in the same lane
     // TODO: Replace the range with continous d values to prevent accident
-    if ((_map.road.GetLaneCenterDValue(targetLaneId - 1) < d) and
-        d < (_map.road.GetLaneCenterDValue(targetLaneId + 1))) {
+    if ((_map.road.GetLaneCenterDValue(targetLaneId - 1) < d) and d < (_map.road.GetLaneCenterDValue(targetLaneId + 1)) ) {
 
-      double distance = s - expectedS;
-
-      if (distance > 0 and distance < 10) {
-        targetSpeed = speed;
-        break;
-      }
+      double distance = s - expectedSValue;
 
       if (distance > 0 and distance < distanceToKeep) {
-        if (s < closestCarS) {
-          closestCarS = s;
+        if (s < closestCarSValue) {
+          closestCarSValue = s;
           closestCarSpeed = speed;
         }
       }
@@ -133,6 +149,7 @@ Goal GoalGenerator::GenerateGoal(
   }
 
   static constexpr double acc = 0.224;  // ~5 meters / second^2
+
   if (!std::isnan(closestCarSpeed)) {
     targetSpeed -= acc;
   } else if (targetSpeed < speedLimit) {
@@ -142,8 +159,39 @@ Goal GoalGenerator::GenerateGoal(
   targetSpeed = std::min(targetSpeed, speedLimit); // Speed limit
 
   return Goal(targetSpeed, targetLaneId);
+
+
 }
 
+Goal GoalGenerator::_GenerateLCPGoal(
+  const SensorFusions &sensorFusions,
+  const CarState &carState,
+  const Path &prevPath)
+{
+  return Goal(1.0, 1);
+}
+
+Goal GoalGenerator::_GenerateLCGoal(
+  const SensorFusions &sensorFusions,
+  const CarState &carState,
+  const Path &prevPath)
+{
+  return Goal(1.0, 1);
+}
+
+Goal GoalGenerator::GenerateGoal(
+  const BehaviorState &behaviorState,
+  const double speedReference,
+  const SensorFusions &sensorFusions,
+  const CarState &carState,
+  const Path &prevPath)
+{
+  switch (behaviorState) {
+    case BehaviorState::kLaneKeeping:
+      return _GenerateLKGoal(
+        speedReference, sensorFusions, carState, prevPath);
+  }
+}
 
 Path GeneratePath(const CarState &carState) {
   // The time difference between each path point in the project is 0.02 seconds,
@@ -160,19 +208,23 @@ Path GeneratePath(const CarState &carState) {
   return path;
 }
 
+
 Path GeneratePath(const CarState &carState, const NaviMap &naviMap) {
   // The time difference between each path point in the project is 0.02 seconds,
   // setting this distDelta will change the speed per 0.02 second.
-  double distDelta = 0.5; // 0.5 
+  double distDelta = 0.5;
   double s = 0.0;
-  const double d = 6; // 2 + 4 from the road center, 1.5 lane width
+
+  static constexpr double d = 6.0; // 2 + 4 from the road center, 1.5 lane width
+  static constexpr int totalNumPoints = 50;
 
   Path path;
-  for (int i = 0; i < 50; ++i) {
+  for (int i = 0; i < totalNumPoints; ++i) {
     s = carState.frenetPose[0] + (i + 1) * distDelta;
     std::vector<double> xy = getXY(s, d, naviMap.s, naviMap.x, naviMap.y);
     path.push_back({xy[0], xy[1]});
   }
+
   return path;
 }
 
@@ -186,8 +238,8 @@ Path PathPlanner::_GeneratePath(
   const double speedReference
 )
 {
-  cout << boost::format("_GeneratePath: targetDValue=%.3f, targetSValue=%.3f, speedReference=%.3f\n")
-    % targetDValue % targetSValue % speedReference;
+  // cout << boost::format("_GeneratePath: targetDValue=%.3f, targetSValue=%.3f, speedReference=%.3f\n")
+  //   % targetDValue % targetSValue % speedReference;
 
   const double &currCarYaw = _carState.euclideanPose[0];
   const double &currCarX = _carState.euclideanPose[1];
@@ -206,7 +258,6 @@ Path PathPlanner::_GeneratePath(
     // use artificial previous car state
     double prevCarX = currCarX - std::cos(currCarYaw);  // in radians
     double prevCarY = currCarY - std::sin(currCarYaw);  // in radians
-
     splineAnchorPoints.push_back({prevCarX, prevCarY});
     splineAnchorPoints.push_back({currCarX, currCarY});
   } else {
@@ -227,10 +278,10 @@ Path PathPlanner::_GeneratePath(
   // PrintPath(splineAnchorPoints);
 
   constexpr int numAnchorPoints = 5;
-  const double deltaS = targetSValue / static_cast<double>(numAnchorPoints);
+  const double deltaSValue = targetSValue / static_cast<double>(numAnchorPoints);
   std::vector<double> targetSValueDeltas(numAnchorPoints); // in meter
   for (int i = 0; i < numAnchorPoints; ++i) {
-    targetSValueDeltas[i] = deltaS * (i + 1);
+    targetSValueDeltas[i] = deltaSValue * (i + 1);
   }
 
   // expectedEndS is for attaching the newly planned points to the previous path
@@ -242,16 +293,12 @@ Path PathPlanner::_GeneratePath(
 
   for (double targetSValueDelta : targetSValueDeltas) {
     std::vector<double> loc = getXY(
-      expectedFrenetPoseEndPath[0] + targetSValueDelta,
-      targetDValue,
-      _map.s,
-      _map.x,
-      _map.y
-    );
+      expectedFrenetPoseEndPath[0] + targetSValueDelta, targetDValue,
+      _map.s, _map.x, _map.y);
     splineAnchorPoints.push_back({loc[0], loc[1]});
   }
 
-  PrintPath(splineAnchorPoints);
+  // PrintPath(splineAnchorPoints);
 
   // NOTE: Shift the car reference angle to 0 degree
   // Transform the anchor points to car local frame
@@ -298,7 +345,7 @@ Path PathPlanner::_GeneratePath(
   double y = 0.0;
   const size_t numPointsNeedsToBeGenerated = totalNumPoints - _prevPath.size();
 
-  cout << "Generating numPointsNeedsToBeGenerated=" << numPointsNeedsToBeGenerated << endl;
+  // cout << "Generating numPointsNeedsToBeGenerated=" << numPointsNeedsToBeGenerated << endl;
   for (size_t i = 0; i < numPointsNeedsToBeGenerated; ++i) {
     // Break the target distance into N pieces
     // interpolate the hypothenous to be a curve (instead of the straight line)
@@ -312,7 +359,7 @@ Path PathPlanner::_GeneratePath(
     newPath.push_back(newPathPoint);
   }
 
-  PrintPath(newPath);
+  // PrintPath(newPath);
 
   return newPath;
 }

@@ -25,12 +25,31 @@ public:
 
   Goal GenerateGoal(
     const BehaviorState &behaviorState,
+    const double speedReference,
     const SensorFusions &sensorFusions,
-    const CarState &carState
+    const CarState &carState,
+    const Path &prevPath
   );
 
 private :
   const NaviMap &_map;
+
+  Goal _GenerateLKGoal(
+    const double speedReference,
+    const SensorFusions &sensorFusions,
+    const CarState &carState,
+    const Path &prevPath);
+
+  Goal _GenerateLCPGoal(
+    const SensorFusions &sensorFusions,
+    const CarState &carState,
+    const Path &prevPath);
+
+  Goal _GenerateLCGoal(
+    const SensorFusions &sensorFusions,
+    const CarState &carState,
+    const Path &prevPath);
+
 };
 
 class PathPlanner {
@@ -46,10 +65,7 @@ public:
 
   double EvaluatePath() { return 1.0; }
 
-  void UpdateCarState(const CarState &carState) {
-    _carState = carState;
-  }
-
+  void UpdateCarState(const CarState &carState) { _carState = carState; }
   void UpdatePathCache(const Path &path) { _prevPath = path; }
 
 private:
@@ -65,8 +81,7 @@ private:
   Path _GeneratePath(
     const double targetDValue,
     const double targetSValue,
-    const double speedReference
-  );
+    const double speedReference);
 
   const NaviMap &_map; ///< Navigation map
   CarState _carState; ///< Current car state
