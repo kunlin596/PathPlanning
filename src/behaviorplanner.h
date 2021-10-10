@@ -8,19 +8,23 @@ namespace pathplanning {
 class BehaviorPlanner {
 public:
 
-  static std::vector<BehaviorState> GetNextBehavior(
-    const BehaviorState &prevBehaviorState,
-    const CarState &currCarState,
-    const Path &prevPath,
-    const SensorFusions &sensorFusions,
-    const NaviMap &naviMap,
-    const std::array<double, 2> &endPathFrenetPose);
+  BehaviorPlanner(const NaviMap &map)
+    : _map(map) {}
 
   /**
    * Get successor states from given state
    */
   static std::vector<BehaviorState>
     GetSuccessorStates(const BehaviorState &state, int laneId);
+
+  void Reset() {};
+
+  void SetBehavior(const Behavior &behavior) { _behavior = behavior; }
+  const Behavior& GetBehavior() const { return _behavior; }
+
+private:
+  Behavior _behavior;
+  const NaviMap &_map;
 };
 
 } // end of pathplanning

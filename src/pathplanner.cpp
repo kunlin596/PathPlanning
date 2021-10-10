@@ -64,6 +64,86 @@ TransformPath(const Path &path, const Eigen::Matrix3d &T) {
 
 namespace pathplanning {
 
+SensorFusions PathPlanner::_Filter(const SensorFusions &sensorFusions, double radius)
+{
+  SensorFusions filtered;
+  const std::array<double, 2> egoLocation = {
+    _carState.euclideanPose[1],
+    _carState.euclideanPose[2]
+  };
+
+  // TODO:
+  for (size_t i = 0; i < sensorFusions.size(); ++i) {
+    // Sensed info for each car
+  }
+
+  return sensorFusions;
+}
+
+Goal GoalGenerator::GenerateGoal(
+  const BehaviorState &behaviorState,
+  const SensorFusions &sensorFusions,
+  const CarState &carState)
+{
+  static constexpr double distanceToKeep = 30; // in meter
+  static constexpr double timeInterval = 0.02;
+  static constexpr double speedLimit = 49.5; // MPH
+
+  // Target speed is based on the previous behavior speed, not the current car speed.
+  double targetSpeed = speedLimit;
+  int targetLaneId = carState.lane.id;
+
+  const double currS = carState.frenetPose[0];
+  const double currD = carState.frenetPose[1];
+
+  // Expected S value of the car if the previous trajectory are executed
+  double expectedS = currS;
+
+  double closestCarSpeed = std::numeric_limits<double>::quiet_NaN();
+  double closestCarS = std::numeric_limits<double>::max();
+
+  bool tooClose = false;
+
+  for (size_t i = 0; i < sensorFusions.size(); ++i) {
+    // Sensed info for each car
+    const double &speed = sensorFusions[i].speed;
+    // Predict where the car will be in the future
+    const double s = sensorFusions[i].frenetPose[0];
+    // + static_cast<double>(prevPath.size()) * timeInterval * speed / 2.24;
+    const double &d = sensorFusions[i].frenetPose[1];
+    // If the the other car is in the same lane
+    // TODO: Replace the range with continous d values to prevent accident
+    if ((_map.road.GetLaneCenterDValue(targetLaneId - 1) < d) and
+        d < (_map.road.GetLaneCenterDValue(targetLaneId + 1))) {
+
+      double distance = s - expectedS;
+
+      if (distance > 0 and distance < 10) {
+        targetSpeed = speed;
+        break;
+      }
+
+      if (distance > 0 and distance < distanceToKeep) {
+        if (s < closestCarS) {
+          closestCarS = s;
+          closestCarSpeed = speed;
+        }
+      }
+    }
+  }
+
+  static constexpr double acc = 0.224;  // ~5 meters / second^2
+  if (!std::isnan(closestCarSpeed)) {
+    targetSpeed -= acc;
+  } else if (targetSpeed < speedLimit) {
+    targetSpeed += acc;
+  }
+
+  targetSpeed = std::min(targetSpeed, speedLimit); // Speed limit
+
+  return Goal(targetSpeed, targetLaneId);
+}
+
 
 Path GeneratePath(const CarState &carState) {
   // The time difference between each path point in the project is 0.02 seconds,
@@ -96,91 +176,22 @@ Path GeneratePath(const CarState &carState, const NaviMap &naviMap) {
   return path;
 }
 
-double ComputeTargetSpeed(
-  const Behavior &currBehavior,
-  const CarState &currCarState,
-  const Path &prevPath,
-  const NaviMap &naviMap,
-  const SensorFusions &sensorFusions,
-  const std::array<double, 2> &endPathFrenetPose,
-  const int targetLaneId)
-{
-  constexpr double distanceToKeep = 30; // in meter
-  constexpr double timeInterval = 0.02;
-  constexpr double speedLimit = 49.5; // MPH
-
-  // Target speed is based on the previous behavior speed, not the current car speed.
-  double targetSpeed = currBehavior.targetSpeed;
-
-  const double currS = currCarState.frenetPose[0];
-  const double currD = currCarState.frenetPose[1];
-
-  // Expected S value of the car if the previous trajectory are executed
-  double expectedS = currS;
-
-  if (prevPath.size() > 0) {
-    expectedS = endPathFrenetPose[0];
-  }
-
-  double closestCarSpeed = std::numeric_limits<double>::quiet_NaN();
-  double closestCarS = std::numeric_limits<double>::max();
-
-  bool tooClose = false;
-
-  for (size_t i = 0; i < sensorFusions.size(); ++i) {
-    // Sensed info for each car
-    const double &speed = sensorFusions[i].speed;
-    // Predict where the car will be in the future
-    const double s = sensorFusions[i].frenetPose[0] + static_cast<double>(prevPath.size()) * timeInterval * speed / 2.24;
-    const double &d = sensorFusions[i].frenetPose[1];
-    // If the the other car is in the same lane
-    // TODO: Replace the range with continous d values to prevent accident
-    if ((naviMap.road.GetLaneCenterDValue(targetLaneId - 1) < d) and
-        d < (naviMap.road.GetLaneCenterDValue(targetLaneId + 1))) {
-
-      double distance = s - expectedS;
-
-      if (distance > 0 and distance < 10) {
-        targetSpeed = speed;
-        return targetSpeed;
-      }
-
-      if (distance > 0 and distance < distanceToKeep) {
-        if (s < closestCarS) {
-          closestCarS = s;
-          closestCarSpeed = speed;
-        }
-      }
-    }
-  }
-
-  constexpr double acc = 0.224;  // ~5 meters / second^2
-  if (!std::isnan(closestCarSpeed)) {
-    targetSpeed -= acc;
-  } else if (targetSpeed < speedLimit) {
-    targetSpeed += acc;
-  }
-
-  return std::min(targetSpeed, speedLimit); // Speed limit
-}
 
 /**
  * Generate a spline fitting in vehicle's local frame
  */
-Path _GeneratePath(
-  const CarState &carState,
-  const NaviMap &naviMap,
-  const std::array<double, 2> &endPathFrenetPose,
-  const Path &prevPath,
+Path PathPlanner::_GeneratePath(
   const double targetDValue,
   const double targetSValue,
   const double speedReference
 )
 {
+  cout << boost::format("_GeneratePath: targetDValue=%.3f, targetSValue=%.3f, speedReference=%.3f\n")
+    % targetDValue % targetSValue % speedReference;
 
-  const double &currCarYaw = carState.euclideanPose[0];
-  const double &currCarX = carState.euclideanPose[1];
-  const double &currCarY = carState.euclideanPose[2];
+  const double &currCarYaw = _carState.euclideanPose[0];
+  const double &currCarX = _carState.euclideanPose[1];
+  const double &currCarY = _carState.euclideanPose[2];
 
   Path splineAnchorPoints;
 
@@ -189,47 +200,58 @@ Path _GeneratePath(
   std::array<double, 3> newTrajectoryRefenencePose;
 
   // If previous path is empty, use current car pose as starting reference pose
-  newTrajectoryRefenencePose = carState.euclideanPose;
+  newTrajectoryRefenencePose = _carState.euclideanPose;
+  if (_prevPath.size() < 1) {
+    // Since there is no previous trajectory left,
+    // use artificial previous car state
+    double prevCarX = currCarX - std::cos(currCarYaw);  // in radians
+    double prevCarY = currCarY - std::sin(currCarYaw);  // in radians
 
-  // Since there is no previous trajectory left,
-  // use artificial previous car state
-  double prevCarX = currCarX - std::cos(currCarYaw);  // in radians
-  double prevCarY = currCarY - std::sin(currCarYaw);  // in radians
+    splineAnchorPoints.push_back({prevCarX, prevCarY});
+    splineAnchorPoints.push_back({currCarX, currCarY});
+  } else {
+    auto point1 = _prevPath[_prevPath.size() - 2];
+    auto point2 = _prevPath[_prevPath.size() - 1];
+    splineAnchorPoints.push_back(point1);
+    splineAnchorPoints.push_back(point2);
+    newTrajectoryRefenencePose = {
+      std::atan2(
+        point2[1] - point1[1],
+        point2[0] - point1[0]
+      ),
+      point2[0],
+      point2[1]
+    };
+  }
 
-  splineAnchorPoints.push_back({prevCarX, prevCarY});
-  splineAnchorPoints.push_back({currCarX, currCarY});
-
-  const std::vector<double> carPositionInFrenet = getFrenet(
-    currCarX,
-    currCarY,
-    currCarYaw,
-    naviMap.x,
-    naviMap.y
-  );
+  // PrintPath(splineAnchorPoints);
 
   constexpr int numAnchorPoints = 5;
   const double deltaS = targetSValue / static_cast<double>(numAnchorPoints);
   std::vector<double> targetSValueDeltas(numAnchorPoints); // in meter
   for (int i = 0; i < numAnchorPoints; ++i) {
-    targetSValueDeltas.push_back(deltaS * (i + 1));
+    targetSValueDeltas[i] = deltaS * (i + 1);
   }
 
   // expectedEndS is for attaching the newly planned points to the previous path
-  double expectedEndS = carState.frenetPose[0];
-  if (prevPath.size() > 0) {
-    expectedEndS = endPathFrenetPose[0];
-  }
+  std::vector<double> expectedFrenetPoseEndPath = getFrenet(
+    newTrajectoryRefenencePose[1],
+    newTrajectoryRefenencePose[2],
+    newTrajectoryRefenencePose[0],
+    _map.x, _map.y);
 
   for (double targetSValueDelta : targetSValueDeltas) {
-    std::vector<double> xy = getXY(
-      expectedEndS + targetSValueDelta,
+    std::vector<double> loc = getXY(
+      expectedFrenetPoseEndPath[0] + targetSValueDelta,
       targetDValue,
-      naviMap.s,
-      naviMap.x,
-      naviMap.y
+      _map.s,
+      _map.x,
+      _map.y
     );
-    splineAnchorPoints.push_back({xy[0], xy[1]});
+    splineAnchorPoints.push_back({loc[0], loc[1]});
   }
+
+  PrintPath(splineAnchorPoints);
 
   // NOTE: Shift the car reference angle to 0 degree
   // Transform the anchor points to car local frame
@@ -251,8 +273,8 @@ Path _GeneratePath(
   Path newPath;
 
   // Start with all often previous path points from last time
-  if (prevPath.size() > 0) {
-    std::copy(prevPath.begin(), prevPath.end(), std::back_inserter(newPath));
+  if (_prevPath.size() > 0) {
+    std::copy(_prevPath.begin(), _prevPath.end(), std::back_inserter(newPath));
   }
 
   // Calculate how to break up spline points so that we travel at our desired
@@ -261,8 +283,8 @@ Path _GeneratePath(
   const double targetY = splineFn(targetX);
   const double targetDist = std::sqrt(targetX * targetX + targetY * targetY);
 
-  constexpr size_t totalNumPoints = 50;
-  constexpr double timeInterval = 0.02; // seconds
+  static constexpr size_t totalNumPoints = 50;
+  static constexpr double timeInterval = 0.02; // seconds
 
   // TODO: Move
   // fill up the rest of our path planner after filling it with previous points,
@@ -274,8 +296,9 @@ Path _GeneratePath(
 
   double x = 0.0;
   double y = 0.0;
-  const size_t numPointsNeedsToBeGenerated = totalNumPoints - prevPath.size();
+  const size_t numPointsNeedsToBeGenerated = totalNumPoints - _prevPath.size();
 
+  cout << "Generating numPointsNeedsToBeGenerated=" << numPointsNeedsToBeGenerated << endl;
   for (size_t i = 0; i < numPointsNeedsToBeGenerated; ++i) {
     // Break the target distance into N pieces
     // interpolate the hypothenous to be a curve (instead of the straight line)
@@ -288,83 +311,10 @@ Path _GeneratePath(
 
     newPath.push_back(newPathPoint);
   }
+
+  PrintPath(newPath);
+
   return newPath;
-}
-
-Path _GenerateLaneChangingPath(
-  int targetLaneId,
-  const Behavior &currBehavior,
-  const CarState &carState,
-  const Path &prevPath,
-  const NaviMap &naviMap,
-  const std::array<double, 2> &endPathFrenetPose,
-  int numPreservedWaypoints
-)
-{
-  // Generate lane changing path
-  const double changingDirection = targetLaneId - currBehavior.lane.id;  // changeingDirection will be one of [-1, 0, 1]
-  const double targetDValue = changingDirection * 2.0; // half of lane width
-  const double targetSValue = 30; // meters
-  return _GeneratePath(
-    carState,
-    naviMap,
-    endPathFrenetPose,
-    prevPath,
-    targetDValue,
-    targetSValue,
-    currBehavior.targetSpeed
-  );
-}
-
-Path _GenerateLaneKeepingPath(
-  const Behavior &currBehavior,
-  const double targetSpeed,
-  const CarState &carState,
-  const Path &prevPath,
-  const NaviMap &naviMap,
-  const std::array<double, 2> &endPathFrenetPose,
-  int numPreservedWaypoints
-)
-{
-  const double targetSValue = 90; // meters
-  const double targetLaneId = naviMap.road.GetLandId(carState.frenetPose[1]);
-  const double targetDValue = naviMap.road.GetLaneCenterDValue(targetLaneId);
-
-  return _GeneratePath(
-    carState,
-    naviMap,
-    endPathFrenetPose,
-    prevPath,
-    targetDValue,
-    targetSValue,
-    targetSpeed
-  );
-}
-
-Path _GenerateLaneChangingPreparationPath(
-  int targetLaneId,
-  const Behavior &currBehavior,
-  const CarState &carState,
-  const Path &prevPath,
-  const NaviMap &naviMap,
-  const std::array<double, 2> &endPathFrenetPose,
-  int numPreservedWaypoints
-)
-{
-  const double targetSValue = 90; // meters
-  const double changingDirection = targetLaneId - currBehavior.lane.id;  // changeingDirection will be one of [-1, 0, 1]
-  const double dValueDelta = 0.5; // meters, offset the car to be closer to the target lane
-  const double targetDValue
-    = naviMap.road.GetLaneCenterDValue(targetLaneId) + changingDirection * dValueDelta;
-  return _GeneratePath(
-    carState,
-    naviMap,
-    endPathFrenetPose,
-    prevPath,
-    targetDValue,
-    targetSValue,
-    currBehavior.targetSpeed
-  );
 }
 
 int _GetLaneId(int currLaneId, const std::string &direction) {
@@ -377,77 +327,15 @@ int _GetLaneId(int currLaneId, const std::string &direction) {
   return -1;
 }
 
-
-Path GeneratePath(
-  const BehaviorState nextBehaviorState,
-  const double targetSpeed,
-  const Behavior &currBehavior,
-  const CarState &carState,
-  const Path &prevPath,
-  const NaviMap &naviMap,
-  const std::array<double, 2> &endPathFrenetPose,
-  int numPreservedWaypoints
-)
+Path PathPlanner::GeneratePath(const Goal &goal, const Behavior &currBehavior)
 {
+  double targetSpeed = goal.speed;
   int targetLaneId = currBehavior.lane.id;
-  switch (nextBehaviorState) {
-    case BehaviorState::kLaneKeeping:
-      return _GenerateLaneKeepingPath(
-        currBehavior,
-        targetSpeed,
-        carState,
-        prevPath,
-        naviMap,
-        endPathFrenetPose,
-        numPreservedWaypoints);
 
-    case BehaviorState::kLeftLaneChangePreparation:
-      targetLaneId = _GetLaneId(currBehavior.lane.id, "left");
-      return _GenerateLaneChangingPreparationPath(
-        targetLaneId,
-        currBehavior,
-        carState,
-        prevPath,
-        naviMap,
-        endPathFrenetPose,
-        numPreservedWaypoints);
+  double targetDValue = _map.road.GetLaneCenterDValue(currBehavior.lane.id);
+  double targetSValue = 90.0;
 
-    case BehaviorState::kLeftLaneChange:
-      targetLaneId = _GetLaneId(currBehavior.lane.id, "left");
-      return _GenerateLaneChangingPath(
-        targetLaneId,
-        currBehavior,
-        carState,
-        prevPath,
-        naviMap,
-        endPathFrenetPose,
-        numPreservedWaypoints);
-
-    case BehaviorState::kRightLaneChangePreparation:
-      targetLaneId = _GetLaneId(currBehavior.lane.id, "right");
-      return _GenerateLaneChangingPreparationPath(
-        targetLaneId,
-        currBehavior,
-        carState,
-        prevPath,
-        naviMap,
-        endPathFrenetPose,
-        numPreservedWaypoints);
-
-    case BehaviorState::kRightLaneChange:
-      targetLaneId = _GetLaneId(currBehavior.lane.id, "right");
-      return _GenerateLaneChangingPath(
-        targetLaneId,
-        currBehavior,
-        carState,
-        prevPath,
-        naviMap,
-        endPathFrenetPose,
-        numPreservedWaypoints);
-
-    default:
-      return Path();
-  }
+  return _GeneratePath(targetDValue, targetSValue, targetSpeed);
 }
 
 } // namespace pathplanning

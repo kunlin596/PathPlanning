@@ -59,12 +59,15 @@ int main() {
   // Speed reference for navidation, initial value is the initial speed,
   // will be updated over time, unit is in mile (simulator is using this unit, Orz).
   Behavior currBehavior(naviMap.road.lanes[1], 0.0, BehaviorState::kLaneKeeping);
-  BehaviorPlanner behaviorPlanner;
+
+  BehaviorPlanner behaviorPlanner(naviMap);
+  GoalGenerator goalGenerator(naviMap);
+  PathPlanner pathPlanner(naviMap);
 
   // Main event loop callback when we receive something from the simulator.
   // These parameters are specific to uWS communication.
   h.onMessage(
-    [&naviMap, &currBehavior, &behaviorPlanner] (
+    [&naviMap, &currBehavior, &behaviorPlanner, &goalGenerator, &pathPlanner] (
       uWS::WebSocket<uWS::SERVER> ws,
       char *data,
       size_t length,
@@ -95,18 +98,22 @@ int main() {
             {j[1]["s"], j[1]["d"]},
             j[1]["speed"]
           );
-          // BOOST_LOG_TRIVIAL(info) << currCarState;
+
+          cout << currCarState << endl;
  
           // Previous path data given to the Planner
           Path prevPath = ConvertXYToPath(
             j[1]["previous_path_x"],
             j[1]["previous_path_y"]
           );
+          cout << prevPath << endl;
 
           const size_t prevPathSize = prevPath.size();
 
+          pathPlanner.UpdatePathCache(prevPath);
+
           // Previous path's end s and d values
-          std::array<double, 2> endPathFrenetPose = {
+          const std::array<double, 2> endPathFrenetPose = {
             j[1]["end_path_s"],
             j[1]["end_path_d"]
           };
@@ -115,57 +122,30 @@ int main() {
           //   of the road.
           SensorFusions sensorFusions = SensorFusion::Read(j[1]["sensor_fusion"]);
 
+          pathPlanner.UpdateCarState(currCarState);
+
+          //
+          // Main path generation loop
+          //
+
           std::vector<BehaviorState> possibleStates
             = behaviorPlanner.GetSuccessorStates(currBehavior.state, currBehavior.lane.id);
 
-          std::cout << "Current state: " << currBehavior.state << ", possible next states: ";
-          for (auto state : possibleStates) {
-            std::cout << state << " ";
-          }
-          std::cout << std::endl;
-
-          // Cache of generated path cache, and its cost.
           std::vector<std::pair<Path, double>> pathCache;
-
-          double targetSpeed = ComputeTargetSpeed(
-            currBehavior,
-            currCarState,
-            prevPath,
-            naviMap,
-            sensorFusions,
-            endPathFrenetPose,
-            currBehavior.lane.id);
-
-          for (const BehaviorState &candidateBehaviorState : possibleStates) {
-            // NOTE: Goal generation is embeded inside path generator
-            // since the goal of this project is just to keep the car running
-            std::cout << "Generating candidate path for behavior=" << candidateBehaviorState << std::endl;
-
-            Path newPath = GeneratePath(
-              candidateBehaviorState,
-              targetSpeed,
-              currBehavior,
-              currCarState,
-              prevPath,
-              naviMap,
-              endPathFrenetPose,
-              2
-            );
-
-            // double score = EvaluatePath(
-            //   newPath,
-            //   currvBehavior,
-            //   sensorFusions
-            // );
-            pathCache.push_back({newPath, 1.0});
+          for (const auto &candidateBehaviorState : possibleStates) {
+            Goal goal = goalGenerator.GenerateGoal(candidateBehaviorState, sensorFusions, currCarState);
+            cout << "goal=" << goal << endl;
+            Path candidatePath = pathPlanner.GeneratePath(goal, currBehavior);
+            double score = pathPlanner.EvaluatePath();
+            pathCache.push_back({candidatePath, score});
           }
 
           decltype(pathCache)::iterator bestPathItr = std::min_element(
             pathCache.begin(), pathCache.end(),
             [] (const std::pair<Path, double> &e1, const std::pair<Path, double> &e2) {
               return e1.second > e2.second;
-            }
-          );
+            });
+
           size_t bestIndex = std::distance(pathCache.begin(), bestPathItr);
           Path newPath = pathCache[bestIndex].first;
 

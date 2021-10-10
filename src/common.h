@@ -12,6 +12,19 @@ namespace pathplanning {
 /// Data Structures
 ///
 
+using std::cout;
+using std::endl;
+
+struct Goal {
+  Goal(double speed, int laneId)
+    : speed(speed)
+    , laneId(laneId) {}
+
+  double speed;
+  int laneId;
+};
+
+
 struct SensorFusion {
   std::array<double, 2> velocity; ///< vector
   double speed; ///< magnitude of velocity, meters/s
@@ -101,7 +114,9 @@ enum class BehaviorState : uint8_t {
 struct Behavior {
   Lane lane;
   double targetSpeed;
-  BehaviorState state;
+  BehaviorState state = BehaviorState::kLaneKeeping;
+
+  Behavior() {};
 
   Behavior(
     Lane lane,
@@ -119,6 +134,8 @@ struct CarState {
   std::array<double, 3> euclideanPose; ///< theta, x, y 
   std::array<double, 2> frenetPose; ///< s, d
   double speed; ///< car speed, in MPH
+
+  CarState() {}
 
   CarState(
     const std::array<double, 3> &euclideanPose,
@@ -186,6 +203,11 @@ inline std::ostream& operator<< (std::ostream &out, const pathplanning::Behavior
   // FIXME: There are some name looking issue where the overloaded operator cannot be found and resolved in compilation error.
   out << boost::format("Behavior=(laneId=%d, targetSpeed=%.3f)")
     % behavior.lane.id % behavior.targetSpeed;
+  return out;
+}
+
+inline std::ostream& operator<< (std::ostream &out, const pathplanning::Goal &goal) {
+  out << boost::format("Goal(speed=%.3f, laneId=%d)") % goal.speed % goal.laneId;
   return out;
 }
 
