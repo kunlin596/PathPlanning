@@ -123,15 +123,9 @@ int main() {
           // Group sensor fusion results per lane;
           std::vector<SensorFusions> laneSensorFusions(3);
           for (const SensorFusion &sensorFusion : sensorFusions) {
-            const double d = sensorFusion.frenetPose[1];
-            if (0.0 <= d and d < 4.0) {
-              laneSensorFusions[0].push_back(sensorFusion);
-            }
-            else if (4.0 <= d and d < 8.0) {
-              laneSensorFusions[1].push_back(sensorFusion);
-            }
-            else if (8.0 <= d and d < 12.0) {
-              laneSensorFusions[2].push_back(sensorFusion);
+            const int laneId = naviMap.road.GetLandId(sensorFusion.frenetPose[1]);
+            if (laneId >= 0) {
+              laneSensorFusions[laneId].push_back(sensorFusion);
             }
           }
 

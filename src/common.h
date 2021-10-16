@@ -67,10 +67,10 @@ struct Lane {
 struct Road {
   std::vector<Lane> lanes;
 
-  int GetLandId(const double d) const {
+  int GetLandId(const double d, double tolerance = 0.5) const {
     for (const auto &lane : lanes) {
-      if ((lane.id * Lane::kWidth - Lane::kWidth / 2.0) < d and
-           d < (lane.id * Lane::kWidth + Lane::kWidth / 2.0)) {
+      if ((lane.id * Lane::kWidth - Lane::kWidth / 2.0 + tolerance) < d and
+           d < (lane.id * Lane::kWidth + Lane::kWidth / 2.0 - tolerance)) {
         return lane.id;
       }
     }
