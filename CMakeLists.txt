@@ -22,6 +22,7 @@ add_library(
   SHARED
   src/path.cpp
   src/jmt.cpp
+  src/ptg.cpp
   src/perception.cpp
   src/behaviorplanner.cpp
   src/map.cpp
