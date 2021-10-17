@@ -12,7 +12,7 @@ struct QuinticFunction {
   explicit QuinticFunction(const std::array<double, 6>& coeffs)
       : coeffs(coeffs) {}
 
-  inline double Eval(const double x) {
+  inline double Eval(const double x) const {
     double item = 1.0;
     double result = 0.0;
     for (size_t i = 0; i < 6; ++i) {
@@ -34,9 +34,12 @@ class SDWaypointFunction {
                               const QuinticFunction& dFunc)
       : _sFunc(sFunc), _dFunc(dFunc) {}
 
-  std::array<double, 2> Eval(const double x) {
-    return { _sFunc.Eval(x), _dFunc.Eval(x) };
+  std::array<double, 2> Eval(const double x) const {
+    return {_sFunc.Eval(x), _dFunc.Eval(x)};
   }
+
+  const QuinticFunction& GetSFunc() const { return _sFunc; }
+  const QuinticFunction& GetDFunc() const { return _dFunc; }
 
  private:
   QuinticFunction _sFunc;
