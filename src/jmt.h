@@ -23,6 +23,14 @@ struct PolynomialFunctor {
     return result;
   }
 
+  PolynomialFunctor<Order - 1> Differentiate() {
+    std::array<double, Order - 1> newCoeffs;
+    for (size_t i = 0; i < coeffs.size() - 1; ++i) {
+      newCoeffs[i] = coeffs[i + 1] * (i + 1);
+    }
+    return PolynomialFunctor<Order - 1>(newCoeffs);
+  }
+
   double operator()(const double x) const { return Eval(x); }
 
   std::array<double, Order + 1> coeffs;
