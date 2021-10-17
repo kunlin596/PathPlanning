@@ -2,7 +2,7 @@ project(Path_Planning)
 
 cmake_minimum_required (VERSION 3.5)
 
-add_definitions(-std=c++2a)
+add_definitions(-std=c++17)
 
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
@@ -21,6 +21,7 @@ add_library(
   driving
   SHARED
   src/path.cpp
+  src/jmt.cpp
   src/perception.cpp
   src/behaviorplanner.cpp
   src/map.cpp

@@ -23,7 +23,7 @@ void PerceptionManager::Update(
   // This is OK because it's simulation and the sensor measurements are assumed
   // to be perfect.
   for (const auto &curId : curIds) {
-    if (not newIds.contains(curId)) {
+    if (newIds.count(curId) == 0) {
       _perceptions.erase(curId);
     }
   }
