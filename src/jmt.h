@@ -8,42 +8,48 @@ namespace pathplanning {
 /**
  * @brief      5th order polynomial
  */
-struct QuinticFunction {
-  explicit QuinticFunction(const std::array<double, 6>& coeffs)
+template <uint32_t Order>
+struct PolynomialFunctor {
+  explicit PolynomialFunctor(const std::array<double, Order + 1>& coeffs)
       : coeffs(coeffs) {}
 
   inline double Eval(const double x) const {
     double item = 1.0;
     double result = 0.0;
-    for (size_t i = 0; i < 6; ++i) {
+    for (size_t i = 0; i < Order + 1; ++i) {
       result += coeffs[i] * item;
       item *= x;
     }
     return result;
   }
 
-  std::array<double, 6> coeffs;
+  double operator()(const double x) const { return Eval(x); }
+
+  std::array<double, Order + 1> coeffs;
 };
+
+using QuinticFunctor = PolynomialFunctor<5>;
 
 /**
  * @brief      This class describes a sd waypoint function.
  */
-class SDWaypointFunction {
+class SDFunctor {
  public:
-  explicit SDWaypointFunction(const QuinticFunction& sFunc,
-                              const QuinticFunction& dFunc)
+  explicit SDFunctor(const QuinticFunctor& sFunc, const QuinticFunctor& dFunc)
       : _sFunc(sFunc), _dFunc(dFunc) {}
 
   std::array<double, 2> Eval(const double x) const {
-    return {_sFunc.Eval(x), _dFunc.Eval(x)};
+    return {_sFunc(x), _dFunc(x)};
   }
 
-  const QuinticFunction& GetSFunc() const { return _sFunc; }
-  const QuinticFunction& GetDFunc() const { return _dFunc; }
+  std::array<double, 2> operator()(const double x) { return Eval(x); }
+
+  const QuinticFunctor& GetSFunc() const { return _sFunc; }
+  const QuinticFunctor& GetDFunc() const { return _dFunc; }
 
  private:
-  QuinticFunction _sFunc;
-  QuinticFunction _dFunc;
+  QuinticFunctor _sFunc;
+  QuinticFunctor _dFunc;
 };
 
 /**
@@ -104,7 +110,7 @@ class SDWaypointFunction {
  */
 struct JMT {
   /**
-   * @brief      Compute a SDWaypointFunction
+   * @brief      Compute a SDFunctor
    *
    * S paramerers, [s(i), s'(i), s"(i), s(f), s'(f), * s"(f)]
    * D parameters, [d(i), d'(i), d"(i), d(f), d'(f), * d"(f)]
@@ -115,12 +121,12 @@ struct JMT {
    *
    * @return     The sd waypoint function.
    */
-  static SDWaypointFunction Solve2D(const std::array<double, 6>& sParams,
-                                    const std::array<double, 6>& dParams,
-                                    const double t);
+  static SDFunctor Solve2D(const std::array<double, 6>& sParams,
+                           const std::array<double, 6>& dParams,
+                           const double t);
 
-  static QuinticFunction Solve1D(const std::array<double, 6>& params,
-                                 const double t);
+  static QuinticFunctor Solve1D(const std::array<double, 6>& params,
+                                const double t);
 };
 
 }  // namespace pathplanning

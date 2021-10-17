@@ -4,7 +4,7 @@
 
 namespace pathplanning {
 
-QuinticFunction JMT::Solve1D(const std::array<double, 6> &params,
+QuinticFunctor JMT::Solve1D(const std::array<double, 6> &params,
                              const double t) {
   std::array<double, 6> coeffs;
   Eigen::Matrix3d A;
@@ -29,13 +29,13 @@ QuinticFunction JMT::Solve1D(const std::array<double, 6> &params,
   coeffs[3] = x[0];
   coeffs[4] = x[1];
   coeffs[5] = x[2];
-  return QuinticFunction(coeffs);
+  return QuinticFunctor(coeffs);
 }
 
-SDWaypointFunction JMT::Solve2D(const std::array<double, 6> &sParams,
+SDFunctor JMT::Solve2D(const std::array<double, 6> &sParams,
                                 const std::array<double, 6> &dParams,
                                 const double t) {
-  return SDWaypointFunction(JMT::Solve1D(sParams, t), JMT::Solve1D(dParams, t));
+  return SDFunctor(JMT::Solve1D(sParams, t), JMT::Solve1D(dParams, t));
 }
 
 }  // namespace pathplanning

@@ -21,11 +21,11 @@ Waypoints PolynomialTrajectoryGenerator::Generate(
     std::array<double, 6> dParamsSampled = dParams;
     sParamsSampled[3] = sSampler(gen);
     dParamsSampled[3] = dSampler(gen);
-    SDWaypointFunction func = JMT::Solve2D(sParamsSampled, dParamsSampled, t);
+    SDFunctor func = JMT::Solve2D(sParamsSampled, dParamsSampled, t);
     size_t numPoints = static_cast<size_t>(t / _options.timeStep);
     Waypoints waypoints(numPoints);
     for (size_t j = 0; j < numPoints; ++i) {
-      waypoints[j] = func.Eval(_options.timeStep * j);
+      waypoints[j] = func(_options.timeStep * j);
     }
     // TODO: Validate the path
     bestWaypoints = waypoints;
