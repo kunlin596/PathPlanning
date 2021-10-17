@@ -23,7 +23,7 @@ struct PolynomialFunctor {
     return result;
   }
 
-  PolynomialFunctor<Order - 1> Differentiate() {
+  inline PolynomialFunctor<Order - 1> Differentiate() {
     std::array<double, Order - 1> newCoeffs;
     for (size_t i = 0; i < coeffs.size() - 1; ++i) {
       newCoeffs[i] = coeffs[i + 1] * (i + 1);
@@ -58,6 +58,14 @@ class SDFunctor {
  private:
   QuinticFunctor _sFunc;
   QuinticFunctor _dFunc;
+};
+
+struct JMTTrajectory {
+  SDFunctor sdFunc;
+  double t;
+
+  explicit JMTTrajectory(const SDFunctor& sdFunc, const double t)
+      : sdFunc(sdFunc), t(t) {}
 };
 
 /**
@@ -117,6 +125,9 @@ class SDFunctor {
  *
  */
 struct JMT {
+  static QuinticFunctor Solve1D(const std::array<double, 6>& params,
+                                const double t);
+
   /**
    * @brief      Compute a SDFunctor
    *
@@ -133,8 +144,9 @@ struct JMT {
                            const std::array<double, 6>& dParams,
                            const double t);
 
-  static QuinticFunctor Solve1D(const std::array<double, 6>& params,
-                                const double t);
+  static JMTTrajectory ComputeTrajectory(const std::array<double, 6>& sParams,
+                                         const std::array<double, 6>& dParams,
+                                         const double t);
 };
 
 }  // namespace pathplanning
