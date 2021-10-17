@@ -2,7 +2,8 @@
 
 namespace pathplanning {
 
-void PerceptionManager::Update(const std::vector<std::vector<double>> &rawdata) {
+void PerceptionManager::Update(
+    const std::vector<std::vector<double>> &rawdata) {
   _perceptions.clear();
   for (size_t i = 0; i < rawdata.size(); ++i) {
     const std::vector<double> &perception = rawdata[i];
