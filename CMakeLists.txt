@@ -17,12 +17,14 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     link_directories(/usr/local/Cellar/libuv/1.11.0/lib)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
-
 add_library(
   driving
   SHARED
   src/path.cpp
-  src/map.cpp)
+  src/perception.cpp
+  src/map.cpp
+  src/system.cpp
+)
 
 # set(sources src/helpers.cpp src/pathplanner.cpp src/behaviorplanner.cpp src/main.cpp)
 # add_executable(path_planning ${sources})

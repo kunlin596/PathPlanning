@@ -1,0 +1,34 @@
+#ifndef PATHPLANNING_PERCEPTION_H
+#define PATHPLANNING_PERCEPTION_H
+
+#include <vector>
+#include <array>
+#include <cmath>
+
+namespace pathplanning {
+
+struct Perception {
+  int id;
+  std::array<double, 2> xy;
+  std::array<double, 2> vel;
+  std::array<double, 2> frenet;
+  double speed;
+
+  Perception(int id, double x, double y, double vx, double vy, double s,
+             double d)
+      : id(id), xy({x, y}), vel({vx, vy}), frenet({s, d}) {
+    speed = std::sqrt(vel[0] * vel[0] + vel[1] * vel[1]);
+  }
+};
+
+class PerceptionManager {
+ public:
+  void Update(const std::vector<std::vector<double>> &rawdata);
+
+ private:
+  std::vector<Perception> _perceptions;
+};
+
+}  // namespace pathplanning
+
+#endif

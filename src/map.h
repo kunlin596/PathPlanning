@@ -9,6 +9,9 @@
 
 namespace pathplanning {
 
+/**
+ * @brief      This class describes a map for navigation.
+ */
 class Map {
 public:
   // Calculate closest waypoint to current x, y position
@@ -30,6 +33,8 @@ public:
   }
 
   void Read(const std::string &filename);
+
+  static constexpr double MaxS = 6945.554;
 
 private:
   std::vector<double> _x;
