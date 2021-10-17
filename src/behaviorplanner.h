@@ -47,6 +47,8 @@ class BehaviorPlanner {
  public:
   BehaviorPlanner(const Map &map) : _map(map) {}
 
+  std::vector<BehaviorState> GetSuccessorStates(const BehaviorState &state);
+
  private:
   const Map &_map;
 };
