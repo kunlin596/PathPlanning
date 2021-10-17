@@ -11,12 +11,12 @@ struct Perception {
   int id;
   std::array<double, 2> xy;
   std::array<double, 2> vel;
-  std::array<double, 2> frenet;
+  std::array<double, 2> sd;
   double speed;
 
   Perception(int id, double x, double y, double vx, double vy, double s,
              double d)
-      : id(id), xy({x, y}), vel({vx, vy}), frenet({s, d}) {
+      : id(id), xy({x, y}), vel({vx, vy}), sd({s, d}) {
     speed = std::sqrt(vel[0] * vel[0] + vel[1] * vel[1]);
   }
 };

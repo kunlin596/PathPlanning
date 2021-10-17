@@ -67,7 +67,7 @@ int Map::GetNextWaypoint(double x, double y, double theta) {
   return closestWaypointIndex;
 }
 
-std::array<double, 2> Map::GetFrenet(double x, double y, double theta) {
+std::array<double, 2> Map::GetSD(double x, double y, double theta) {
   int nextWaypointIndex = GetNextWaypoint(x, y, theta);
   int prevWaypointIndex = nextWaypointIndex - 1;
 

@@ -21,7 +21,7 @@ public:
   int GetNextWaypoint(double x, double y, double theta);
 
   // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-  std::array<double, 2> GetFrenet(double x, double y, double theta);
+  std::array<double, 2> GetSD(double x, double y, double theta);
 
   // Transform from Frenet s,d coordinates to Cartesian x,y
   std::array<double, 2> GetXY(double s, double d);
