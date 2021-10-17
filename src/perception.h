@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <array>
+#include <map>
 #include <cmath>
 
 namespace pathplanning {
@@ -23,10 +24,16 @@ struct Perception {
 
 class PerceptionManager {
  public:
+
+  /**
+   * @brief      Update perceptions caches
+   *
+   * @param[in]  rawdata  The rawdata
+   */
   void Update(const std::vector<std::vector<double>> &rawdata);
 
  private:
-  std::vector<Perception> _perceptions;
+  std::map<int, std::vector<Perception>> _perceptions;
 };
 
 }  // namespace pathplanning

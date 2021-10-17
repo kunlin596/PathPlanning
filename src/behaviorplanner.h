@@ -1,8 +1,9 @@
 #ifndef PATHPLANNING_BEHAVIORPLANNER_H
 #define PATHPLANNING_BEHAVIORPLANNER_H
 
-#include "map.h"
 #include <vector>
+
+#include "map.h"
 
 namespace pathplanning {
 
@@ -59,8 +60,18 @@ enum class BehaviorState : uint8_t {
 class BehaviorPlanner {
  public:
   BehaviorPlanner(const Map &map) : _map(map) {}
+  virtual ~BehaviorPlanner() {}
 
+  /**
+   * @brief      Gets the successor states.
+   *
+   * @param[in]  state  The state
+   *
+   * @return     The successor states.
+   */
   std::vector<BehaviorState> GetSuccessorStates(const BehaviorState &state);
+
+  void ChooseNextState();
 
  private:
   const Map &_map;
