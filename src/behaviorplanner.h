@@ -1,14 +1,27 @@
-#ifndef BEHAVIORPLANNER_H
-#define BEHAVIORPLANNER_H
+#ifndef PATHPLANNING_BEHAVIORPLANNER_H
+#define PATHPLANNING_BEHAVIORPLANNER_H
 
 #include "map.h"
+#include <vector>
 
 namespace pathplanning {
 
 /**
+ * @brief      Collection of cost functions
+ */
+struct CostFunctions {
+  static double GetGoalDistanceCost(int goalLaneId, int intendedLaneId,
+                                    int finalLaneId, double distanceToGoal);
+
+  static double GetInefficiencyCost(int targetSpeed, int intendedLane,
+                                    int finalLaneId,
+                                    const std::vector<double> &laneSpeeds);
+};
+
+/**
  * @brief      Output structure of Behacior planner
  */
-struct Target {
+struct Goal {
   int targetLaneId;
   int targetLeadingVehicleId;
   double targetSpeed;
