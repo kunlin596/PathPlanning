@@ -21,6 +21,7 @@ add_library(
   driving
   SHARED
   src/path.cpp
+  src/prediction.cpp
   src/perception.cpp
   src/map.cpp
   src/system.cpp
