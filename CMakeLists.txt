@@ -23,6 +23,7 @@ add_library(
   src/path.cpp
   src/prediction.cpp
   src/perception.cpp
+  src/behaviorplanner.cpp
   src/map.cpp
   src/system.cpp
 )
