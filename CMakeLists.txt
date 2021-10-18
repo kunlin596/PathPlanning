@@ -21,6 +21,7 @@ add_library(
   driving
   SHARED
   src/path.cpp
+  src/vehicle.cpp
   src/jmt.cpp
   src/ptg.cpp
   src/perception.cpp

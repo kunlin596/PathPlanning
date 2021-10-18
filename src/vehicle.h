@@ -5,35 +5,53 @@
 
 namespace pathplanning {
 
+struct VehicleKinParams {
+  VehicleKinParams() {}
+  VehicleKinParams(double sPos, double sVel, double sAcc, double dPos,
+                   double dVel, double dAcc)
+      : sPos(sPos),
+        sVel(sVel),
+        sAcc(sAcc),
+        dPos(dPos),
+        dVel(dVel),
+        dAcc(dAcc) {}
+  double sPos = 0.0;
+  double sVel = 0.0;
+  double sAcc = 0.0;
+  double dPos = 0.0;
+  double dVel = 0.0;
+  double dAcc = 0.0;
+};
+
 /**
  * @brief      This class describes a non-ego vehicle.
  */
 class Vehicle {
  public:
-  Vehicle(const std::array<double, 6> &startState) : _startState(startState) {}
+  Vehicle(const VehicleKinParams &params) : _params(params) {}
 
-  inline std::array<double, 6> GetStateByTime(const double time) {
-    const double &sPos = _startState[0];
-    const double &sVel = _startState[1];
-    const double &sAcc = _startState[2];
-    const double &dPos = _startState[4];
-    const double &dVel = _startState[5];
-    const double &dAcc = _startState[6];
+  inline VehicleKinParams GetKinematicsByTime(const double time) {
+    const double &sPos = _params.sPos;
+    const double &sVel = _params.sVel;
+    const double &sAcc = _params.sAcc;
+    const double &dPos = _params.dPos;
+    const double &dVel = _params.dVel;
+    const double &dAcc = _params.dAcc;
 
     // clang-format off
-    return {
+    return VehicleKinParams(
         sPos + sVel * time + sAcc * time * time / 2.0,
         sVel + sAcc * time,
         sAcc,
         dPos + dVel * time + dAcc * time * time / 2.0,
         dVel + dAcc * time,
-        dAcc,
-    };
+        dAcc
+    );
     // clang-format on
   }
 
  private:
-  std::array<double, 6> _startState;
+  VehicleKinParams _params;
 };
 
 }  // namespace pathplanning
