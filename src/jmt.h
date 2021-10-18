@@ -15,7 +15,9 @@ namespace pathplanning {
  */
 class SDFunctor {
  public:
-  explicit SDFunctor(const QuinticFunctor& sFunc, const QuinticFunctor& dFunc)
+  SDFunctor() {}
+
+  SDFunctor(const QuinticFunctor& sFunc, const QuinticFunctor& dFunc)
       : _sFunc(sFunc), _dFunc(dFunc) {}
 
   std::array<double, 2> Eval(const double x) const {
@@ -46,9 +48,11 @@ class SDFunctor {
  */
 struct JMTTrajectory {
   SDFunctor sdFunc;
-  double elapsedTime;
+  double elapsedTime = 0.0;
 
-  explicit JMTTrajectory(const SDFunctor& sdFunc, const double elapsedTime)
+  JMTTrajectory() {}
+
+  JMTTrajectory(const SDFunctor& sdFunc, const double elapsedTime)
       : sdFunc(sdFunc), elapsedTime(elapsedTime) {}
 
   inline Waypoint Eval(const double t) { return sdFunc(t); }
@@ -135,6 +139,10 @@ struct JMT {
   static JMTTrajectory ComputeTrajectory(const std::array<double, 6>& sParams,
                                          const std::array<double, 6>& dParams,
                                          const double t);
+
+  static JMTTrajectory ComputeTrajectory(const VehicleConfiguration& start,
+                                         const VehicleConfiguration& end,
+                                         const double t);
 };
 
 /* -------------------------------------------------------------------------- */
@@ -158,15 +166,17 @@ enum class CostType {
 using CostWeightMapping = std::unordered_map<CostType, double>;
 
 struct CostFunctor {
-  virtual double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                         const double delta, const double time,
-                         const std::vector<Vehicle>& predictions) = 0;
+  virtual double Compute(
+      const JMTTrajectory& traj, const int targetVehicleId, const double delta,
+      const double time,
+      const std::unordered_map<int, Vehicle>& perceptions) = 0;
+  virtual ~CostFunctor() {}
 };
 
 struct TimeDiffCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     return Logistic(static_cast<double>(std::abs(traj.elapsedTime - time)) /
                     time);
   }
@@ -175,7 +185,7 @@ struct TimeDiffCost : public CostFunctor {
 struct SDiffCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -184,7 +194,7 @@ struct SDiffCost : public CostFunctor {
 struct DDiffCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -193,7 +203,7 @@ struct DDiffCost : public CostFunctor {
 struct CollisionCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -202,7 +212,7 @@ struct CollisionCost : public CostFunctor {
 struct BufferCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -211,7 +221,7 @@ struct BufferCost : public CostFunctor {
 struct StaysOnRoadCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -220,7 +230,7 @@ struct StaysOnRoadCost : public CostFunctor {
 struct ExceedsSpeedLimitCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -229,7 +239,7 @@ struct ExceedsSpeedLimitCost : public CostFunctor {
 struct EfficiencyCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -238,7 +248,7 @@ struct EfficiencyCost : public CostFunctor {
 struct TotalAccelCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -247,7 +257,7 @@ struct TotalAccelCost : public CostFunctor {
 struct MaxAccelCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -255,7 +265,7 @@ struct MaxAccelCost : public CostFunctor {
 struct TotalJerkCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -263,7 +273,7 @@ struct TotalJerkCost : public CostFunctor {
 struct MaxJerkCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
                  const double delta, const double time,
-                 const std::vector<Vehicle>& predictions) override {
+                 const std::unordered_map<int, Vehicle>& perceptions) override {
     // TODO
     return 0.0;
   }
@@ -275,24 +285,26 @@ std::shared_ptr<CostFunctor> CreateCostFunctor(const CostType& type);
 
 class JMTTrajectoryValidator {
  public:
-  double Validate(const JMTTrajectory& traj,
-                  const costs::CostWeightMapping& costWeightMapping,
-                  const int targetVehicleId, const double delta,
-                  const double time, const std::vector<Vehicle>& predictions) {
+  JMTTrajectoryValidator(const costs::CostWeightMapping& costWeightMapping)
+      : _costWeightMapping(costWeightMapping) {}
+
+  double Validate(const JMTTrajectory& traj, const int targetVehicleId,
+                  const double delta, const double time,
+                  const std::unordered_map<int, Vehicle>& perceptions) {
     double cost = 0.0;
-    for (const auto& costInfo : costWeightMapping) {
+    for (const auto& costInfo : _costWeightMapping) {
       if (_funcPtrs.count(costInfo.first) == 0) {
         _funcPtrs[costInfo.first] = costs::CreateCostFunctor(costInfo.first);
       }
-      // clang-format off
-      cost += _funcPtrs[costInfo.first]
-        ->Compute(traj, targetVehicleId, delta, time, predictions) * costInfo.second;
-      // clang-format on
+      cost += _funcPtrs[costInfo.first]->Compute(traj, targetVehicleId, delta,
+                                                 time, perceptions) *
+              costInfo.second;
     }
     return cost;
   }
 
  private:
+  costs::CostWeightMapping _costWeightMapping;
   std::unordered_map<costs::CostType, std::shared_ptr<costs::CostFunctor>>
       _funcPtrs;
 };

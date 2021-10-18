@@ -2,54 +2,86 @@
 
 namespace pathplanning {
 
-GoalSampler::GoalSampler(const double s, const double sSigma, const double d,
-                         const double dSigma) {
-  _sSampler = std::make_unique<GaussianSampler1D<>>(s, sSigma);
-  _dSampler = std::make_unique<GaussianSampler1D<>>(d, dSigma);
+GoalSampler::GoalSampler(const VehicleConfiguration &canonicalConf,
+                         const std::array<double, 6> &sigmas) {
+  for (size_t i = 0; i < 6; ++i) {
+    _samplers[i] =
+        std::make_unique<GaussianSampler1D<>>(canonicalConf.At(i), sigmas[i]);
+  }
 }
 
-std::array<double, 2> GoalSampler::Sample() const {
-  return {_sSampler->Sample(), _dSampler->Sample()};
+VehicleConfiguration GoalSampler::Sample() const {
+  return VehicleConfiguration(_samplers[0]->Sample(), _samplers[1]->Sample(),
+                              _samplers[2]->Sample(), _samplers[3]->Sample(),
+                              _samplers[4]->Sample(), _samplers[5]->Sample());
 }
 
 Waypoints PolynomialTrajectoryGenerator::Generate(
-    const VehicleKinParams &startParams, const VehicleKinParams &endParams,
-    const std::vector<Vehicle> &predictions, const double t) const {
-  GoalSampler sampler(endParams.sPos, _options.sSamplerSigma, endParams.dPos,
-                      _options.dSamplerSigma);
-
-  Waypoints bestWaypoints;
-  for (size_t i = 0; i < _options.numSamples; ++i) {
-    // Copy the goal and modify it's sd values to create new goal.
-
-    // clang-format off
-    std::array<double, 6> sParamsSampled = {
-      startParams.sPos, startParams.sVel, startParams.sAcc,
-      endParams.sPos, endParams.sVel, endParams.sAcc
-    };
-
-    std::array<double, 6> dParamsSampled = {
-      startParams.dPos, startParams.dVel, startParams.dAcc,
-      endParams.dPos, endParams.dVel, endParams.dAcc
-    };
-    // clang-format on
-
-    std::array<double, 2> sampledGoal = sampler.Sample();
-    sParamsSampled[3] = sampledGoal[0];
-    dParamsSampled[3] = sampledGoal[1];
-    JMTTrajectory trajectory =
-        JMT::ComputeTrajectory(sParamsSampled, dParamsSampled, t);
-
-    auto func = trajectory.sdFunc;
-    size_t numPoints = static_cast<size_t>(t / _options.timeStep);
-    Waypoints waypoints(numPoints);
-    for (size_t j = 0; j < numPoints; ++i) {
-      waypoints[j] = func(_options.timeStep * j);
-    }
-    // TODO: Validate the path
-    bestWaypoints = waypoints;
+    const VehicleConfiguration &startConf, const VehicleConfiguration &endConf,
+    const std::unordered_map<int, Vehicle> &perceptions,
+    const int targetVehicleId, const VehicleConfiguration &deltaConf,
+    const double t) const {
+  if (perceptions.count(targetVehicleId) == 0) {
+    throw std::runtime_error("Cannot find target vehicle");
   }
-  return bestWaypoints;
+
+  const Vehicle &targetVehicle = perceptions.at(targetVehicleId);
+
+  //
+  // Generate perturbed goals
+  //
+
+  std::vector<VehicleConfiguration> goals;
+  std::vector<int> goalTimes;
+
+  const double sampleTimeStart = t - 4 * _options.goalTimeSampleStep;
+  double sampleTime = sampleTimeStart;
+
+  for (size_t i = 0; i < 4; ++i) {
+    VehicleConfiguration targetConf =
+        targetVehicle.GetCofiguration(sampleTime) + deltaConf;
+
+    goals.push_back(targetConf);
+
+    GoalSampler sampler(targetConf, _options.sampleSigmas);
+    for (size_t j = 0; j < _options.numSamples; ++j) {
+      goals.push_back(sampler.Sample());
+      goalTimes.push_back(sampleTime);
+    }
+
+    sampleTime += _options.goalTimeSampleStep;
+  }
+
+  //
+  // Evaluate all goals by generating the trajectory and select best one
+  //
+
+  double minCost = std::numeric_limits<double>::max();
+  JMTTrajectory bestTrajectory;
+  for (size_t i = 0; i < goals.size(); ++i) {
+    JMTTrajectory trajectory =
+        JMT::ComputeTrajectory(startConf, goals[i], goalTimes[i]);
+
+    // FIXME: Fix delta format
+    double cost =
+        _pValidator->Validate(trajectory, targetVehicleId, 0.0, t, perceptions);
+    if (cost < minCost) {
+      minCost = cost;
+      bestTrajectory = trajectory;
+    }
+  }
+
+  //
+  // Evaluate trajectory into waypoints
+  //
+
+  auto func = bestTrajectory.sdFunc;
+  size_t numPoints = static_cast<size_t>(t / _options.timeStep);
+  Waypoints waypoints(numPoints);
+  for (size_t i = 0; i < numPoints; ++i) {
+    waypoints[i] = func(_options.timeStep * i);
+  }
+  return waypoints;
 }
 
 }  // namespace pathplanning

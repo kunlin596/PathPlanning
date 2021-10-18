@@ -76,4 +76,17 @@ JMTTrajectory JMT::ComputeTrajectory(const std::array<double, 6> &sParams,
   return JMTTrajectory(JMT::Solve2D(sParams, dParams, t), t);
 }
 
+JMTTrajectory JMT::ComputeTrajectory(const VehicleConfiguration &start,
+                                     const VehicleConfiguration &end,
+                                     const double t) {
+  return JMT::ComputeTrajectory(
+      // sParams
+      std::array<double, 6>{start.At(0), start.At(1), start.At(2), end.At(0),
+                            end.At(1), end.At(2)},
+      // dParams
+      std::array<double, 6>{start.At(3), start.At(4), start.At(5), end.At(3),
+                            end.At(4), end.At(5)},
+      t);
+}
+
 }  // namespace pathplanning

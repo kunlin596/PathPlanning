@@ -22,7 +22,8 @@ inline double Logistic(const double x) {
  */
 template <uint32_t Order>
 struct PolynomialFunctor {
-  explicit PolynomialFunctor(const std::array<double, Order + 1>& coeffs)
+  PolynomialFunctor() {}
+  PolynomialFunctor(const std::array<double, Order + 1>& coeffs)
       : coeffs(coeffs) {}
 
   inline double Eval(const double x) const {
