@@ -4,6 +4,39 @@
 
 namespace pathplanning {
 
+namespace costs {
+std::shared_ptr<CostFunctor> CreateCostFunctor(const CostType &type) {
+  switch (type) {
+    case CostType::kTimeDiff:
+      return std::make_shared<TimeDiffCost>();
+    case CostType::kSDiff:
+      return std::make_shared<SDiffCost>();
+    case CostType::kDDiff:
+      return std::make_shared<DDiffCost>();
+    case CostType::kCollision:
+      return std::make_shared<CollisionCost>();
+    case CostType::kBuffer:
+      return std::make_shared<BufferCost>();
+    case CostType::kStaysOnRoad:
+      return std::make_shared<StaysOnRoadCost>();
+    case CostType::kExceedsSpeedLimit:
+      return std::make_shared<ExceedsSpeedLimitCost>();
+    case CostType::kEfficiency:
+      return std::make_shared<EfficiencyCost>();
+    case CostType::kTotalAccel:
+      return std::make_shared<TotalAccelCost>();
+    case CostType::kMaxAccel:
+      return std::make_shared<MaxAccelCost>();
+    case CostType::kTotalJerk:
+      return std::make_shared<TotalJerkCost>();
+    case CostType::kMaxJerk:
+      return std::make_shared<MaxJerkCost>();
+    default:
+      throw std::runtime_error("Not supported cost function");
+  }
+}
+}  // namespace costs
+
 QuinticFunctor JMT::Solve1D(const std::array<double, 6> &params,
                             const double t) {
   std::array<double, 6> coeffs;

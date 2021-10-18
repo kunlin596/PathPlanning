@@ -2,6 +2,7 @@
 #define PATHPLANNING_MATH_H
 
 #include <cmath>
+#include <random>
 
 namespace pathplanning {
 
@@ -12,7 +13,9 @@ inline double GetDistance(double x1, double y1, double x2, double y2) {
   return std::sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
-inline double Logistic(const double x) { return 2.0 / (1.0 + std::exp(-x)) - 1.0; }
+inline double Logistic(const double x) {
+  return 2.0 / (1.0 + std::exp(-x)) - 1.0;
+}
 
 /**
  * @brief      Polynomial equation definition
@@ -46,6 +49,20 @@ struct PolynomialFunctor {
 };
 
 using QuinticFunctor = PolynomialFunctor<5>;
+
+template <typename T = double>
+struct GaussianSampler1D {
+  GaussianSampler1D(const T mu, const T sigma) {
+    gen = std::mt19937(rd());
+    dist = std::normal_distribution<T>(mu, sigma);
+  }
+
+  double Sample() { return dist(gen); }
+
+  std::random_device rd;
+  std::mt19937 gen;
+  std::normal_distribution<T> dist;
+};
 
 }  // namespace pathplanning
 

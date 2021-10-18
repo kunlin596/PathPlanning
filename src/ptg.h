@@ -1,9 +1,26 @@
 #ifndef PATHPLANNING_PTG_H
 #define PATHPLANNING_PTG_H
 
+#include <memory>
+
 #include "path.h"
+#include "math.h"
+#include "jmt.h"
 
 namespace pathplanning {
+
+class GoalSampler {
+ public:
+  explicit GoalSampler(const double s, const double sSigma, const double d,
+                       const double dSigma);
+
+  std::array<double, 2> Sample() const;
+
+ private:
+  // Make it constant for this project
+  std::unique_ptr<GaussianSampler1D<>> _sSampler;
+  std::unique_ptr<GaussianSampler1D<>> _dSampler;
+};
 
 class PolynomialTrajectoryGenerator {
  public:
@@ -18,11 +35,9 @@ class PolynomialTrajectoryGenerator {
                      const std::array<double, 6> &dParams,
                      const double t) const;
 
-  struct TrajectoryValidator {};
-
  private:
   Options _options;
-  TrajectoryValidator _validator;
+  JMTTrajectoryValidator _validator;
 };
 
 };  // namespace pathplanning
