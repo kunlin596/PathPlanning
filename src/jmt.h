@@ -6,6 +6,7 @@
 
 #include "math.h"
 #include "path.h"
+#include "vehicle.h"
 
 namespace pathplanning {
 
@@ -158,12 +159,14 @@ using CostWeightMapping = std::unordered_map<CostType, double>;
 
 struct CostFunctor {
   virtual double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                         const double delta, const double time) = 0;
+                         const double delta, const double time,
+                         const std::vector<Vehicle>& predictions) = 0;
 };
 
 struct TimeDiffCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     return Logistic(static_cast<double>(std::abs(traj.elapsedTime - time)) /
                     time);
   }
@@ -171,7 +174,8 @@ struct TimeDiffCost : public CostFunctor {
 
 struct SDiffCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -179,7 +183,8 @@ struct SDiffCost : public CostFunctor {
 
 struct DDiffCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -187,7 +192,8 @@ struct DDiffCost : public CostFunctor {
 
 struct CollisionCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -195,7 +201,8 @@ struct CollisionCost : public CostFunctor {
 
 struct BufferCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -203,7 +210,8 @@ struct BufferCost : public CostFunctor {
 
 struct StaysOnRoadCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -211,7 +219,8 @@ struct StaysOnRoadCost : public CostFunctor {
 
 struct ExceedsSpeedLimitCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -219,7 +228,8 @@ struct ExceedsSpeedLimitCost : public CostFunctor {
 
 struct EfficiencyCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -227,7 +237,8 @@ struct EfficiencyCost : public CostFunctor {
 
 struct TotalAccelCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -235,21 +246,24 @@ struct TotalAccelCost : public CostFunctor {
 
 struct MaxAccelCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
 };
 struct TotalJerkCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
 };
 struct MaxJerkCost : public CostFunctor {
   double Compute(const JMTTrajectory& traj, const int targetVehicleId,
-                 const double delta, const double time) override {
+                 const double delta, const double time,
+                 const std::vector<Vehicle>& predictions) override {
     // TODO
     return 0.0;
   }
@@ -264,7 +278,7 @@ class JMTTrajectoryValidator {
   double Validate(const JMTTrajectory& traj,
                   const costs::CostWeightMapping& costWeightMapping,
                   const int targetVehicleId, const double delta,
-                  const double time) {
+                  const double time, const std::vector<Vehicle>& predictions) {
     double cost = 0.0;
     for (const auto& costInfo : costWeightMapping) {
       if (_funcPtrs.count(costInfo.first) == 0) {
@@ -272,7 +286,7 @@ class JMTTrajectoryValidator {
       }
       // clang-format off
       cost += _funcPtrs[costInfo.first]
-        ->Compute(traj, targetVehicleId, delta, time) * costInfo.second;
+        ->Compute(traj, targetVehicleId, delta, time, predictions) * costInfo.second;
       // clang-format on
     }
     return cost;

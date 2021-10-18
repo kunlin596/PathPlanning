@@ -25,12 +25,12 @@ Waypoints PolynomialTrajectoryGenerator::Generate(
     // clang-format off
     std::array<double, 6> sParamsSampled = {
       startParams.sPos, startParams.sVel, startParams.sAcc,
-      endParams.sPos, endParams.sVel,   endParams.sAcc
+      endParams.sPos, endParams.sVel, endParams.sAcc
     };
 
     std::array<double, 6> dParamsSampled = {
       startParams.dPos, startParams.dVel, startParams.dAcc,
-      endParams.dPos, endParams.dVel,   endParams.dAcc
+      endParams.dPos, endParams.dVel, endParams.dAcc
     };
     // clang-format on
 
