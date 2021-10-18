@@ -13,16 +13,27 @@ std::array<double, 2> GoalSampler::Sample() const {
 }
 
 Waypoints PolynomialTrajectoryGenerator::Generate(
-    const std::array<double, 6> &sParams, const std::array<double, 6> &dParams,
-    const double t) const {
-  GoalSampler sampler(sParams[3], _options.sSamplerSigma, dParams[3],
+    const VehicleKinParams &startParams, const VehicleKinParams &endParams,
+    const std::vector<Vehicle> &predictions, const double t) const {
+  GoalSampler sampler(endParams.sPos, _options.sSamplerSigma, endParams.dPos,
                       _options.dSamplerSigma);
 
   Waypoints bestWaypoints;
   for (size_t i = 0; i < _options.numSamples; ++i) {
     // Copy the goal and modify it's sd values to create new goal.
-    std::array<double, 6> sParamsSampled = sParams;
-    std::array<double, 6> dParamsSampled = dParams;
+
+    // clang-format off
+    std::array<double, 6> sParamsSampled = {
+      startParams.sPos, startParams.sVel, startParams.sAcc,
+      endParams.sPos, endParams.sVel,   endParams.sAcc
+    };
+
+    std::array<double, 6> dParamsSampled = {
+      startParams.dPos, startParams.dVel, startParams.dAcc,
+      endParams.dPos, endParams.dVel,   endParams.dAcc
+    };
+    // clang-format on
+
     std::array<double, 2> sampledGoal = sampler.Sample();
     sParamsSampled[3] = sampledGoal[0];
     dParamsSampled[3] = sampledGoal[1];

@@ -3,9 +3,10 @@
 
 #include <memory>
 
-#include "path.h"
-#include "math.h"
 #include "jmt.h"
+#include "math.h"
+#include "path.h"
+#include "vehicle.h"
 
 namespace pathplanning {
 
@@ -31,8 +32,9 @@ class PolynomialTrajectoryGenerator {
     double dSamplerSigma = 0.1;
   };
 
-  Waypoints Generate(const std::array<double, 6> &sParams,
-                     const std::array<double, 6> &dParams,
+  Waypoints Generate(const VehicleKinParams &startParams,
+                     const VehicleKinParams &end,
+                     const std::vector<Vehicle> &predictions,
                      const double t) const;
 
  private:
