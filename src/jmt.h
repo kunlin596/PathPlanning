@@ -4,41 +4,9 @@
 #include <array>
 
 #include "path.h"
+#include "math.h"
 
 namespace pathplanning {
-
-/**
- * @brief      Polynomial equation definition
- */
-template <uint32_t Order>
-struct PolynomialFunctor {
-  explicit PolynomialFunctor(const std::array<double, Order + 1>& coeffs)
-      : coeffs(coeffs) {}
-
-  inline double Eval(const double x) const {
-    double item = 1.0;
-    double result = 0.0;
-    for (size_t i = 0; i < Order + 1; ++i) {
-      result += coeffs[i] * item;
-      item *= x;
-    }
-    return result;
-  }
-
-  inline PolynomialFunctor<Order - 1> Differentiate() {
-    std::array<double, Order - 1> newCoeffs;
-    for (size_t i = 0; i < coeffs.size() - 1; ++i) {
-      newCoeffs[i] = coeffs[i + 1] * (i + 1);
-    }
-    return PolynomialFunctor<Order - 1>(newCoeffs);
-  }
-
-  double operator()(const double x) const { return Eval(x); }
-
-  std::array<double, Order + 1> coeffs;
-};
-
-using QuinticFunctor = PolynomialFunctor<5>;
 
 /**
  * @brief      This class describes a sd waypoint function.

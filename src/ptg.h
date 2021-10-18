@@ -18,8 +18,11 @@ class PolynomialTrajectoryGenerator {
                      const std::array<double, 6> &dParams,
                      const double t) const;
 
+  struct TrajectoryValidator {};
+
  private:
   Options _options;
+  TrajectoryValidator _validator;
 };
 
 };  // namespace pathplanning
