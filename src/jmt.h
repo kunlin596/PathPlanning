@@ -3,10 +3,12 @@
 
 #include <array>
 
+#include "path.h"
+
 namespace pathplanning {
 
 /**
- * @brief      5th order polynomial
+ * @brief      Polynomial equation definition
  */
 template <uint32_t Order>
 struct PolynomialFunctor {
@@ -60,12 +62,28 @@ class SDFunctor {
   QuinticFunctor _dFunc;
 };
 
+/**
+ * @brief      JMT Trajectory representation
+ *
+ * JMT trajectory is used for producing a waypoint at a given time.
+ *
+ * This trajectory is also flexible for evaluation since it preserves a lot of
+ * useful information than the final product which is a set of discrete
+ * waypoints.
+ *
+ * Note that not all trajectory generators use the same information to produce
+ * the same format of output, so trajecotry is per generator type.
+ */
 struct JMTTrajectory {
   SDFunctor sdFunc;
-  double t;
+  double elapsedTime;
 
-  explicit JMTTrajectory(const SDFunctor& sdFunc, const double t)
-      : sdFunc(sdFunc), t(t) {}
+  explicit JMTTrajectory(const SDFunctor& sdFunc, const double elapsedTime)
+      : sdFunc(sdFunc), elapsedTime(elapsedTime) {}
+
+  inline Waypoint Eval(const double t) { return sdFunc(t); }
+
+  Waypoint operator()(const double t) { return Eval(t); }
 };
 
 /**
