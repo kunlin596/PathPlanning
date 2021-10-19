@@ -30,6 +30,7 @@ add_library(
   src/system.cpp
 )
 
-# set(sources src/helpers.cpp src/pathplanner.cpp src/behaviorplanner.cpp src/main.cpp)
-# add_executable(path_planning ${sources})
-# target_link_libraries(path_planning z ssl uv uWS Boost::log)
+add_executable(pathplanningserver src/main.cpp)
+target_link_libraries(
+  pathplanningserver
+  z ssl uv uWS Boost::log driving)
