@@ -1,6 +1,6 @@
 #include "jmt.h"
 
-#include "Eigen/Dense"
+#include "Eigen-3.3/Eigen/Dense"
 
 namespace pathplanning {
 
