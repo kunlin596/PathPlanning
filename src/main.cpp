@@ -8,7 +8,23 @@
 #include "json.hpp"
 #include "map.h"
 
-int main() {
+namespace {
+
+std::string _NormalizeJsonString(std::string s) {
+  using std::string;
+  auto found_null = s.find("null");
+  auto b1 = s.find_first_of("[");
+  auto b2 = s.find_first_of("}");
+  if (found_null != string::npos) {
+    return "";
+  } else if (b1 != string::npos && b2 != string::npos) {
+    return s.substr(b1, b2 - b1 + 2);
+  }
+  return "";
+}
+}
+
+int main(int argc, char ** argv) {
   using nlohmann::json;
   using std::string;
   using std::vector;
@@ -33,7 +49,7 @@ int main() {
       std::string s = data;
 
       if (s != "") {
-        auto j = json::parse(s);
+        auto j = json::parse(_NormalizeJsonString(s));
 
         std::string event = j[0].get<string>();
 
