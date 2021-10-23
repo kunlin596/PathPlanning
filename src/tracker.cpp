@@ -56,4 +56,16 @@ void Tracker::Update(const Perceptions &perceptions) {
   _trackedVehicles.insert(newVehicles.begin(), newVehicles.end());
 }
 
+std::unordered_map<int, std::vector<Vehicle>> Tracker::GeneratePredictions()
+    const {
+  std::unordered_map<int, std::vector<Vehicle>> predictions;
+  // For each tracked vehicle, generate a set of predictions per time step
+  for (const auto &trackedVehicle : _trackedVehicles) {
+    auto pred =
+        trackedVehicle.second.GeneratePredictions(Configuration::TIME_HORIZON);
+    predictions.insert(pred.begin(), pred.end());
+  }
+  return predictions;
+}
+
 }  // namespace pathplanning

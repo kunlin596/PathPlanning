@@ -34,6 +34,8 @@ class Tracker {
    */
   void Update(const Perceptions &perceptions);
 
+  std::unordered_map<int, std::vector<Vehicle>> GeneratePredictions() const;
+
   const std::unordered_map<int, TrackedVehicle> &GetVehicles() const {
     return _trackedVehicles;
   }
