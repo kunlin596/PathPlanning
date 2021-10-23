@@ -6,6 +6,14 @@
 
 namespace pathplanning {
 
+inline double CalculateVelocity(double vel, double acc, double time) {
+  return vel + acc * time;
+}
+
+inline double CalculatePosition(double pos, double vel, double acc, double time) {
+  return pos + vel * time + acc * time * time / 2.0;
+}
+
 inline double deg2rad(double x) { return x * M_PI / 180.0; }
 inline double rad2deg(double x) { return x * 180.0 / M_PI; }
 

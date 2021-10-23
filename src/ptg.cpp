@@ -39,7 +39,7 @@ Waypoints PolynomialTrajectoryGenerator::Generate(
 
   for (size_t i = 0; i < 4; ++i) {
     VehicleConfiguration targetConf =
-        targetVehicle.GetCofiguration(sampleTime) + deltaConf;
+        targetVehicle.GetConfiguration(sampleTime) + deltaConf;
 
     goals.push_back(targetConf);
 

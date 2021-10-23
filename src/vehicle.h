@@ -4,6 +4,7 @@
 #include <array>
 
 #include "map.h"
+#include "math.h"
 #include "perception.h"
 
 namespace pathplanning {
@@ -117,7 +118,7 @@ class Vehicle {
    *
    * @return     The cofiguration.
    */
-  inline VehicleConfiguration GetCofiguration(const double time) const {
+  inline VehicleConfiguration GetConfiguration(const double time = 0.0) const {
     const double &sPos = _conf.sPos;
     const double &sVel = _conf.sVel;
     const double &sAcc = _conf.sAcc;
@@ -126,14 +127,14 @@ class Vehicle {
     const double &dAcc = _conf.dAcc;
 
     // clang-format off
-    return VehicleConfiguration(
-        sPos + sVel * time + sAcc * time * time / 2.0,
-        sVel + sAcc * time,
+    return {
+        CalculatePosition(sPos, sVel, sAcc, time),
+        CalculateVelocity(sVel, sAcc, time),
         sAcc,
-        dPos + dVel * time + dAcc * time * time / 2.0,
-        dVel + dAcc * time,
+        CalculatePosition(dPos, dVel, dAcc, time),
+        CalculateVelocity(dVel, dAcc, time),
         dAcc
-    );
+    };
     // clang-format on
   }
 

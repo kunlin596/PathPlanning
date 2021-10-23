@@ -4,6 +4,7 @@
 #include "map.h"
 #include "perception.h"
 #include "vehicle.h"
+// #include "spline.h"  // For generating prediction
 
 namespace pathplanning {
 
@@ -18,6 +19,9 @@ class Tracker {
   struct TrackedVehicle {
     int id = -1;
     std::vector<Vehicle> observations;  ///< Keep track of all observations
+
+    std::unordered_map<int, std::vector<Vehicle>> GeneratePredictions(
+        const double time = 1.0) const;
   };
 
   Tracker(const Map::ConstPtr &pMap) : _pMap(pMap) {}
