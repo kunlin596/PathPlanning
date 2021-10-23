@@ -86,8 +86,7 @@ class BehaviorPlanner {
 
  private:
   const Map::ConstPtr &_pMap;
-  std::unordered_map<int, Vehicle> _pPerceptions;
-  std::unique_ptr<JMTTrajectoryValidator> _pValidator;
+  std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };
 
 }  // namespace pathplanning

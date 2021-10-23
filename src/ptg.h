@@ -38,7 +38,7 @@ class PolynomialTrajectoryGenerator {
   PolynomialTrajectoryGenerator(
       const Options &options, const costs::CostWeightMapping &costWeightMapping)
       : _options(options) {
-    _pValidator = std::make_unique<JMTTrajectoryValidator>(costWeightMapping);
+    _pEvaluator = std::make_unique<JMTTrajectoryEvaluator>(costWeightMapping);
   }
 
   /**
@@ -84,7 +84,7 @@ class PolynomialTrajectoryGenerator {
 
  private:
   Options _options;
-  std::unique_ptr<JMTTrajectoryValidator> _pValidator;
+  std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };
 
 };  // namespace pathplanning

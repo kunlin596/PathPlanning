@@ -64,7 +64,7 @@ Waypoints PolynomialTrajectoryGenerator::Generate(
 
     // FIXME: Fix delta format
     double cost =
-        _pValidator->Validate(trajectory, targetVehicleId, 0.0, t, perceptions);
+        _pEvaluator->Validate(trajectory, targetVehicleId, 0.0, t, perceptions);
     if (cost < minCost) {
       minCost = cost;
       bestTrajectory = trajectory;

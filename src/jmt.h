@@ -293,9 +293,9 @@ std::shared_ptr<CostFunctor> CreateCostFunctor(const CostType& type);
 
 }  // namespace costs
 
-class JMTTrajectoryValidator {
+class JMTTrajectoryEvaluator {
  public:
-  JMTTrajectoryValidator(const costs::CostWeightMapping& costWeightMapping)
+  JMTTrajectoryEvaluator(const costs::CostWeightMapping& costWeightMapping)
       : _costWeightMapping(costWeightMapping) {}
 
   double Validate(const JMTTrajectory& traj, const int targetVehicleId,
