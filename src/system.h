@@ -33,6 +33,8 @@ class System {
    */
   inline void ResetMap(const std::string &filename) { _pMap->Read(filename); }
 
+  void UpdatePerception(const std::string &) {}
+
  private:
   Map::Ptr _pMap;
   std::unique_ptr<BehaviorPlanner> _pBehaviorPlanner;
