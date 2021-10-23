@@ -2,6 +2,7 @@
 #define PATHPLANNING_JMT_H
 
 #include <array>
+#include <memory>
 #include <unordered_map>
 
 #include "math.h"
