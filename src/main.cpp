@@ -45,11 +45,11 @@ int main(int argc, char ** argv) {
 
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
       // FIXME
-      // auto s = hasData(data);
-      std::string s = data;
+      auto s = _NormalizeJsonString(data);
+      std::cout << s << std::endl;
 
       if (s != "") {
-        auto j = json::parse(_NormalizeJsonString(s));
+        auto j = json::parse(s);
 
         std::string event = j[0].get<string>();
 
