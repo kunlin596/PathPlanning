@@ -3,6 +3,9 @@
 
 #include <array>
 
+#include "map.h"
+#include "perception.h"
+
 namespace pathplanning {
 
 struct VehicleConfiguration {
@@ -102,7 +105,10 @@ struct VehicleConfiguration {
  */
 class Vehicle {
  public:
-  Vehicle(const VehicleConfiguration &params) : _params(params) {}
+  Vehicle(){};
+  Vehicle(const int id, const VehicleConfiguration &conf)
+      : _id(id), _conf(conf) {}
+  virtual ~Vehicle() {}
 
   /**
    * @brief      Gets the predicted cofiguration `time` seconds from now.
@@ -112,12 +118,12 @@ class Vehicle {
    * @return     The cofiguration.
    */
   inline VehicleConfiguration GetCofiguration(const double time) const {
-    const double &sPos = _params.sPos;
-    const double &sVel = _params.sVel;
-    const double &sAcc = _params.sAcc;
-    const double &dPos = _params.dPos;
-    const double &dVel = _params.dVel;
-    const double &dAcc = _params.dAcc;
+    const double &sPos = _conf.sPos;
+    const double &sVel = _conf.sVel;
+    const double &sAcc = _conf.sAcc;
+    const double &dPos = _conf.dPos;
+    const double &dVel = _conf.dVel;
+    const double &dAcc = _conf.dAcc;
 
     // clang-format off
     return VehicleConfiguration(
@@ -131,8 +137,15 @@ class Vehicle {
     // clang-format on
   }
 
+  void UpdateFromPerception(const Map::ConstPtr &pMap,
+                            const Perception &perception);
+
+  static Vehicle CreateFromPerception(const Map::ConstPtr &pMap,
+                                      const Perception &perception);
+
  private:
-  VehicleConfiguration _params;
+  int _id = -1;
+  VehicleConfiguration _conf;
 };
 
 }  // namespace pathplanning

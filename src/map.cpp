@@ -33,7 +33,7 @@ void Map::Read(const std::string &filename) {
   }
 }
 
-int Map::GetClosestWaypoint(double x, double y) {
+int Map::GetClosestWaypoint(double x, double y) const {
   double minDist = std::numeric_limits<double>::max();
   int closestWaypointIndex = 0;
 
@@ -49,7 +49,7 @@ int Map::GetClosestWaypoint(double x, double y) {
 }
 
 // Returns next waypoint of the closest waypoint
-int Map::GetNextWaypoint(double x, double y, double theta) {
+int Map::GetNextWaypoint(double x, double y, double theta) const {
   int closestWaypointIndex = GetClosestWaypoint(x, y);
   double heading = std::atan2((_y[closestWaypointIndex] - y),
                               (_x[closestWaypointIndex] - x));
@@ -67,7 +67,7 @@ int Map::GetNextWaypoint(double x, double y, double theta) {
   return closestWaypointIndex;
 }
 
-std::array<double, 2> Map::GetSD(double x, double y, double theta) {
+std::array<double, 2> Map::GetSD(double x, double y, double theta) const {
   int nextWaypointIndex = GetNextWaypoint(x, y, theta);
   int prevWaypointIndex = nextWaypointIndex - 1;
 
@@ -108,7 +108,7 @@ std::array<double, 2> Map::GetSD(double x, double y, double theta) {
   return {frenetS, frenetD};
 }
 
-std::array<double, 2> Map::GetXY(double s, double d) {
+std::array<double, 2> Map::GetXY(double s, double d) const {
   int prevWaypointIndex = -1;
 
   while (s > _s[prevWaypointIndex + 1] &&
@@ -138,4 +138,4 @@ double GetKMFromMile(double mile) { return mile / 2.24; }
 
 double GetMileFromKM(double km) { return km * 2.24; }
 
-}
+}  // namespace pathplanning

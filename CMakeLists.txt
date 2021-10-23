@@ -27,12 +27,13 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 add_library(
   driving
   SHARED
+  src/configuration.cpp
   src/path.cpp
   src/vehicle.cpp
   src/jmt.cpp
   src/ptg.cpp
   src/map.cpp
-  src/perception.cpp
+  src/tracker.cpp
   src/behaviorplanner.cpp
   src/system.cpp
 )

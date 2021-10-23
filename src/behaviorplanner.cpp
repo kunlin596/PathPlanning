@@ -3,7 +3,7 @@
 namespace pathplanning {
 
 std::vector<BehaviorState> BehaviorPlanner::GetSuccessorStates(
-    const BehaviorState &state) {
+    const BehaviorState &state) const {
   std::vector<BehaviorState> states = {BehaviorState::kLaneKeeping};
   if (state == BehaviorState::kLaneKeeping) {
     states.push_back(BehaviorState::kLeftLaneChangePreparation);

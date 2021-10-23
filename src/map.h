@@ -22,16 +22,24 @@ class Map {
 
   // Calculate closest waypoint to current x, y position
 
-  int GetClosestWaypoint(double x, double y);
+  int GetClosestWaypoint(double x, double y) const;
 
   // Returns next waypoint of the closest waypoint
-  int GetNextWaypoint(double x, double y, double theta);
+  int GetNextWaypoint(double x, double y, double theta) const;
 
-  // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-  std::array<double, 2> GetSD(double x, double y, double theta);
+  /**
+   * @brief      Gets the Frenet sd coordinates.
+   *
+   * @param[in]  x      x coordinate
+   * @param[in]  y      y coordinate
+   * @param[in]  theta  The theta in radian
+   *
+   * @return     The Frenet sd coordinates.
+   */
+  std::array<double, 2> GetSD(double x, double y, double theta) const;
 
   // Transform from Frenet s,d coordinates to Cartesian x,y
-  std::array<double, 2> GetXY(double s, double d);
+  std::array<double, 2> GetXY(double s, double d) const;
 
   inline double GetDValueFromLandId(int laneId) {
     static constexpr double laneWidth = 4.0;      // meter

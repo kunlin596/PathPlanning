@@ -3,6 +3,7 @@
 
 #include "behaviorplanner.h"
 #include "ptg.h"
+#include "tracker.h"
 
 namespace pathplanning {
 
@@ -33,11 +34,11 @@ class System {
    */
   inline void ResetMap(const std::string &filename) { _pMap->Read(filename); }
 
-  void UpdatePerception(const std::string &) {}
-
  private:
   Map::Ptr _pMap;
   std::unique_ptr<BehaviorPlanner> _pBehaviorPlanner;
+  std::unique_ptr<Tracker> _pTracker;
+  std::unordered_map<int, Vehicle> _pPerceptions;
   std::unique_ptr<PolynomialTrajectoryGenerator> _pPathGenerator;
 };
 

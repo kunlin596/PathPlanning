@@ -54,7 +54,7 @@ int main(int argc, char ** argv) {
       auto s = _NormalizeJsonString(data);
 
       if (s != "") {
-        auto j = json::parse(s);
+        json j = json::parse(s);
 
         std::string event = j[0].get<string>();
 
