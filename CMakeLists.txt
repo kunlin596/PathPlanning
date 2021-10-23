@@ -31,9 +31,9 @@ add_library(
   src/vehicle.cpp
   src/jmt.cpp
   src/ptg.cpp
+  src/map.cpp
   src/perception.cpp
   src/behaviorplanner.cpp
-  src/map.cpp
   src/system.cpp
 )
 

@@ -3,9 +3,6 @@
 #include <memory>
 
 #include "jmt.h"
-#include "math.h"
-#include "path.h"
-#include "vehicle.h"
 
 namespace pathplanning {
 

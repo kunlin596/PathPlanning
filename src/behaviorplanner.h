@@ -1,33 +1,10 @@
 #ifndef PATHPLANNING_BEHAVIORPLANNER_H
 #define PATHPLANNING_BEHAVIORPLANNER_H
 
-#include <vector>
-
 #include "map.h"
+#include "ptg.h"  // For generating goals for PTG
 
 namespace pathplanning {
-
-/**
- * @brief      Collection of cost functions
- */
-struct CostFunctions {
-  static double GetGoalDistanceCost(int goalLaneId, int intendedLaneId,
-                                    int finalLaneId, double distanceToGoal);
-
-  static double GetInefficiencyCost(int targetSpeed, int intendedLane,
-                                    int finalLaneId,
-                                    const std::vector<double> &laneSpeeds);
-};
-
-/**
- * @brief      Output structure of Behacior planner
- */
-struct Goal {
-  int targetLaneId;
-  int targetLeadingVehicleId;
-  double targetSpeed;
-  double secondsToReachTarget;
-};
 
 /**
  * @brief      States of FSM for behavior planner
@@ -47,7 +24,8 @@ struct Goal {
  *
  */
 enum class BehaviorState : uint8_t {
-  kLaneKeeping = 0,
+  kConstSpeed = 0,
+  kLaneKeeping,
   kLeftLaneChangePreparation,
   kLeftLaneChange,
   kRightLaneChangePreparation,
@@ -59,7 +37,7 @@ enum class BehaviorState : uint8_t {
  */
 class BehaviorPlanner {
  public:
-  BehaviorPlanner(const Map &map) : _map(map) {}
+  BehaviorPlanner(const Map::ConstPtr &pMap) : _pMap(pMap) {}
   virtual ~BehaviorPlanner() {}
 
   /**
@@ -74,7 +52,7 @@ class BehaviorPlanner {
   void ChooseNextState();
 
  private:
-  const Map &_map;
+  const Map::ConstPtr &_pMap;
 };
 
 }  // namespace pathplanning

@@ -1,7 +1,8 @@
-#ifndef PATHPLANNING_PATH_H
-#define PATHPLANNING_PATH_H
+#ifndef PATHPLANNING_SYSTEM_H
+#define PATHPLANNING_SYSTEM_H
 
-#include "map.h"
+#include "behaviorplanner.h"
+#include "ptg.h"
 
 namespace pathplanning {
 
@@ -10,16 +11,13 @@ namespace pathplanning {
  */
 class System {
  public:
-  System(){};
+  System() { _pMap = Map::CreateMap(); };
   virtual ~System(){};
 
   /**
    * @brief      System options/parameters
    */
-  struct Options
-  {
-
-  };
+  struct Options {};
 
   /**
    * @brief      Initialize the system with input configuration file
@@ -33,10 +31,12 @@ class System {
    *
    * @param[in]  filename  The map csv filename
    */
-  inline void ResetMap(const std::string &filename) { _map.Read(filename); }
+  inline void ResetMap(const std::string &filename) { _pMap->Read(filename); }
 
  private:
-  Map _map;
+  Map::Ptr _pMap;
+  std::unique_ptr<BehaviorPlanner> _pBehaviorPlanner;
+  std::unique_ptr<PolynomialTrajectoryGenerator> _pPathGenerator;
 };
 
 }  // namespace pathplanning

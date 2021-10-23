@@ -10,6 +10,13 @@
 
 namespace {
 
+/**
+ * @brief      Normalize input JSON string data
+ *
+ * @param[in]  s     Input data
+ *
+ * @return     Normalized JSON string
+ */
 std::string _NormalizeJsonString(std::string s) {
   using std::string;
   auto found_null = s.find("null");
@@ -44,9 +51,7 @@ int main(int argc, char ** argv) {
     // The 2 signifies a websocket event
 
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
-      // FIXME
       auto s = _NormalizeJsonString(data);
-      std::cout << s << std::endl;
 
       if (s != "") {
         auto j = json::parse(s);
