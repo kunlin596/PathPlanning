@@ -14,6 +14,9 @@ Tracker::TrackedVehicle::GeneratePredictions(const double time) const {
   const Vehicle &lastObservation = observations[observations.size() - 1];
   int numPredictions = static_cast<int>(time / Configuration::TIME_STEP);
   predictions[id] = std::vector<Vehicle>(numPredictions);
+
+  // Generate numPredictions + 1 predictions, the first one the current
+  // configuration.
   for (int i = 0; i < numPredictions + 1; ++i) {
     predictions[id][i] = Vehicle(
         id, lastObservation.GetConfiguration(i * Configuration::TIME_STEP));
