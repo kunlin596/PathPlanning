@@ -11,7 +11,6 @@ void Vehicle::UpdateFromPerception(const Map::ConstPtr &pMap,
 
 Vehicle Vehicle::CreateFromPerception(const Map::ConstPtr &pMap,
                                       const Perception &perception) {
-  int id = perception.id;
   VehicleConfiguration conf;
   conf.sPos = perception.sd[0];
   conf.dPos = perception.sd[1];
@@ -25,7 +24,7 @@ Vehicle Vehicle::CreateFromPerception(const Map::ConstPtr &pMap,
   conf.dVel = (sd2[1] - conf.dPos);
   // Assume constant accelaration
 
-  return Vehicle(id, conf);
+  return Vehicle(perception.id, conf);
 }
 
 Vehicle Vehicle::CreateFromEgo(const Map::ConstPtr &pMap, const Ego &ego) {

@@ -14,15 +14,18 @@ Predictions Tracker::TrackedVehicle::GeneratePredictions(
   if (observations.empty()) {
     return predictions;
   }
+
   const Vehicle &lastObservation = observations[observations.size() - 1];
   // Generate numPredictions + 1 predictions, the first one the current
   // configuration.
   int numPredictions = static_cast<int>(time / Configuration::TIME_STEP) + 1;
+  // SPDLOG_INFO("numPredictions={}", numPredictions);
 
   predictions[id] = std::vector<Vehicle>(numPredictions);
   for (int i = 0; i < numPredictions; ++i) {
     predictions[id][i] = Vehicle(
         id, lastObservation.GetConfiguration(i * Configuration::TIME_STEP));
+    // SPDLOG_INFO("predictions[{}][{}]={}", id, i, predictions[id][i]);
   }
   return predictions;
 }
@@ -63,10 +66,11 @@ void Tracker::Update(const Vehicle &ego, const Perceptions &perceptions) {
     }
 
     const int id = perception.first;
+    _trackedVehicles[id].id = id;
     _trackedVehicles[id].observations.push_back(
         Vehicle::CreateFromPerception(_pMap, perception.second));
-    SPDLOG_INFO("Append new observation to {}, in lane {}", id,
-                Map::GetLaneId(perception.second.sd[1]));
+    // SPDLOG_INFO("Append new observation to {}, in lane {}", id,
+    //             Map::GetLaneId(perception.second.sd[1]));
   }
   // SPDLOG_INFO("Size of tracked vehicles {}", _trackedVehicles.size());
 }
@@ -75,8 +79,12 @@ Predictions Tracker::GeneratePredictions() const {
   Predictions predictions;
   // For each tracked vehicle, generate a set of predictions per time step
   for (const auto &trackedVehicle : _trackedVehicles) {
-    auto pred =
+
+    Predictions pred =
         trackedVehicle.second.GeneratePredictions(Configuration::TIME_HORIZON);
+    // SPDLOG_INFO("id={}, pred.size()={}", trackedVehicle.first, pred.size());
+    // SPDLOG_INFO("Generated {} predictions for {}",
+    //             pred[trackedVehicle.first].size(), trackedVehicle.first);
     predictions.insert(pred.begin(), pred.end());
   }
   return predictions;
