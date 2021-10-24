@@ -15,6 +15,11 @@ namespace pathplanning {
  */
 class Map {
  public:
+  static constexpr double MaxS = 6945.554;
+  static constexpr double LANE_WIDTH = 4.0;
+  static constexpr double HALF_LANE_WIDTH = LANE_WIDTH / 2.0;
+  static constexpr int NUM_LANES = 3;
+
   Map() {}
   Map(const std::string &filename) { Read(filename); }
 
@@ -41,15 +46,24 @@ class Map {
   // Transform from Frenet s,d coordinates to Cartesian x,y
   std::array<double, 2> GetXY(double s, double d) const;
 
-  inline double GetDValueFromLandId(int laneId) {
-    static constexpr double laneWidth = 4.0;      // meter
-    static constexpr double halfLaneWidth = 2.0;  // meter
-    return halfLaneWidth + laneWidth * static_cast<double>(laneId);
+  static inline int GetLaneId(double d) {
+    for (int i = 0; i < NUM_LANES; ++i) {
+      if (Map::IsInLane(d, i)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  static inline int GetLaneCenterD(int laneId) {
+    return HALF_LANE_WIDTH + HALF_LANE_WIDTH * static_cast<double>(laneId);
+  }
+
+  static inline bool IsInLane(int d, int laneId) {
+    return (laneId * LANE_WIDTH) < d and d < ((laneId + 1) * LANE_WIDTH);
   }
 
   void Read(const std::string &filename);
-
-  static constexpr double MaxS = 6945.554;
 
   static std::shared_ptr<Map> CreateMap() { return std::make_shared<Map>(); }
   static std::shared_ptr<Map> CreateMap(const std::string filename) {

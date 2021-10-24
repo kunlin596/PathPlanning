@@ -1,6 +1,7 @@
 #include "tracker.h"
 
 #include <iostream>
+#include <set>
 
 #include "configuration.h"
 
@@ -26,8 +27,18 @@ Predictions Tracker::TrackedVehicle::GeneratePredictions(
   return predictions;
 }
 
-void Tracker::Update(const Perceptions &perceptions) {
+void Tracker::Update(const Vehicle &ego, const Perceptions &perceptions) {
   // TODO: Implementation can be simplified.
+  const VehicleConfiguration &egoConf = ego.GetConfiguration(0.0);
+  std::array<double, 2> egoSD = {egoConf.sPos, egoConf.dPos};
+
+  std::set<int> idToBeIgnored;
+  for (const auto &perception : perceptions) {
+    double dist = GetDistance(perception.second.sd, egoSD);
+    if (dist > Configuration::NONEGO_SEARCH_RADIUS) {
+      idToBeIgnored.insert(perception.first);
+    }
+  }
 
   // Naively remove disappered vehicle.
   std::vector<int> idToBeRemoved;
@@ -38,19 +49,26 @@ void Tracker::Update(const Perceptions &perceptions) {
   }
 
   // SPDLOG_DEBUG("received new perceptions: {}", perceptions);
-
   for (auto &id : idToBeRemoved) {
     _trackedVehicles.erase(id);
-    std::cout << id << std::endl;
   }
 
   // Process new vehicles;
   for (const auto &perception : perceptions) {
+    if (idToBeIgnored.count(perception.first)) {
+      if (_trackedVehicles.count(perception.first)) {
+        _trackedVehicles.erase(perception.first);
+      }
+      continue;
+    }
+
     const int id = perception.first;
     _trackedVehicles[id].observations.push_back(
         Vehicle::CreateFromPerception(_pMap, perception.second));
+    SPDLOG_INFO("Append new observation to {}, in lane {}", id,
+                Map::GetLaneId(perception.second.sd[1]));
   }
-  SPDLOG_DEBUG("_trackedVehicles={:s}", _trackedVehicles);
+  // SPDLOG_INFO("Size of tracked vehicles {}", _trackedVehicles.size());
 }
 
 Predictions Tracker::GeneratePredictions() const {

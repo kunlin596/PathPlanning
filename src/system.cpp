@@ -59,9 +59,9 @@ std::string System::SpinOnce(const std::string &commandString) {
           Perception::CreatePerceptions(data["sensor_fusion"]);
       SPDLOG_DEBUG("perceptions={}", perceptions);
 
-      _pTracker->Update(perceptions);
+      _pTracker->Update(egoVehicle, perceptions);
       Predictions predictions = _pTracker->GeneratePredictions();
-      SPDLOG_DEBUG("predictions={}", predictions);
+      // SPDLOG_INFO("Generated predictions for {} vihicles.", predictions.size());
 
       std::vector<double> nextXValues, nextYValues;
       waypointsJson["next_x"] = nextXValues;

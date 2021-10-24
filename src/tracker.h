@@ -41,7 +41,7 @@ class Tracker {
    *
    * @param[in]  perceptions  The new perceptions results
    */
-  void Update(const Perceptions &perceptions);
+  void Update(const Vehicle &ego, const Perceptions &perceptions);
 
   Predictions GeneratePredictions() const;
 

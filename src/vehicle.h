@@ -162,6 +162,7 @@ class Vehicle {
   void UpdateFromPerception(const Map::ConstPtr &pMap,
                             const Perception &perception);
 
+
   static Vehicle CreateFromPerception(const Map::ConstPtr &pMap,
                                       const Perception &perception);
 

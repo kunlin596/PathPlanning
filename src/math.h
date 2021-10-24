@@ -21,6 +21,10 @@ inline double GetDistance(double x1, double y1, double x2, double y2) {
   return std::sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
+inline double GetDistance(std::array<double, 2> p1, std::array<double, 2> p2) {
+  return GetDistance(p1[0], p1[1], p2[0], p2[1]);
+}
+
 inline double Logistic(const double x) {
   return 2.0 / (1.0 + std::exp(-x)) - 1.0;
 }

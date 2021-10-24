@@ -14,9 +14,7 @@ namespace pathplanning {
  */
 class System {
  public:
-  System() {
-    Initialize();
-  };
+  System() { Initialize(); };
   virtual ~System(){};
 
   /**
