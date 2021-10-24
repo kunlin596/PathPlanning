@@ -27,4 +27,17 @@ Vehicle Vehicle::CreateFromPerception(const Map::ConstPtr &pMap,
 
   return Vehicle(id, conf);
 }
+
+Vehicle Vehicle::CreateFromEgo(const Map::ConstPtr &pMap, const Ego &ego) {
+  double theta = deg2rad(ego.yaw);
+  double x2 = ego.x - std::cos(theta) * ego.speed * Configuration::TIME_STEP;
+  double y2 = ego.y - std::sin(theta) * ego.speed * Configuration::TIME_STEP;
+  std::array<double, 2> sd2 = pMap->GetSD(ego.x, ego.y, theta);
+  // Assume constant accelaration
+  double sDot = (sd2[0] - ego.s) / Configuration::TIME_STEP;
+  double dDot = (sd2[1] - ego.d) / Configuration::TIME_STEP;
+  return Vehicle(std::numeric_limits<int>::max(),
+                 VehicleConfiguration(ego.s, sDot, 0.0, ego.d, dDot, 0.0));
+}
+
 }  // namespace pathplanning

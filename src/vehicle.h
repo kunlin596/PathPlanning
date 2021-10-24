@@ -3,6 +3,7 @@
 
 #include <array>
 
+#include "configuration.h"
 #include "log.h"
 #include "map.h"
 #include "math.h"
@@ -103,6 +104,21 @@ struct VehicleConfiguration {
 };
 
 /**
+ * @brief      A thin wrapper data class for ego vehicle
+ */
+struct Ego {
+  Ego(double x, double y, double s, double d, double yaw, double speed)
+      : x(x), y(y), s(s), d(d), yaw(yaw), speed(speed) {}
+
+  double x = 0.0;
+  double y = 0.0;
+  double s = 0.0;
+  double d = 0.0;
+  double yaw = 0.0;
+  double speed = 0.0;
+};
+
+/**
  * @brief      This class describes a non-ego vehicle.
  */
 class Vehicle {
@@ -141,13 +157,17 @@ class Vehicle {
     // clang-format on
   }
 
+  bool IsEgo() const { return _id == std::numeric_limits<int>::max(); }
+
   void UpdateFromPerception(const Map::ConstPtr &pMap,
                             const Perception &perception);
 
   static Vehicle CreateFromPerception(const Map::ConstPtr &pMap,
                                       const Perception &perception);
 
- private:
+  static Vehicle CreateFromEgo(const Map::ConstPtr &pMap, const Ego &ego);
+
+ protected:
   int _id = -1;
   VehicleConfiguration _conf;
 };

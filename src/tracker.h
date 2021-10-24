@@ -1,6 +1,7 @@
 #ifndef PATHPLANNING_TRACKER_H
 #define PATHPLANNING_TRACKER_H
 
+#include "configuration.h"
 #include "log.h"
 #include "map.h"
 #include "perception.h"
@@ -27,7 +28,12 @@ class Tracker {
     Predictions GeneratePredictions(const double time = 1.0) const;
   };
 
+  struct Options {
+    std::array<double, 2> sdhorizon = Configuration::SD_HORIZON;
+  };
+
   Tracker(const Map::ConstPtr &pMap) : _pMap(pMap) {}
+
   virtual ~Tracker() {}
 
   /**
@@ -54,6 +60,7 @@ class Tracker {
   }
 
  private:
+  Options _options;
   Map::ConstPtr _pMap;
   std::unordered_map<int, TrackedVehicle> _trackedVehicles;
 };

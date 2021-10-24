@@ -44,13 +44,19 @@ std::string System::SpinOnce(const std::string &commandString) {
   if (!commandString.empty()) {
     json commandJson = json::parse(commandString);
     std::string event = commandJson[0].get<std::string>();
+    const json &data = commandJson[1];
 
     if (event == "telemetry") {
       json waypointsJson;
 
+      Ego ego(data["x"], data["y"], data["s"], data["d"], data["yaw"],
+              data["speed"]);
+
+      Vehicle egoVehicle = Vehicle::CreateFromEgo(_pMap, ego);
+
       // Create the latest perceptions from input command
       Perceptions perceptions =
-          Perception::CreatePerceptions(commandJson[1]["sensor_fusion"]);
+          Perception::CreatePerceptions(data["sensor_fusion"]);
       SPDLOG_DEBUG("perceptions={}", perceptions);
 
       _pTracker->Update(perceptions);
