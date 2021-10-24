@@ -27,7 +27,11 @@ std::string _NormalizeJsonString(std::string s) {
 
 namespace pathplanning {
 
-void System::Initialize(const std::string &configFilename) {}
+void System::Initialize(const std::string &configFilename) {
+  _pMap = Map::CreateMap();
+  _pHub = std::make_unique<uWS::Hub>();
+  _pTracker = std::make_unique<Tracker>(_pMap);
+}
 
 std::string System::SpinOnce(const std::string &commandString) {
   using nlohmann::json;
@@ -40,6 +44,19 @@ std::string System::SpinOnce(const std::string &commandString) {
 
     if (event == "telemetry") {
       json waypointsJson;
+
+      // Create the latest perceptions from input command
+      Perceptions perceptions =
+          Perception::CreatePerceptions(commandJson[1]["sensor_fusion"]);
+
+      _pTracker->Update(perceptions);
+      Predictions predictions = _pTracker->GeneratePredictions();
+    
+      for (const auto &pred : predictions) {
+        for (const auto &v : pred.second) {
+          std::cout << v << std::endl;
+        }
+      }
 
       std::vector<double> nextXValues, nextYValues;
       waypointsJson["next_x"] = nextXValues;
@@ -57,8 +74,8 @@ std::string System::SpinOnce(const std::string &commandString) {
 int System::Spin() {
   // Main event loop callback when we receive something from the simulator.
   // These parameters are specific to uWS communication.
-  _pHub->onMessage([this](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                      uWS::OpCode opCode) {
+  _pHub->onMessage([this](uWS::WebSocket<uWS::SERVER> ws, char *data,
+                          size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -69,12 +86,13 @@ int System::Spin() {
     }  // end websocket if
   });  // end _pHub->onMessage
 
-  _pHub->onConnection([this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-    std::cout << "Connected!" << std::endl;
-  });
+  _pHub->onConnection(
+      [this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+        std::cout << "Connected!" << std::endl;
+      });
 
   _pHub->onDisconnection([this](uWS::WebSocket<uWS::SERVER> ws, int code,
-                            char *message, size_t length) {
+                                char *message, size_t length) {
     ws.close();
     std::cout << "Disconnected" << std::endl;
   });

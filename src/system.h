@@ -15,8 +15,7 @@ namespace pathplanning {
 class System {
  public:
   System() {
-    _pMap = Map::CreateMap();
-    _pHub = std::make_unique<uWS::Hub>();
+    Initialize();
   };
   virtual ~System(){};
 
@@ -30,7 +29,7 @@ class System {
    *
    * @param[in]  configFilename  The configuration filename
    */
-  void Initialize(const std::string &configFilename);
+  void Initialize(const std::string &configFilename = "");
 
   /**
    * @brief      Reset map
@@ -48,6 +47,11 @@ class System {
    */
   std::string SpinOnce(const std::string &commandString);
 
+  /**
+   * @brief      Spin the planning server
+   *
+   * @return     Status code
+   */
   int Spin();
 
  private:

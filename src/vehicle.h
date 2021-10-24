@@ -2,6 +2,7 @@
 #define PATHPLANNING_VEHICLE_H
 
 #include <array>
+#include <boost/format.hpp>
 
 #include "map.h"
 #include "math.h"
@@ -111,6 +112,8 @@ class Vehicle {
       : _id(id), _conf(conf) {}
   virtual ~Vehicle() {}
 
+  inline int GetId() const { return _id; }
+
   /**
    * @brief      Gets the predicted cofiguration `time` seconds from now.
    *
@@ -150,5 +153,26 @@ class Vehicle {
 };
 
 }  // namespace pathplanning
+
+// IO functions
+
+inline std::ostream &operator<<(
+    std::ostream &out, const pathplanning::VehicleConfiguration &conf) {
+  out << boost::format(
+             "VehicleConfiguration=(sPos=%.3f, sVel=%.3f, sAcc=%.3f, "
+             "dPos=%.3f, dVel=%.3f, dAcc=%.3f)") %
+             conf.sPos % conf.sVel % conf.sAcc % conf.dPos % conf.dVel %
+             conf.dAcc;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out,
+                                const pathplanning::Vehicle &vehicle) {
+  out << "Vehicle(id=" << vehicle.GetId()
+      << ", conf=" << vehicle.GetConfiguration() << ")";
+  return out;
+}
+
+
 
 #endif  // PATHPLANNING_VEHICLE_H

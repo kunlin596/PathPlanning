@@ -14,14 +14,16 @@ namespace pathplanning {
  * This class is responsible for creating predictions and keep track of the
  * non-ego vehicles.
  */
+
+using Predictions = std::unordered_map<int, std::vector<Vehicle>>;
+
 class Tracker {
  public:
   struct TrackedVehicle {
     int id = -1;
     std::vector<Vehicle> observations;  ///< Keep track of all observations
 
-    std::unordered_map<int, std::vector<Vehicle>> GeneratePredictions(
-        const double time = 1.0) const;
+    Predictions GeneratePredictions(const double time = 1.0) const;
   };
 
   Tracker(const Map::ConstPtr &pMap) : _pMap(pMap) {}
@@ -34,7 +36,7 @@ class Tracker {
    */
   void Update(const Perceptions &perceptions);
 
-  std::unordered_map<int, std::vector<Vehicle>> GeneratePredictions() const;
+  Predictions GeneratePredictions() const;
 
   const std::unordered_map<int, TrackedVehicle> &GetVehicles() const {
     return _trackedVehicles;

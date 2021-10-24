@@ -26,16 +26,11 @@ Tracker::TrackedVehicle::GeneratePredictions(const double time) const {
 
 void Tracker::Update(const Perceptions &perceptions) {
   // TODO: Implementation can be simplified.
-  std::unordered_map<int, Perception> newPerceptionMap;
-
-  for (const auto &perception : perceptions) {
-    newPerceptionMap[perception.id] = perception;
-  }
 
   // Naively remove disappered vehicle.
   std::vector<int> idToBeRemoved;
   for (const auto &vehicleData : _trackedVehicles) {
-    if (newPerceptionMap.count(vehicleData.first) == 0) {
+    if (perceptions.count(vehicleData.first) == 0) {
       idToBeRemoved.push_back(vehicleData.first);
     }
   }
@@ -48,12 +43,12 @@ void Tracker::Update(const Perceptions &perceptions) {
   decltype(_trackedVehicles) newVehicles;
   for (auto &vehicleData : _trackedVehicles) {
     const int id = vehicleData.first;
-    if (newPerceptionMap.count(id) != 0) {
+    if (perceptions.count(id) != 0) {
       _trackedVehicles[id].observations.push_back(
-          Vehicle::CreateFromPerception(_pMap, newPerceptionMap[id]));
+          Vehicle::CreateFromPerception(_pMap, perceptions.at(id)));
     } else {
       newVehicles[id].observations = {
-          Vehicle::CreateFromPerception(_pMap, newPerceptionMap[id])};
+          Vehicle::CreateFromPerception(_pMap, perceptions.at(id))};
     }
   }
   _trackedVehicles.insert(newVehicles.begin(), newVehicles.end());
