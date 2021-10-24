@@ -15,7 +15,7 @@ using Waypoints = std::vector<Waypoint>;
 class Path {
  public:
   static std::tuple<std::vector<double>, std::vector<double>>
-  ConverWaypointsToXY(const Waypoints &waypoints);
+  ConvertWaypointsToXY(const Waypoints &waypoints);
 
   static Waypoints ConvertXYToWaypoints(const std::vector<double> &x,
                                         const std::vector<double> &y);

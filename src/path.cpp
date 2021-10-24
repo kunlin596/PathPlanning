@@ -2,7 +2,7 @@
 
 namespace pathplanning {
 
-std::tuple<std::vector<double>, std::vector<double>> Path::ConverWaypointsToXY(
+std::tuple<std::vector<double>, std::vector<double>> Path::ConvertWaypointsToXY(
     const Waypoints& waypoints) {
   using std::vector;
   vector<double> x(waypoints.size()), y(waypoints.size());

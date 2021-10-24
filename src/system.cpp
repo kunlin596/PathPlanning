@@ -50,12 +50,18 @@ std::string System::SpinOnce(const std::string &commandString) {
     const json &data = commandJson[1];
 
     if (event == "telemetry") {
-      json waypointsJson;
+      Waypoints previousPath = Path::ConvertXYToWaypoints(
+          data["previous_path_x"], data["previous_path_y"]);
+      Waypoint expectedEndPathSD = {data["end_path_s"], data["end_path_d"]};
 
       Ego ego(data["x"], data["y"], data["s"], data["d"], data["yaw"],
               data["speed"]);
 
       Vehicle egoVehicle = Vehicle::CreateFromEgo(_pMap, ego);
+
+      //
+      // Process perceptions
+      //
 
       // Create the latest perceptions from input command
       Perceptions perceptions =
@@ -67,6 +73,9 @@ std::string System::SpinOnce(const std::string &commandString) {
       // SPDLOG_INFO("Generated predictions for {} vihicles.",
       // predictions.size());
 
+      //
+      // Behavior planning
+      //
       const auto successorStates =
           _pBehaviorPlanner->GetSuccessorStates(BehaviorState::kLaneKeeping);
 
@@ -74,12 +83,19 @@ std::string System::SpinOnce(const std::string &commandString) {
           egoVehicle, successorStates, predictions);
       SPDLOG_INFO("ego={}, proposal={}", egoVehicle, proposal);
 
+      //
+      // Path generation
+      //
       auto path =
           _pPathGenerator->GeneratePath(egoVehicle, proposal, predictions);
       SPDLOG_INFO("path={}", path);
 
+      //
+      // Construct result message
+      //
+      json waypointsJson;
       std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) =
-          Path::ConverWaypointsToXY(path);
+          Path::ConvertWaypointsToXY(path);
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
     }
