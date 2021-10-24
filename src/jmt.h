@@ -25,20 +25,30 @@ class SDFunctor {
   SDFunctor() {}
 
   SDFunctor(const QuinticFunctor& sFunc, const QuinticFunctor& dFunc)
-      : _sFunc(sFunc), _dFunc(dFunc) {}
-
-  std::array<double, 2> Eval(const double x) const {
-    return {_sFunc(x), _dFunc(x)};
+      : _sPosFunc(sFunc), _dPosFunc(dFunc) {
+    _sVelFunc = _sPosFunc.Differentiate();
+    _dVelFunc = _dPosFunc.Differentiate();
+    _sAccFunc = _sVelFunc.Differentiate();
+    _dAccFunc = _dVelFunc.Differentiate();
   }
 
-  std::array<double, 2> operator()(const double x) { return Eval(x); }
+  std::array<double, 6> Eval(const double x) const {
+    return {_sPosFunc(x), _sVelFunc(x), _sAccFunc(x),
+            _dPosFunc(x), _dVelFunc(x), _dAccFunc(x)};
+  }
 
-  const QuinticFunctor& GetSFunc() const { return _sFunc; }
-  const QuinticFunctor& GetDFunc() const { return _dFunc; }
+  std::array<double, 6> operator()(const double x) const { return Eval(x); }
+
+  const QuinticFunctor& GetSFunc() const { return _sPosFunc; }
+  const QuinticFunctor& GetDFunc() const { return _dPosFunc; }
 
  private:
-  QuinticFunctor _sFunc;
-  QuinticFunctor _dFunc;
+  QuinticFunctor _sPosFunc;
+  PolynomialFunctor<4> _sVelFunc;
+  PolynomialFunctor<3> _sAccFunc;
+  QuinticFunctor _dPosFunc;
+  PolynomialFunctor<4> _dVelFunc;
+  PolynomialFunctor<3> _dAccFunc;
 };
 
 /**
@@ -54,17 +64,19 @@ class SDFunctor {
  * the same format of output, so trajecotry is per generator type.
  */
 struct JMTTrajectory {
-  SDFunctor sdFunc;
+  SDFunctor _sdFunc;
   double elapsedTime = 0.0;
 
   JMTTrajectory() {}
 
   JMTTrajectory(const SDFunctor& sdFunc, const double elapsedTime)
-      : sdFunc(sdFunc), elapsedTime(elapsedTime) {}
+      : _sdFunc(sdFunc), elapsedTime(elapsedTime) {}
 
-  inline Waypoint Eval(const double t) { return sdFunc(t); }
+  inline VehicleConfiguration Eval(const double t) const {
+    return VehicleConfiguration(_sdFunc(t));
+  }
 
-  Waypoint operator()(const double t) { return Eval(t); }
+  VehicleConfiguration operator()(const double t) const { return Eval(t); }
 };
 
 /**
@@ -124,6 +136,10 @@ struct JMTTrajectory {
  *
  */
 struct JMT {
+  static QuinticFunctor Solve1D(const std::array<double, 3>& start,
+                                const std::array<double, 3>& end,
+                                const double t);
+
   static QuinticFunctor Solve1D(const std::array<double, 6>& params,
                                 const double t);
 
@@ -286,17 +302,7 @@ class JMTTrajectoryEvaluator {
       : _costWeightMapping(costWeightMapping) {}
 
   double Validate(const JMTTrajectory& traj, const double time,
-                  const Predictions& predictions) {
-    double cost = 0.0;
-    for (const auto& costInfo : _costWeightMapping) {
-      if (_funcPtrs.count(costInfo.first) == 0) {
-        _funcPtrs[costInfo.first] = costs::CreateCostFunctor(costInfo.first);
-      }
-      cost += _funcPtrs[costInfo.first]->Compute(traj, time, predictions) *
-              costInfo.second;
-    }
-    return cost;
-  }
+                  const Predictions& predictions);
 
  private:
   costs::CostWeightMapping _costWeightMapping;
@@ -305,5 +311,17 @@ class JMTTrajectoryEvaluator {
 };
 
 }  // namespace pathplanning
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const pathplanning::SDFunctor& functor) {
+  return out << fmt::format("SDFunctor(QuinticFunctor({}), QuinticFunctor({}))",
+                            functor.GetSFunc(), functor.GetDFunc());
+}
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const pathplanning::JMTTrajectory& traj) {
+  return out << fmt::format("JMTTrajectory({}, {})", traj.elapsedTime,
+                            traj._sdFunc);
+}
 
 #endif

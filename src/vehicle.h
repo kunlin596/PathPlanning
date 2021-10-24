@@ -3,6 +3,7 @@
 
 #include <array>
 
+#include "Eigen-3.3/Eigen/Dense"
 #include "configuration.h"
 #include "log.h"
 #include "map.h"
@@ -21,79 +22,45 @@ struct VehicleConfiguration {
         dPos(dPos),
         dVel(dVel),
         dAcc(dAcc) {}
+  VehicleConfiguration(const std::array<double, 6> &params)
+      : sPos(params[0]),
+        sVel(params[1]),
+        sAcc(params[2]),
+        dPos(params[3]),
+        dVel(params[4]),
+        dAcc(params[5]) {}
 
-  double operator[](size_t index) {
-    switch (index) {
-      case 0:
-        return sPos;
-      case 1:
-        return sVel;
-      case 2:
-        return sAcc;
-      case 3:
-        return dPos;
-      case 4:
-        return dVel;
-      case 5:
-        return dAcc;
-      default:
-        throw std::runtime_error("not valid index");
-    }
-  }
+  // VehicleConfiguration(const VehicleConfiguration &other)
+  //     : sPos(other.sPos),
+  //       sVel(other.sVel),
+  //       sAcc(other.sAcc),
+  //       dPos(other.dPos),
+  //       dVel(other.dVel),
+  //       dAcc(other.dAcc) {}
 
-  double At(size_t index) const {
-    switch (index) {
-      case 0:
-        return sPos;
-      case 1:
-        return sVel;
-      case 2:
-        return sAcc;
-      case 3:
-        return dPos;
-      case 4:
-        return dVel;
-      case 5:
-        return dAcc;
-      default:
-        throw std::runtime_error("not valid index");
-    }
-  }
+  // VehicleConfiguration(VehicleConfiguration &&other)
+  //     : sPos(std::move(other.sPos)),
+  //       sVel(std::move(other.sVel)),
+  //       sAcc(std::move(other.sAcc)),
+  //       dPos(std::move(other.dPos)),
+  //       dVel(std::move(other.dVel)),
+  //       dAcc(std::move(other.dAcc)) {}
 
   size_t Size() const { return 6; }
 
+  double operator[](size_t index);
+
+  double At(size_t index) const;
+
   friend VehicleConfiguration operator+(VehicleConfiguration lhs,
-                                        const VehicleConfiguration &rhs) {
-    // friends defined inside class body are inline and are hidden from non-ADL
-    // lookup
-    lhs.sPos += rhs.sPos;
-    lhs.sVel += rhs.sVel;
-    lhs.sAcc += rhs.sAcc;
-    lhs.dPos += rhs.dPos;
-    lhs.dVel += rhs.dVel;
-    lhs.dAcc += rhs.dAcc;
-    return lhs;
-  }
+                                        const VehicleConfiguration &rhs);
 
-  VehicleConfiguration &operator+=(const VehicleConfiguration &rhs) {
-    sPos += rhs.sPos;
-    sVel += rhs.sVel;
-    sAcc += rhs.sAcc;
-    dPos += rhs.dPos;
-    dVel += rhs.dVel;
-    dAcc += rhs.dAcc;
-    return *this;
-  }
+  friend VehicleConfiguration operator-(VehicleConfiguration lhs,
+                                        const VehicleConfiguration &rhs);
 
-  VehicleConfiguration &operator-=(const VehicleConfiguration &rhs) {
-    sPos -= rhs.sPos;
-    sVel -= rhs.sVel;
-    sAcc -= rhs.sAcc;
-    dPos -= rhs.dPos;
-    dVel -= rhs.dVel;
-    dAcc -= rhs.dAcc;
-    return *this;
-  }
+  VehicleConfiguration &operator+=(const VehicleConfiguration &rhs);
+
+  VehicleConfiguration &operator-=(const VehicleConfiguration &rhs);
 
   double sPos = 0.0;
   double sVel = 0.0;
@@ -103,12 +70,31 @@ struct VehicleConfiguration {
   double dAcc = 0.0;
 };
 
+VehicleConfiguration operator+(VehicleConfiguration lhs,
+                               const VehicleConfiguration &rhs);
+
 /**
  * @brief      A thin wrapper data class for ego vehicle
+ *
+ * Velocity and accelatation of s and d will be computed when ego collects 3 new
+ * localization (measurements) from simulator. They could be calculated using
+ * simple kinematics equations.
  */
 struct Ego {
-  Ego(double x, double y, double s, double d, double yaw, double speed)
-      : x(x), y(y), s(s), d(d), yaw(yaw), speed(speed) {}
+  Ego() {}
+  Ego(double x, double y, double s, double d, double yaw, double speed);
+
+  /**
+   * @brief      Update new localization (measurements) from simulator
+   *
+   * @param[in]  x      New x
+   * @param[in]  y      New y
+   * @param[in]  s      New s
+   * @param[in]  d      New d
+   * @param[in]  yaw    The yaw angle in degrees
+   * @param[in]  speed  The speed in meters/second
+   */
+  void Update(double x, double y, double s, double d, double yaw, double speed);
 
   double x = 0.0;
   double y = 0.0;
@@ -116,10 +102,22 @@ struct Ego {
   double d = 0.0;
   double yaw = 0.0;
   double speed = 0.0;
+
+  double sVel = 0.0;
+  double sAcc = 0.0;
+  double dVel = 0.0;
+  double dAcc = 0.0;
+
+ private:
+  void _Collect(double s, double d);
+  std::vector<double>
+      _sMeasursments;  ///< For calculating speed and accelaration.
+  std::vector<double>
+      _dMeasursments;  ///< For calculating speed and accelaration.
 };
 
 /**
- * @brief      This class describes a non-ego vehicle.
+ * @brief      This class describes a vehicle.
  */
 class Vehicle {
  public:
@@ -137,31 +135,12 @@ class Vehicle {
    *
    * @return     The cofiguration.
    */
-  inline VehicleConfiguration GetConfiguration(const double time = 0.0) const {
-    const double &sPos = _conf.sPos;
-    const double &sVel = _conf.sVel;
-    const double &sAcc = _conf.sAcc;
-    const double &dPos = _conf.dPos;
-    const double &dVel = _conf.dVel;
-    const double &dAcc = _conf.dAcc;
-
-    // clang-format off
-    return {
-        CalculatePosition(sPos, sVel, sAcc, time),
-        CalculateVelocity(sVel, sAcc, time),
-        sAcc,
-        CalculatePosition(dPos, dVel, dAcc, time),
-        CalculateVelocity(dVel, dAcc, time),
-        dAcc
-    };
-    // clang-format on
-  }
+  VehicleConfiguration GetConfiguration(const double time = 0.0) const;
 
   bool IsEgo() const { return _id == std::numeric_limits<int>::max(); }
 
-  void UpdateFromPerception(const Map::ConstPtr &pMap,
-                            const Perception &perception);
-
+  // void UpdateFromPerception(const Map::ConstPtr &pMap,
+  //                           const Perception &perception);
 
   static Vehicle CreateFromPerception(const Map::ConstPtr &pMap,
                                       const Perception &perception);
@@ -182,7 +161,7 @@ using Vehicles = std::vector<Vehicle>;
 inline std::ostream &operator<<(
     std::ostream &out, const pathplanning::VehicleConfiguration &conf) {
   return out << fmt::format(
-             "VehicleConfiguration=("
+             "VehicleConfiguration("
              "sPos={:7.3f}, sVel={:7.3f}, sAcc={:7.3f}, "
              "dPos={:7.3f}, dVel={:7.3f}, dAcc={:7.3f})",
              conf.sPos, conf.sVel, conf.sAcc, conf.dPos, conf.dVel, conf.dAcc);

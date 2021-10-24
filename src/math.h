@@ -4,7 +4,12 @@
 #include <cmath>
 #include <random>
 
+#include "log.h"
+
 namespace pathplanning {
+
+inline double mph2ms(const double mph) { return mph / 2.24; }
+inline double ms2mph(const double ms) { return ms * 2.24; }
 
 inline double CalculateVelocity(double vel, double acc, double time) {
   return vel + acc * time;
@@ -42,15 +47,15 @@ struct PolynomialFunctor {
   inline double Eval(const double x) const {
     double item = 1.0;
     double result = 0.0;
-    for (size_t i = 0; i < Order + 1; ++i) {
+    for (size_t i = 0; i < coeffs.size(); ++i) {
       result += coeffs[i] * item;
       item *= x;
     }
     return result;
   }
 
-  inline PolynomialFunctor<Order - 1> Differentiate() {
-    std::array<double, Order - 1> newCoeffs;
+  inline PolynomialFunctor<Order - 1> Differentiate() const {
+    std::array<double, Order> newCoeffs;
     for (size_t i = 0; i < coeffs.size() - 1; ++i) {
       newCoeffs[i] = coeffs[i + 1] * (i + 1);
     }
@@ -79,5 +84,11 @@ struct GaussianSampler1D {
 };
 
 }  // namespace pathplanning
+
+template <uint32_t Order>
+inline std::ostream& operator<<(
+    std::ostream& out, const pathplanning::PolynomialFunctor<Order>& functor) {
+  return out << functor.coeffs;
+}
 
 #endif

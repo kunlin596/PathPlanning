@@ -7,7 +7,7 @@ add_definitions(-std=c++17)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     include_directories(/usr/local/include)
     link_directories(/usr/local/lib)
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm64")
@@ -20,7 +20,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
       link_directories(/usr/local/opt/openssl/lib)
       link_directories(/usr/local/Cellar/libuv/1.11.0/lib)
     endif()
-endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
+endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 find_package(spdlog REQUIRED)
 
@@ -35,10 +35,19 @@ add_library(
   src/map.cpp
   src/tracker.cpp
   src/behaviorplanner.cpp
-  src/system.cpp
 )
 
-add_executable(pathplanningserver src/main.cpp)
+target_link_libraries(
+  driving
+  PUBLIC
+  spdlog::spdlog
+)
+
+add_executable(
+  pathplanningserver
+  src/system.cpp
+  src/main.cpp)
+
 target_link_libraries(
   pathplanningserver
   PRIVATE
@@ -46,5 +55,18 @@ target_link_libraries(
   ssl
   uv
   uWS
+  driving)
+
+add_executable(test_math src/test_math.cpp)
+target_link_libraries(
+  test_math
+  PRIVATE
+  spdlog::spdlog
+)
+
+add_executable(test_ptg src/test_ptg.cpp)
+target_link_libraries(
+  test_ptg
+  PRIVATE
   driving
-  spdlog::spdlog)
+)

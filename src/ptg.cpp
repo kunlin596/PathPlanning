@@ -18,65 +18,102 @@ VehicleConfiguration GoalSampler::Sample() const {
                               _samplers[4]->Sample(), _samplers[5]->Sample());
 }
 
-Waypoints PolynomialTrajectoryGenerator::GeneratePath(
+std::pair<Waypoints, JMTTrajectory> PolynomialTrajectoryGenerator::GeneratePath(
     const Vehicle &startState, const Vehicle &goalState,
-    const Predictions &predictions, const double t) const {
-  //
-  // Generate perturbed goals
-  //
+    const Predictions &predictions, const double targetExecutionTime) {
+  VehicleConfiguration startConf = startState.GetConfiguration();
+  const int numPointsToBeGenerated =
+      std::min(static_cast<int>(targetExecutionTime / _options.timeStep),
+               Configuration::NUM_POINTS);
 
-  SPDLOG_INFO("t={}, sampleTimeStart={}", t, _options.goalTimeSampleStep);
-  std::vector<VehicleConfiguration> goals;
-  std::vector<int> goalTimes;
+  Waypoints waypoints(numPointsToBeGenerated);
 
-  SPDLOG_INFO("t={}, sampleTimeStart={}", t, _options.goalTimeSampleStep);
-  const double sampleTimeStart = t - 4 * _options.goalTimeSampleStep;
-  double sampleTime = sampleTimeStart;
-
-  for (size_t i = 0; i < 4; ++i) {
-    VehicleConfiguration targetConf = goalState.GetConfiguration(sampleTime);
-
-    goals.push_back(targetConf);
-
-    GoalSampler sampler(targetConf, _options.sampleSigmas);
-    for (size_t j = 0; j < _options.numSamples; ++j) {
-      goals.push_back(sampler.Sample());
-      goalTimes.push_back(sampleTime);
-    }
-
-    sampleTime += _options.goalTimeSampleStep;
-  }
-
-  //
-  // Evaluate all goals by generating the trajectory and select best one
-  //
-
-  double minCost = std::numeric_limits<double>::max();
   JMTTrajectory bestTrajectory;
-  for (size_t i = 0; i < goals.size(); ++i) {
-    JMTTrajectory trajectory = JMT::ComputeTrajectory(
-        startState.GetConfiguration(), goals[i], goalTimes[i]);
+  VehicleConfiguration *pBestGoal;
 
-    // FIXME: Fix delta format
-    double cost = _pEvaluator->Validate(trajectory, t, predictions);
-    if (cost < minCost) {
-      minCost = cost;
-      bestTrajectory = trajectory;
+  if (_options.useGoalSampler) {
+    //
+    // Generate perturbed goals
+    //
+
+    std::vector<VehicleConfiguration> goals;
+    std::vector<int> goalTimes;
+    const double sampleTimeStart =
+        targetExecutionTime - 4 * _options.goalTimeSampleStep;
+    double sampleTime = sampleTimeStart;
+
+    //
+    // Evaluate all goals by generating the trajectory and select best one
+    //
+
+    for (size_t i = 0; i < 4; ++i) {
+      VehicleConfiguration targetConf = goalState.GetConfiguration(sampleTime);
+
+      goals.push_back(targetConf);
+
+      GoalSampler sampler(targetConf, _options.sampleSigmas);
+      for (size_t j = 0; j < _options.numSamples; ++j) {
+        goals.push_back(sampler.Sample());
+        goalTimes.push_back(sampleTime);
+      }
+
+      sampleTime += _options.goalTimeSampleStep;
     }
+
+    double minCost = std::numeric_limits<double>::max();
+    for (size_t i = 0; i < goals.size(); ++i) {
+      JMTTrajectory trajectory =
+          JMT::ComputeTrajectory(startConf, goals[i], goalTimes[i]);
+
+      double cost =
+          _pEvaluator->Validate(trajectory, targetExecutionTime, predictions);
+      if (cost < minCost) {
+        minCost = cost;
+        pBestGoal = &goals[i];
+        bestTrajectory = trajectory;
+      }
+    }
+  } else {
+    bestTrajectory = JMT::ComputeTrajectory(
+        startConf, goalState.GetConfiguration(), targetExecutionTime);
   }
 
   //
   // Evaluate trajectory into waypoints
   //
 
-  auto func = bestTrajectory.sdFunc;
-  size_t numPoints = static_cast<size_t>(t / _options.timeStep);
-  Waypoints waypoints(numPoints);
-  for (size_t i = 0; i < numPoints; ++i) {
-    Waypoint sd = func(_options.timeStep * i);
-    waypoints[i] = _pMap->GetXY(sd[0], sd[1]);
+  SPDLOG_DEBUG(
+      "start={}, targetExecutionTime={:7.3f}, numPointsToBeGenerated={}, "
+      "waypoints.size()={}",
+      startConf, targetExecutionTime, numPointsToBeGenerated, waypoints.size());
+
+  for (size_t i = 0; i < numPointsToBeGenerated; ++i) {
+    VehicleConfiguration conf = bestTrajectory(_options.timeStep * i);
+    waypoints[i] = _pMap->GetXY(conf.sPos, conf.dPos);
   }
-  return waypoints;
+
+  return std::make_pair(waypoints, bestTrajectory);
+}
+
+Vehicle PolynomialTrajectoryGenerator::ComputeStartState(
+    const Vehicle &ego, const JMTTrajectory &prevTraj,
+    const Waypoints &prevPath, const Waypoint &endPrevPathSD) {
+  if (prevPath.empty()) {
+    return ego;
+  }
+  double executedTime =
+      (Configuration::NUM_POINTS - prevPath.size()) * Configuration::TIME_STEP;
+
+  // clang-format off
+  VehicleConfiguration result = prevTraj(executedTime);
+
+  // clang-format on
+  auto diff = result - ego.GetConfiguration();
+
+  SPDLOG_DEBUG("executedTime={:7.3f}, diff={}, {}", executedTime, diff[0],
+               diff[3]);
+
+  return Vehicle(ego.GetId(), result);
 }
 
 }  // namespace pathplanning

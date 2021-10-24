@@ -91,7 +91,8 @@ class BehaviorPlanner {
    *
    * @return     Target vehicle state
    */
-  Vehicle GenerateProposal(const Vehicle &ego,
+  Vehicle GenerateProposal(const Vehicle &ego, const Waypoints &prevPath,
+                           const Waypoint &endPrevPathSD,
                            const std::vector<BehaviorState> successorStates,
                            const Predictions &predictions) const;
 

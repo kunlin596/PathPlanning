@@ -55,6 +55,11 @@ class Map {
     return -1;
   }
 
+  std::array<double, 5> Get(int index) const {
+    // TODO: Add boundary checking
+    return {_x[index], _y[index], _s[index], _dx[index], _dy[index]};
+  }
+
   static inline int GetLaneCenterD(int laneId) {
     return HALF_LANE_WIDTH + HALF_LANE_WIDTH * static_cast<double>(laneId);
   }
@@ -74,11 +79,13 @@ class Map {
   using ConstPtr = std::shared_ptr<const Map>;
 
  private:
-  std::vector<double> _x;
-  std::vector<double> _y;
-  std::vector<double> _s;
-  std::vector<double> _dx;
-  std::vector<double> _dy;
+  std::vector<double> _x;  ///< All x coords
+  std::vector<double> _y;  ///< All y coords
+  std::vector<double> _s;  ///< All s coords
+  std::vector<double>
+      _dx;  ///< All x components of tangent unit direction vector
+  std::vector<double>
+      _dy;  ///< All y components of tangent unit direction vector
 };
 
 }  // namespace pathplanning

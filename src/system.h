@@ -17,6 +17,10 @@ class System {
   System() { Initialize(); };
   virtual ~System(){};
 
+  struct State {
+    JMTTrajectory cachedTrajectory;
+  };
+
   /**
    * @brief      System options/parameters
    */
@@ -52,6 +56,12 @@ class System {
    */
   int Spin();
 
+  void UpdateCachedTrajectory(const JMTTrajectory &traj) {
+    _state.cachedTrajectory = traj;
+  }
+
+  State GetState() const { return _state; }
+
  private:
   Map::Ptr _pMap;
   std::unique_ptr<BehaviorPlanner> _pBehaviorPlanner;
@@ -59,7 +69,9 @@ class System {
   std::unordered_map<int, Vehicle> _pPerceptions;
   std::unique_ptr<PolynomialTrajectoryGenerator> _pPathGenerator;
   std::unique_ptr<uWS::Hub> _pHub;
+  std::unique_ptr<Ego> _pEgo;
   int _port = Configuration::SERVER_PORT;
+  State _state;
 };
 
 }  // namespace pathplanning

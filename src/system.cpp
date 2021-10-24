@@ -25,6 +25,13 @@ std::string _NormalizeJsonString(std::string s) {
   return "";
 }
 
+std::string _EmptyControlMessage() {
+  nlohmann::json waypointsJson;
+  waypointsJson["next_x"] = std::vector<double>();
+  waypointsJson["next_y"] = std::vector<double>();
+  return "42[\"control\"," + waypointsJson.dump() + "]";
+}
+
 }  // namespace
 
 namespace pathplanning {
@@ -35,6 +42,7 @@ void System::Initialize(const std::string &configFilename) {
   _pTracker = std::make_unique<Tracker>(_pMap);
   _pBehaviorPlanner = std::make_unique<BehaviorPlanner>(_pMap);
   _pPathGenerator = std::make_unique<PolynomialTrajectoryGenerator>(_pMap);
+  _pEgo = std::make_unique<Ego>();
 }
 
 std::string System::SpinOnce(const std::string &commandString) {
@@ -44,20 +52,50 @@ std::string System::SpinOnce(const std::string &commandString) {
 
   std::string msg;
 
+  // static int cnt = 0;
+  // if (cnt < 10) {
+  //   ++cnt;
+  //   return _EmptyControlMessage();
+  // } else {
+  //   cnt = 0;
+  // }
+
+  static Vehicle cachedProposal;
+
   if (!commandString.empty()) {
     json commandJson = json::parse(commandString);
     std::string event = commandJson[0].get<std::string>();
     const json &data = commandJson[1];
 
     if (event == "telemetry") {
-      Waypoints previousPath = Path::ConvertXYToWaypoints(
-          data["previous_path_x"], data["previous_path_y"]);
-      Waypoint expectedEndPathSD = {data["end_path_s"], data["end_path_d"]};
+      // Similator might not be able to consume all of the points, so it returns
+      // the remaining points back to you.
+      Waypoints prevPath = Path::ConvertXYToWaypoints(data["previous_path_x"],
+                                                      data["previous_path_y"]);
 
-      Ego ego(data["x"], data["y"], data["s"], data["d"], data["yaw"],
-              data["speed"]);
+      // NOTE: Ego's localization data (No Noise)
+      // ["x"] The car's x position in map coordinates
+      // ["y"] The car's y position in map coordinates
+      // ["s"] The car's s position in frenet coordinates
+      // ["d"] The car's d position in frenet coordinates
+      // ["yaw"] The car's yaw angle in the map int degrees
+      // ["speed"] The car's speed in MPH
 
-      Vehicle egoVehicle = Vehicle::CreateFromEgo(_pMap, ego);
+      std::cout << std::endl;
+      SPDLOG_INFO("--- telemetry ---");
+      Waypoint endPathSD = {data["end_path_s"], data["end_path_d"]};
+
+      _pEgo->Update(data["x"], data["y"], data["s"], data["d"],
+                    deg2rad(data["yaw"]), mph2ms(data["speed"]));
+
+      double cacheds = cachedProposal.GetConfiguration().sPos;
+
+      if (cacheds > 0.0) {
+        // FIXME: debug purpose
+        // assert(std::abs(_pEgo->s - cacheds) < 100.0);
+      }
+
+      Vehicle egoVehicle = Vehicle::CreateFromEgo(_pMap, *_pEgo);
 
       //
       // Process perceptions
@@ -70,29 +108,42 @@ std::string System::SpinOnce(const std::string &commandString) {
 
       _pTracker->Update(egoVehicle, perceptions);
       Predictions predictions = _pTracker->GeneratePredictions();
-      // SPDLOG_INFO("Generated predictions for {} vihicles.",
-      // predictions.size());
+      SPDLOG_DEBUG("Generated predictions for {} vihicles", predictions.size());
 
       //
       // Behavior planning
       //
+
       const auto successorStates =
           _pBehaviorPlanner->GetSuccessorStates(BehaviorState::kLaneKeeping);
 
+      Vehicle startState = _pPathGenerator->ComputeStartState(
+          egoVehicle, _state.cachedTrajectory, prevPath, endPathSD);
+      SPDLOG_DEBUG("Computed startState={}", startState.GetConfiguration());
+
       Vehicle proposal = _pBehaviorPlanner->GenerateProposal(
-          egoVehicle, successorStates, predictions);
-      SPDLOG_INFO("ego={}, proposal={}", egoVehicle, proposal);
+          startState, prevPath, endPathSD, successorStates, predictions);
+
+      cachedProposal = proposal;
 
       //
       // Path generation
       //
-      auto path =
-          _pPathGenerator->GeneratePath(egoVehicle, proposal, predictions);
-      SPDLOG_INFO("path={}", path);
+
+      SPDLOG_INFO("Generating path for,\nstartState={}\npropoState={}",
+                   startState.GetConfiguration(), proposal.GetConfiguration());
+      double targetExecutionTime = 1.0;
+      Waypoints path;
+      JMTTrajectory trajectory;
+      std::tie(path, trajectory) = _pPathGenerator->GeneratePath(
+          startState, proposal, predictions, targetExecutionTime);
+
+      UpdateCachedTrajectory(trajectory);
 
       //
       // Construct result message
       //
+
       json waypointsJson;
       std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) =
           Path::ConvertWaypointsToXY(path);

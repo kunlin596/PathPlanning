@@ -19,11 +19,16 @@ std::vector<BehaviorState> BehaviorPlanner::GetSuccessorStates(
 }
 
 Vehicle BehaviorPlanner::GenerateProposal(
-    const Vehicle &ego, const std::vector<BehaviorState> successorStates,
+    const Vehicle &ego, const Waypoints &prevPath,
+    const Waypoint &endPrevPathSD,
+    const std::vector<BehaviorState> successorStates,
     const Predictions &predictions) const {
-  // Dummy proposal to mvoe the car 30 meter ahead.
-  return Vehicle(ego.GetId(), ego.GetConfiguration() +
-                                  VehicleConfiguration(30.0, 0, 0, 0, 0, 0));
+  // Dummy proposal to move the car 30 meter ahead.
+  const auto &conf = ego.GetConfiguration();
+  return Vehicle(ego.GetId(), VehicleConfiguration(conf.sPos + 30.0,
+                                                   Configuration::SPEED_LIMIT,
+                                                   0.0, conf.dPos, 0.0, 0.0));
+  // }
 }
 
 }  // namespace pathplanning

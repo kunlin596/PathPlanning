@@ -30,10 +30,13 @@ class GoalSampler {
 class PolynomialTrajectoryGenerator {
  public:
   struct Options {
+    uint32_t numPoints = Configuration::NUM_POINTS;
     uint32_t numSamples = 10;
     double timeStep = Configuration::TIME_STEP;
-    std::array<double, 6> sampleSigmas;
+
+    bool useGoalSampler = false;
     double goalTimeSampleStep = 0.5;
+    std::array<double, 6> sampleSigmas;
     Options(){};
     virtual ~Options() {}
   };
@@ -80,13 +83,19 @@ class PolynomialTrajectoryGenerator {
    *
    * @return     { description_of_the_return_value }
    */
-  Waypoints GeneratePath(const Vehicle &startState, const Vehicle &goalState,
-                         const Predictions &predictions,
-                         const double t = 20.0) const;
+  std::pair<Waypoints, JMTTrajectory> GeneratePath(
+      const Vehicle &startState, const Vehicle &goalState,
+      const Predictions &predictions, const double targetExecutionTime = 1.0);
+
+  Vehicle ComputeStartState(const Vehicle &ego, const JMTTrajectory &prevTraj,
+                            const Waypoints &prevPath,
+                            const Waypoint &endPrevPathSD);
 
  private:
   Map::ConstPtr _pMap;
   Options _options;
+  std::unique_ptr<VehicleConfiguration>
+      _pPrevGoal;  ///< Cache the previous goal for continuous planning
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };
 
