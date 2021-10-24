@@ -59,7 +59,7 @@ class System {
   std::unordered_map<int, Vehicle> _pPerceptions;
   std::unique_ptr<PolynomialTrajectoryGenerator> _pPathGenerator;
   std::unique_ptr<uWS::Hub> _pHub;
-  int _port = 4567;
+  int _port = Configuration::SERVER_PORT;
 };
 
 }  // namespace pathplanning

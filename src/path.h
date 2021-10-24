@@ -5,6 +5,8 @@
 #include <tuple>
 #include <vector>
 
+#include "log.h"
+
 namespace pathplanning {
 
 using Waypoint = std::array<double, 2>;
@@ -12,13 +14,24 @@ using Waypoints = std::vector<Waypoint>;
 
 class Path {
  public:
-  std::tuple<std::vector<double>, std::vector<double>> ConverWaypointsToXY(
-      const Waypoints& waypoints);
+  static std::tuple<std::vector<double>, std::vector<double>>
+  ConverWaypointsToXY(const Waypoints &waypoints);
 
-  inline Waypoints ConvertXYToWaypoints(const std::vector<double>& x,
-                                        const std::vector<double>& y);
+  static Waypoints ConvertXYToWaypoints(const std::vector<double> &x,
+                                        const std::vector<double> &y);
 };
 
 }  // namespace pathplanning
+
+// IO functions
+
+inline std::ostream &operator<<(std::ostream &out,
+                                const pathplanning::Waypoints &waypoints) {
+  out << std::string("{\n");
+  for (const auto &p : waypoints) {
+    out << fmt::format("{:s},\n", p);
+  }
+  return out << std::string("}\n");
+}
 
 #endif

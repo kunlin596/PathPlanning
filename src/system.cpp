@@ -24,6 +24,7 @@ std::string _NormalizeJsonString(std::string s) {
   }
   return "";
 }
+
 }  // namespace
 
 namespace pathplanning {
@@ -32,6 +33,8 @@ void System::Initialize(const std::string &configFilename) {
   _pMap = Map::CreateMap();
   _pHub = std::make_unique<uWS::Hub>();
   _pTracker = std::make_unique<Tracker>(_pMap);
+  _pBehaviorPlanner = std::make_unique<BehaviorPlanner>(_pMap);
+  _pPathGenerator = std::make_unique<PolynomialTrajectoryGenerator>(_pMap);
 }
 
 std::string System::SpinOnce(const std::string &commandString) {
@@ -61,11 +64,22 @@ std::string System::SpinOnce(const std::string &commandString) {
 
       _pTracker->Update(egoVehicle, perceptions);
       Predictions predictions = _pTracker->GeneratePredictions();
-      // SPDLOG_INFO("Generated predictions for {} vihicles.", predictions.size());
+      // SPDLOG_INFO("Generated predictions for {} vihicles.",
+      // predictions.size());
 
-      std::vector<double> nextXValues, nextYValues;
-      waypointsJson["next_x"] = nextXValues;
-      waypointsJson["next_y"] = nextYValues;
+      const auto successorStates =
+          _pBehaviorPlanner->GetSuccessorStates(BehaviorState::kLaneKeeping);
+
+      Vehicle proposal = _pBehaviorPlanner->GenerateProposal(
+          egoVehicle, successorStates, predictions);
+      SPDLOG_INFO("ego={}, proposal={}", egoVehicle, proposal);
+
+      auto path =
+          _pPathGenerator->GeneratePath(egoVehicle, proposal, predictions);
+      SPDLOG_INFO("path={}", path);
+
+      std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) =
+          Path::ConverWaypointsToXY(path);
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
     }
@@ -93,21 +107,23 @@ int System::Spin() {
 
   _pHub->onConnection(
       [this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-        std::cout << "Connected!" << std::endl;
+        SPDLOG_INFO("Connected.");
       });
 
   _pHub->onDisconnection([this](uWS::WebSocket<uWS::SERVER> ws, int code,
                                 char *message, size_t length) {
     ws.close();
-    std::cout << "Disconnected" << std::endl;
+    SPDLOG_INFO("Disconnected.");
   });
 
   if (_pHub->listen(_port)) {
-    std::cout << "Listening to port " << _port << std::endl;
+    SPDLOG_INFO("Listening to port {}.", _port);
   } else {
-    std::cerr << "Failed to listen to port" << std::endl;
+    SPDLOG_INFO("Failed to listen to port {}.", _port);
     return -1;
   }
+
+  SPDLOG_INFO("Starting planning server.");
   _pHub->run();
   return 0;
 }

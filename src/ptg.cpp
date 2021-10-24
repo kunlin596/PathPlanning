@@ -1,5 +1,7 @@
 #include "ptg.h"
 
+#include "log.h"
+
 namespace pathplanning {
 
 GoalSampler::GoalSampler(const VehicleConfiguration &canonicalConf,
@@ -16,30 +18,23 @@ VehicleConfiguration GoalSampler::Sample() const {
                               _samplers[4]->Sample(), _samplers[5]->Sample());
 }
 
-Waypoints PolynomialTrajectoryGenerator::Generate(
-    const VehicleConfiguration &startConf, const VehicleConfiguration &endConf,
-    const std::unordered_map<int, Vehicle> &perceptions,
-    const int targetVehicleId, const VehicleConfiguration &deltaConf,
-    const double t) const {
-  if (perceptions.count(targetVehicleId) == 0) {
-    throw std::runtime_error("Cannot find target vehicle");
-  }
-
-  const Vehicle &targetVehicle = perceptions.at(targetVehicleId);
-
+Waypoints PolynomialTrajectoryGenerator::GeneratePath(
+    const Vehicle &startState, const Vehicle &goalState,
+    const Predictions &predictions, const double t) const {
   //
   // Generate perturbed goals
   //
 
+  SPDLOG_INFO("t={}, sampleTimeStart={}", t, _options.goalTimeSampleStep);
   std::vector<VehicleConfiguration> goals;
   std::vector<int> goalTimes;
 
+  SPDLOG_INFO("t={}, sampleTimeStart={}", t, _options.goalTimeSampleStep);
   const double sampleTimeStart = t - 4 * _options.goalTimeSampleStep;
   double sampleTime = sampleTimeStart;
 
   for (size_t i = 0; i < 4; ++i) {
-    VehicleConfiguration targetConf =
-        targetVehicle.GetConfiguration(sampleTime) + deltaConf;
+    VehicleConfiguration targetConf = goalState.GetConfiguration(sampleTime);
 
     goals.push_back(targetConf);
 
@@ -59,12 +54,11 @@ Waypoints PolynomialTrajectoryGenerator::Generate(
   double minCost = std::numeric_limits<double>::max();
   JMTTrajectory bestTrajectory;
   for (size_t i = 0; i < goals.size(); ++i) {
-    JMTTrajectory trajectory =
-        JMT::ComputeTrajectory(startConf, goals[i], goalTimes[i]);
+    JMTTrajectory trajectory = JMT::ComputeTrajectory(
+        startState.GetConfiguration(), goals[i], goalTimes[i]);
 
     // FIXME: Fix delta format
-    double cost =
-        _pEvaluator->Validate(trajectory, targetVehicleId, 0.0, t, perceptions);
+    double cost = _pEvaluator->Validate(trajectory, t, predictions);
     if (cost < minCost) {
       minCost = cost;
       bestTrajectory = trajectory;
@@ -79,7 +73,8 @@ Waypoints PolynomialTrajectoryGenerator::Generate(
   size_t numPoints = static_cast<size_t>(t / _options.timeStep);
   Waypoints waypoints(numPoints);
   for (size_t i = 0; i < numPoints; ++i) {
-    waypoints[i] = func(_options.timeStep * i);
+    Waypoint sd = func(_options.timeStep * i);
+    waypoints[i] = _pMap->GetXY(sd[0], sd[1]);
   }
   return waypoints;
 }

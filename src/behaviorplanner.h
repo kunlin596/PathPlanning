@@ -5,6 +5,7 @@
 
 #include "map.h"
 #include "ptg.h"  // For generating goals for PTG
+#include "tracker.h"
 
 namespace pathplanning {
 
@@ -82,7 +83,17 @@ class BehaviorPlanner {
   std::vector<BehaviorState> GetSuccessorStates(
       const BehaviorState &state) const;
 
-  void ChooseNextState();
+  /**
+   * @brief      Generate maneuver proposal
+   *
+   * @param[in]  successorStates  The successor states
+   * @param[in]  predictions      The predictions
+   *
+   * @return     Target vehicle state
+   */
+  Vehicle GenerateProposal(const Vehicle &ego,
+                           const std::vector<BehaviorState> successorStates,
+                           const Predictions &predictions) const;
 
  private:
   const Map::ConstPtr &_pMap;

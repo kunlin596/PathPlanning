@@ -10,7 +10,8 @@ inline double CalculateVelocity(double vel, double acc, double time) {
   return vel + acc * time;
 }
 
-inline double CalculatePosition(double pos, double vel, double acc, double time) {
+inline double CalculatePosition(double pos, double vel, double acc,
+                                double time) {
   return pos + vel * time + acc * time * time / 2.0;
 }
 

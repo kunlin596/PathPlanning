@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "jmt.h"
+#include "tracker.h"
 
 namespace pathplanning {
 
@@ -30,14 +31,18 @@ class PolynomialTrajectoryGenerator {
  public:
   struct Options {
     uint32_t numSamples = 10;
-    double timeStep = 0.02;
+    double timeStep = Configuration::TIME_STEP;
     std::array<double, 6> sampleSigmas;
     double goalTimeSampleStep = 0.5;
+    Options(){};
+    virtual ~Options() {}
   };
 
   PolynomialTrajectoryGenerator(
-      const Options &options, const costs::CostWeightMapping &costWeightMapping)
-      : _options(options) {
+      const Map::ConstPtr &pMap, const Options &options = Options(),
+      const costs::CostWeightMapping &costWeightMapping =
+          costs::CostWeightMapping())
+      : _pMap(pMap), _options(options) {
     _pEvaluator = std::make_unique<JMTTrajectoryEvaluator>(costWeightMapping);
   }
 
@@ -75,14 +80,12 @@ class PolynomialTrajectoryGenerator {
    *
    * @return     { description_of_the_return_value }
    */
-  Waypoints Generate(const VehicleConfiguration &startConf,
-                     const VehicleConfiguration &endConf,
-                     const std::unordered_map<int, Vehicle> &perceptions,
-                     const int targetVehicleId,
-                     const VehicleConfiguration &deltaConf,
-                     const double t) const;
+  Waypoints GeneratePath(const Vehicle &startState, const Vehicle &goalState,
+                         const Predictions &predictions,
+                         const double t = 20.0) const;
 
  private:
+  Map::ConstPtr _pMap;
   Options _options;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };
