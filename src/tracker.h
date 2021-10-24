@@ -1,6 +1,7 @@
 #ifndef PATHPLANNING_TRACKER_H
 #define PATHPLANNING_TRACKER_H
 
+#include "log.h"
 #include "map.h"
 #include "perception.h"
 #include "vehicle.h"
@@ -62,18 +63,13 @@ class Tracker {
 
 inline std::ostream &operator<<(
     std::ostream &out, const pathplanning::Tracker::TrackedVehicle &v) {
-  using std::endl;
-  out << v.id << ": {" << endl;
-  out << std::string("  ") << v.observations << endl;
-  out << std::string("}") << endl;
-  return out;
+  return out << fmt::format("{:d}: {\n{:s}}\n", v.id, v.observations);
 }
 
 inline std::ostream &operator<<(std::ostream &out,
                                 const pathplanning::Predictions &predictions) {
-  using std::endl;
   for (const auto &p : predictions) {
-    out << p.first << ": " << p.second << endl;
+    out << fmt::format("{:d}: {:s}\n", p.first, p.second);
   }
   return out;
 }

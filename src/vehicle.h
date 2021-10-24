@@ -2,8 +2,8 @@
 #define PATHPLANNING_VEHICLE_H
 
 #include <array>
-#include <boost/format.hpp>
 
+#include "log.h"
 #include "map.h"
 #include "math.h"
 #include "perception.h"
@@ -160,30 +160,25 @@ using Vehicles = std::vector<Vehicle>;
 
 inline std::ostream &operator<<(
     std::ostream &out, const pathplanning::VehicleConfiguration &conf) {
-  out << (boost::format(
-              "VehicleConfiguration=(sPos=%.3f, sVel=%.3f, sAcc=%.3f, "
-              "dPos=%.3f, dVel=%.3f, dAcc=%.3f)") %
-          conf.sPos % conf.sVel % conf.sAcc % conf.dPos % conf.dVel % conf.dAcc)
-             .str();
-  return out;
+  return out << fmt::format(
+             "VehicleConfiguration=(sPos={:.3f}, sVel={:.3f}, sAcc={:.3f}, "
+             "dPos={:.3f}, dVel={:.3f}, dAcc={:.3f})",
+             conf.sPos, conf.sVel, conf.sAcc, conf.dPos, conf.dVel, conf.dAcc);
 }
 
 inline std::ostream &operator<<(std::ostream &out,
                                 const pathplanning::Vehicle &vehicle) {
-  out << "Vehicle(id=" << vehicle.GetId()
-      << ", conf=" << vehicle.GetConfiguration() << ")";
-  return out;
+  return out << fmt::format("Vehicle(id={:d}, conf={:s}", vehicle.GetId(),
+                            vehicle.GetConfiguration());
 }
 
 inline std::ostream &operator<<(std::ostream &out,
                                 const pathplanning::Vehicles &vehicles) {
-  using std::endl;
-  out << std::string("{") << endl;
+  out << std::string("{\n");
   for (const auto &v : vehicles) {
-    out << std::string("  ") << v << endl;
+    out << fmt::format("  {:s}\n", v);
   }
-  out << std::string("}") << endl;
-  return out;
+  return out << std::string("}\n");
 }
 
 #endif  // PATHPLANNING_VEHICLE_H

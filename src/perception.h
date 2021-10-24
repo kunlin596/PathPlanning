@@ -41,33 +41,31 @@ struct Perception {
     }
     return perceptions;
   }
-
-  friend std::ostream &operator<<(std::ostream &out,
-                                  const pathplanning::Perception &perception) {
-    return out << fmt::format(
-               "Perception=(id=%d, xy=[%.3f, %.3f], vel=[%.3f, "
-               "%.3f], sd=[%.3f, "
-               "%.3f])",
-               perception.id, perception.xy[0], perception.xy[1],
-               perception.vel[0], perception.vel[1], perception.sd[0],
-               perception.sd[1]);
-  }
 };
 
 using Perceptions = std::unordered_map<int, Perception>;
 
+}  // namespace pathplanning
+
 // IO functions
 
-}  // namespace pathplanning
+inline std::ostream &operator<<(std::ostream &out,
+                                const pathplanning::Perception &perception) {
+  return out << fmt::format(
+             "Perception=(id={:d}, xy=[{:.3f}, {:.3f}], vel=[{:.3f}, "
+             "{:.3f}], sd=[{:.3f}, {:.3f}])",
+             perception.id, perception.xy[0], perception.xy[1],
+             perception.vel[0], perception.vel[1], perception.sd[0],
+             perception.sd[1]);
+}
 
 inline std::ostream &operator<<(std::ostream &out,
                                 const pathplanning::Perceptions &perceptions) {
-  using std::endl;
-  out << std::string("{") << endl;
+  out << std::string("{\n");
   for (const auto &p : perceptions) {
-    out << std::string("  ") << p.first << ": " << p.second << std::endl;
+    out << fmt::format("  {:d}: {:s},\n", p.first, p.second);
   }
-  return out << std::string("}") << endl;
+  return out << std::string("}\n");
 }
 
 #endif
