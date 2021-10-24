@@ -14,15 +14,14 @@ Predictions Tracker::TrackedVehicle::GeneratePredictions(
     return predictions;
   }
   const Vehicle &lastObservation = observations[observations.size() - 1];
-  int numPredictions = static_cast<int>(time / Configuration::TIME_STEP);
-  predictions[id] = std::vector<Vehicle>(numPredictions);
-
   // Generate numPredictions + 1 predictions, the first one the current
   // configuration.
-  for (int i = 0; i < numPredictions + 1; ++i) {
+  int numPredictions = static_cast<int>(time / Configuration::TIME_STEP) + 1;
+
+  predictions[id] = std::vector<Vehicle>(numPredictions);
+  for (int i = 0; i < numPredictions; ++i) {
     predictions[id][i] = Vehicle(
         id, lastObservation.GetConfiguration(i * Configuration::TIME_STEP));
-    std::cout << predictions[id][i] << std::endl;
   }
   return predictions;
 }
@@ -38,23 +37,20 @@ void Tracker::Update(const Perceptions &perceptions) {
     }
   }
 
+  // SPDLOG_DEBUG("received new perceptions: {}", perceptions);
+
   for (auto &id : idToBeRemoved) {
     _trackedVehicles.erase(id);
+    std::cout << id << std::endl;
   }
 
   // Process new vehicles;
-  decltype(_trackedVehicles) newVehicles;
-  for (auto &vehicleData : _trackedVehicles) {
-    const int id = vehicleData.first;
-    if (perceptions.count(id) != 0) {
-      _trackedVehicles[id].observations.push_back(
-          Vehicle::CreateFromPerception(_pMap, perceptions.at(id)));
-    } else {
-      newVehicles[id].observations = {
-          Vehicle::CreateFromPerception(_pMap, perceptions.at(id))};
-    }
+  for (const auto &perception : perceptions) {
+    const int id = perception.first;
+    _trackedVehicles[id].observations.push_back(
+        Vehicle::CreateFromPerception(_pMap, perception.second));
   }
-  _trackedVehicles.insert(newVehicles.begin(), newVehicles.end());
+  SPDLOG_DEBUG("_trackedVehicles={:s}", _trackedVehicles);
 }
 
 Predictions Tracker::GeneratePredictions() const {

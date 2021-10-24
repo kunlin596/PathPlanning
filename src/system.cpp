@@ -51,11 +51,11 @@ std::string System::SpinOnce(const std::string &commandString) {
       // Create the latest perceptions from input command
       Perceptions perceptions =
           Perception::CreatePerceptions(commandJson[1]["sensor_fusion"]);
-      spdlog::info("perceptions={}", perceptions);
+      SPDLOG_DEBUG("perceptions={}", perceptions);
 
       _pTracker->Update(perceptions);
       Predictions predictions = _pTracker->GeneratePredictions();
-      spdlog::info("predictions={}", predictions);
+      SPDLOG_DEBUG("predictions={}", predictions);
 
       std::vector<double> nextXValues, nextYValues;
       waypointsJson["next_x"] = nextXValues;

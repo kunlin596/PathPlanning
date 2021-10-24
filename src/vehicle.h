@@ -161,14 +161,15 @@ using Vehicles = std::vector<Vehicle>;
 inline std::ostream &operator<<(
     std::ostream &out, const pathplanning::VehicleConfiguration &conf) {
   return out << fmt::format(
-             "VehicleConfiguration=(sPos={:.3f}, sVel={:.3f}, sAcc={:.3f}, "
-             "dPos={:.3f}, dVel={:.3f}, dAcc={:.3f})",
+             "VehicleConfiguration=("
+             "sPos={:7.3f}, sVel={:7.3f}, sAcc={:7.3f}, "
+             "dPos={:7.3f}, dVel={:7.3f}, dAcc={:7.3f})",
              conf.sPos, conf.sVel, conf.sAcc, conf.dPos, conf.dVel, conf.dAcc);
 }
 
 inline std::ostream &operator<<(std::ostream &out,
                                 const pathplanning::Vehicle &vehicle) {
-  return out << fmt::format("Vehicle(id={:d}, conf={:s}", vehicle.GetId(),
+  return out << fmt::format("Vehicle(id={:2d}, conf={:s}", vehicle.GetId(),
                             vehicle.GetConfiguration());
 }
 

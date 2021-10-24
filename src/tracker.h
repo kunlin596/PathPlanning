@@ -63,15 +63,26 @@ class Tracker {
 
 inline std::ostream &operator<<(
     std::ostream &out, const pathplanning::Tracker::TrackedVehicle &v) {
-  return out << fmt::format("{:d}: {\n{:s}}\n", v.id, v.observations);
+  return out << fmt::format("{:2d}: {{\n{:s}}}\n", v.id, v.observations);
 }
 
 inline std::ostream &operator<<(std::ostream &out,
                                 const pathplanning::Predictions &predictions) {
   for (const auto &p : predictions) {
-    out << fmt::format("{:d}: {:s}\n", p.first, p.second);
+    out << fmt::format("{:2d}: {:s}\n", p.first, p.second);
   }
   return out;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &out,
+    const std::unordered_map<int, pathplanning::Tracker::TrackedVehicle>
+        &trackedVehicles) {
+  out << std::string("{\n");
+  for (const auto &v : trackedVehicles) {
+    out << fmt::format("{:s},\n", v.second);
+  }
+  return out << std::string("}\n");
 }
 
 #endif
