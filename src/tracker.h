@@ -58,4 +58,24 @@ class Tracker {
 };
 }  // namespace pathplanning
 
+// IO functions
+
+inline std::ostream &operator<<(
+    std::ostream &out, const pathplanning::Tracker::TrackedVehicle &v) {
+  using std::endl;
+  out << v.id << ": {" << endl;
+  out << std::string("  ") << v.observations << endl;
+  out << std::string("}") << endl;
+  return out;
+}
+
+inline std::ostream &operator<<(std::ostream &out,
+                                const pathplanning::Predictions &predictions) {
+  using std::endl;
+  for (const auto &p : predictions) {
+    out << p.first << ": " << p.second << endl;
+  }
+  return out;
+}
+
 #endif

@@ -1,13 +1,15 @@
 #include "tracker.h"
 
+#include <iostream>
+
 #include "configuration.h"
 
 namespace pathplanning {
 
-std::unordered_map<int, std::vector<Vehicle>>
-Tracker::TrackedVehicle::GeneratePredictions(const double time) const {
+Predictions Tracker::TrackedVehicle::GeneratePredictions(
+    const double time) const {
   // TODO: Use more sophisticated method like spline fitting later.
-  std::unordered_map<int, std::vector<Vehicle>> predictions;
+  Predictions predictions;
   if (observations.empty()) {
     return predictions;
   }
@@ -20,6 +22,7 @@ Tracker::TrackedVehicle::GeneratePredictions(const double time) const {
   for (int i = 0; i < numPredictions + 1; ++i) {
     predictions[id][i] = Vehicle(
         id, lastObservation.GetConfiguration(i * Configuration::TIME_STEP));
+    std::cout << predictions[id][i] << std::endl;
   }
   return predictions;
 }
@@ -54,9 +57,8 @@ void Tracker::Update(const Perceptions &perceptions) {
   _trackedVehicles.insert(newVehicles.begin(), newVehicles.end());
 }
 
-std::unordered_map<int, std::vector<Vehicle>> Tracker::GeneratePredictions()
-    const {
-  std::unordered_map<int, std::vector<Vehicle>> predictions;
+Predictions Tracker::GeneratePredictions() const {
+  Predictions predictions;
   // For each tracked vehicle, generate a set of predictions per time step
   for (const auto &trackedVehicle : _trackedVehicles) {
     auto pred =

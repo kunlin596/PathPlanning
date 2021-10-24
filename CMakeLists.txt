@@ -7,8 +7,6 @@ add_definitions(-std=c++17)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-find_package(Boost REQUIRED COMPONENTS log)
-
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
     include_directories(/usr/local/include)
     link_directories(/usr/local/lib)
@@ -23,6 +21,8 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
       link_directories(/usr/local/Cellar/libuv/1.11.0/lib)
     endif()
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
+
+find_package(spdlog REQUIRED)
 
 add_library(
   driving
@@ -41,4 +41,10 @@ add_library(
 add_executable(pathplanningserver src/main.cpp)
 target_link_libraries(
   pathplanningserver
-  z ssl uv uWS Boost::log driving)
+  PRIVATE
+  z
+  ssl
+  uv
+  uWS
+  driving
+  spdlog::spdlog)

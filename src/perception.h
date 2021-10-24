@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "log.h"
+
 namespace pathplanning {
 
 /**
@@ -39,6 +41,17 @@ struct Perception {
     }
     return perceptions;
   }
+
+  friend std::ostream &operator<<(std::ostream &out,
+                                  const pathplanning::Perception &perception) {
+    return out << fmt::format(
+               "Perception=(id=%d, xy=[%.3f, %.3f], vel=[%.3f, "
+               "%.3f], sd=[%.3f, "
+               "%.3f])",
+               perception.id, perception.xy[0], perception.xy[1],
+               perception.vel[0], perception.vel[1], perception.sd[0],
+               perception.sd[1]);
+  }
 };
 
 using Perceptions = std::unordered_map<int, Perception>;
@@ -48,27 +61,13 @@ using Perceptions = std::unordered_map<int, Perception>;
 }  // namespace pathplanning
 
 inline std::ostream &operator<<(std::ostream &out,
-                                const pathplanning::Perception &perception) {
-  out << (boost::format(
-              "Perception=(id=%d, xy=[%.3f, %.3f], vel=[%.3f, %.3f], sd=[%.3f, "
-              "%.3f])") %
-          perception.id % perception.xy[0] % perception.xy[1] %
-          perception.vel[0] % perception.vel[1] % perception.sd[0] %
-          perception.sd[1])
-             .str();
-  return out;
-}
-
-inline std::ostream &operator<<(std::ostream &out,
                                 const pathplanning::Perceptions &perceptions) {
   using std::endl;
   out << std::string("{") << endl;
-  for (const auto &perception : perceptions) {
-    out << std::string("  ") << perception.first << ": " << perception.second
-        << std::endl;
+  for (const auto &p : perceptions) {
+    out << std::string("  ") << p.first << ": " << p.second << std::endl;
   }
-  out << std::string("}") << endl;
-  return out;
+  return out << std::string("}") << endl;
 }
 
 #endif

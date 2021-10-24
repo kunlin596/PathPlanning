@@ -152,17 +152,19 @@ class Vehicle {
   VehicleConfiguration _conf;
 };
 
+using Vehicles = std::vector<Vehicle>;
+
 }  // namespace pathplanning
 
 // IO functions
 
 inline std::ostream &operator<<(
     std::ostream &out, const pathplanning::VehicleConfiguration &conf) {
-  out << boost::format(
-             "VehicleConfiguration=(sPos=%.3f, sVel=%.3f, sAcc=%.3f, "
-             "dPos=%.3f, dVel=%.3f, dAcc=%.3f)") %
-             conf.sPos % conf.sVel % conf.sAcc % conf.dPos % conf.dVel %
-             conf.dAcc;
+  out << (boost::format(
+              "VehicleConfiguration=(sPos=%.3f, sVel=%.3f, sAcc=%.3f, "
+              "dPos=%.3f, dVel=%.3f, dAcc=%.3f)") %
+          conf.sPos % conf.sVel % conf.sAcc % conf.dPos % conf.dVel % conf.dAcc)
+             .str();
   return out;
 }
 
@@ -173,6 +175,15 @@ inline std::ostream &operator<<(std::ostream &out,
   return out;
 }
 
-
+inline std::ostream &operator<<(std::ostream &out,
+                                const pathplanning::Vehicles &vehicles) {
+  using std::endl;
+  out << std::string("{") << endl;
+  for (const auto &v : vehicles) {
+    out << std::string("  ") << v << endl;
+  }
+  out << std::string("}") << endl;
+  return out;
+}
 
 #endif  // PATHPLANNING_VEHICLE_H

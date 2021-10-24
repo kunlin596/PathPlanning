@@ -1,6 +1,7 @@
 #include "system.h"
 
 #include "json.hpp"
+#include "log.h"
 
 namespace {
 
@@ -35,6 +36,8 @@ void System::Initialize(const std::string &configFilename) {
 
 std::string System::SpinOnce(const std::string &commandString) {
   using nlohmann::json;
+  using std::cout;
+  using std::endl;
 
   std::string msg;
 
@@ -48,15 +51,11 @@ std::string System::SpinOnce(const std::string &commandString) {
       // Create the latest perceptions from input command
       Perceptions perceptions =
           Perception::CreatePerceptions(commandJson[1]["sensor_fusion"]);
+      spdlog::info("perceptions={}", perceptions);
 
       _pTracker->Update(perceptions);
       Predictions predictions = _pTracker->GeneratePredictions();
-    
-      for (const auto &pred : predictions) {
-        for (const auto &v : pred.second) {
-          std::cout << v << std::endl;
-        }
-      }
+      spdlog::info("predictions={}", predictions);
 
       std::vector<double> nextXValues, nextYValues;
       waypointsJson["next_x"] = nextXValues;
