@@ -25,9 +25,10 @@ Vehicle BehaviorPlanner::GenerateProposal(
     const Predictions &predictions) const {
   // Dummy proposal to move the car 30 meter ahead.
   const auto &conf = ego.GetConfiguration();
-  return Vehicle(ego.GetId(), VehicleConfiguration(conf.sPos + 30.0,
-                                                   Configuration::SPEED_LIMIT,
-                                                   0.0, conf.dPos, 0.0, 0.0));
+  return Vehicle(
+      ego.GetId(),
+      VehicleConfiguration(conf.sPos + 30.0, mph2ms(Configuration::SPEED_LIMIT),
+                           0.0, conf.dPos, 0.0, 0.0));
   // }
 }
 

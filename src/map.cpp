@@ -51,8 +51,8 @@ int Map::GetClosestWaypoint(double x, double y) const {
 // Returns next waypoint of the closest waypoint
 int Map::GetNextWaypoint(double x, double y, double theta) const {
   int closestWaypointIndex = GetClosestWaypoint(x, y);
-  double heading = std::atan((_y[closestWaypointIndex] - y) /
-                             (_x[closestWaypointIndex] - x));
+  double heading = std::atan2((_y[closestWaypointIndex] - y),
+                              (_x[closestWaypointIndex] - x));
   double angle = std::fabs(theta - heading);
 
   angle = std::min(2.0 * M_PI - angle, angle);
@@ -118,8 +118,8 @@ std::array<double, 2> Map::GetXY(double s, double d) const {
 
   int waypoint2 = (prevWaypointIndex + 1) % _x.size();
 
-  double heading = std::atan((_y[waypoint2] - _y[prevWaypointIndex]) /
-                             (_x[waypoint2] - _x[prevWaypointIndex]));
+  double heading = std::atan2((_y[waypoint2] - _y[prevWaypointIndex]),
+                              (_x[waypoint2] - _x[prevWaypointIndex]));
   // the x,y,s along the segment
   double segS = (s - _s[prevWaypointIndex]);
 
