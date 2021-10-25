@@ -60,8 +60,6 @@ std::string System::SpinOnce(const std::string &commandString) {
   //   cnt = 0;
   // }
 
-  static Vehicle cachedProposal;
-
   if (!commandString.empty()) {
     json commandJson = json::parse(commandString);
     std::string event = commandJson[0].get<std::string>();
@@ -87,13 +85,6 @@ std::string System::SpinOnce(const std::string &commandString) {
 
       _pEgo->Update(data["x"], data["y"], data["s"], data["d"],
                     deg2rad(data["yaw"]), mph2ms(data["speed"]));
-
-      double cacheds = cachedProposal.GetConfiguration().sPos;
-
-      if (cacheds > 0.0) {
-        // FIXME: debug purpose
-        // assert(std::abs(_pEgo->s - cacheds) < 100.0);
-      }
 
       Vehicle egoVehicle = Vehicle::CreateFromEgo(_pMap, *_pEgo);
 
@@ -124,19 +115,16 @@ std::string System::SpinOnce(const std::string &commandString) {
       Vehicle proposal = _pBehaviorPlanner->GenerateProposal(
           startState, prevPath, endPathSD, successorStates, predictions);
 
-      cachedProposal = proposal;
-
       //
       // Path generation
       //
 
       SPDLOG_INFO("Generating path for,\nstartState={}\npropoState={}",
-                   startState.GetConfiguration(), proposal.GetConfiguration());
-      double targetExecutionTime = 1.0;
+                  startState.GetConfiguration(), proposal.GetConfiguration());
       Waypoints path;
       JMTTrajectory trajectory;
       std::tie(path, trajectory) = _pPathGenerator->GeneratePath(
-          startState, proposal, predictions, targetExecutionTime);
+          startState, proposal, predictions, Configuration::TIME_HORIZON);
 
       UpdateCachedTrajectory(trajectory);
 
