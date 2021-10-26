@@ -46,14 +46,31 @@ double SDiffCost::Compute(const JMTTrajectory& traj,
                           const VehicleConfiguration& goalConf,
                           const double requestTime,
                           const Predictions& predictions) {
-  return 0.0;
+  double cost = 0.0;
+  VehicleConfiguration finalConf = traj(requestTime);
+  cost += Logistic(std::abs(finalConf.sPos - goalConf.sPos) /
+                   Configuration::TrajectoryEvaluation::SIGMA_S[0]);
+  cost += Logistic(std::abs(finalConf.sVel - goalConf.sVel) /
+                   Configuration::TrajectoryEvaluation::SIGMA_S[1]);
+  cost += Logistic(std::abs(finalConf.sAcc - goalConf.sAcc) /
+                   Configuration::TrajectoryEvaluation::SIGMA_S[2]);
+
+  return cost;
 }
 
 double DDiffCost::Compute(const JMTTrajectory& traj,
                           const VehicleConfiguration& goalConf,
                           const double requestTime,
                           const Predictions& predictions) {
-  return 0.0;
+  double cost = 0.0;
+  VehicleConfiguration finalConf = traj(requestTime);
+  cost += Logistic(std::abs(finalConf.dPos - goalConf.dPos) /
+                   Configuration::TrajectoryEvaluation::SIGMA_D[0]);
+  cost += Logistic(std::abs(finalConf.dVel - goalConf.dVel) /
+                   Configuration::TrajectoryEvaluation::SIGMA_D[1]);
+  cost += Logistic(std::abs(finalConf.dAcc - goalConf.dAcc) /
+                   Configuration::TrajectoryEvaluation::SIGMA_D[2]);
+  return cost;
 }
 
 double CollisionCost::Compute(const JMTTrajectory& traj,
