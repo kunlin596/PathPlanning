@@ -160,14 +160,8 @@ Vehicle Vehicle::CreateFromEgo(const Map::ConstPtr &pMap, const Ego &ego) {
                                       ego.dVel, ego.dAcc));
 }
 
-VehicleConfiguration Vehicle::GetConfiguration(const double time) const {
-  const double &sPos = _conf.sPos;
-  const double &sVel = _conf.sVel;
-  const double &sAcc = _conf.sAcc;
-  const double &dPos = _conf.dPos;
-  const double &dVel = _conf.dVel;
-  const double &dAcc = _conf.dAcc;
-
+VehicleConfiguration VehicleConfiguration::GetConfiguration(
+    const double time) const {
   // clang-format off
   return {
       CalculatePosition(sPos, sVel, sAcc, time),
@@ -178,6 +172,10 @@ VehicleConfiguration Vehicle::GetConfiguration(const double time) const {
       dAcc
   };
   // clang-format on
+}
+
+VehicleConfiguration Vehicle::GetConfiguration(const double time) const {
+  return _conf.GetConfiguration(time);
 }
 
 }  // namespace pathplanning

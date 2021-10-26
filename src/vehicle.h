@@ -62,6 +62,8 @@ struct VehicleConfiguration {
 
   VehicleConfiguration &operator-=(const VehicleConfiguration &rhs);
 
+  VehicleConfiguration GetConfiguration(const double time = 0.0) const;
+
   double sPos = 0.0;
   double sVel = 0.0;
   double sAcc = 0.0;
@@ -109,7 +111,6 @@ struct Ego {
   double dAcc = 0.0;
 
  private:
-
   void _Collect(double s, double d);
 
   std::vector<double>

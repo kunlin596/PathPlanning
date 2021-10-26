@@ -31,6 +31,7 @@ add_library(
   src/path.cpp
   src/vehicle.cpp
   src/jmt.cpp
+  src/traj_evaluator.cpp
   src/ptg.cpp
   src/map.cpp
   src/tracker.cpp
