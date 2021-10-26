@@ -19,6 +19,8 @@ namespace pathplanning {
 
 /**
  * @brief      This class describes a sd waypoint function.
+ *
+ * FIXME: Move this class into JMTTrajectory
  */
 class SDFunctor {
  public:
@@ -41,6 +43,10 @@ class SDFunctor {
 
   const QuinticFunctor& GetSFunc() const { return _sPosFunc; }
   const QuinticFunctor& GetDFunc() const { return _dPosFunc; }
+  const QuarticFunctor& GetSVelFunc() const { return _sVelFunc; }
+  const QuarticFunctor& GetDVelFunc() const { return _dVelFunc; }
+  const CubicFunctor& GetSAccFunc() const { return _sAccFunc; }
+  const CubicFunctor& GetDAccFunc() const { return _dAccFunc; }
 
  private:
   QuinticFunctor _sPosFunc;
@@ -78,6 +84,8 @@ struct JMTTrajectory {
 
   VehicleConfiguration operator()(const double t) const { return Eval(t); }
 
+  const SDFunctor& GetSDFunc() const { return _sdFunc; }
+
   /**
    * @brief      Get nearest approach from trajectory to predicted vehicle
    * position
@@ -89,10 +97,14 @@ struct JMTTrajectory {
    * @return     distance in meter
    */
   double ComputeNearestApproach(const Vehicle& vehicle, double maxTimeDuration,
-                                double timeStep);
+                                double timeStep) const;
 
   double ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
-                                double maxTimeDuration, double timeStep);
+                                double maxTimeDuration, double timeStep) const;
+
+  double ComputeNearestApproach(
+      const std::unordered_map<int, Vehicle>& vehicles, double maxTimeDuration,
+      double timeStep) const;
 };
 
 /**

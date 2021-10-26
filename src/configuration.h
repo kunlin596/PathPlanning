@@ -21,8 +21,8 @@ struct Configuration {
         1.0, 1.0, 1.0};  ///< d pos, d vel, d acc
     static constexpr double MAX_JERK = 10.0;
     static constexpr double MAX_ACC = 10.0;
-    static constexpr double EXPECTED_JERK_IN_ONE_SEC = 2;     ///< m/s^2
-    static constexpr double EXPECTED_ACC_IN_ONE_SEC = 1;      ///< m/s^3
+    static constexpr double EXPECTED_JERK_IN_ONE_SEC = 2.0;     ///< m/s^2
+    static constexpr double EXPECTED_ACC_IN_ONE_SEC = 1.0;      ///< m/s^3
     static constexpr double COLLISION_CHECKING_RADIUS = 1.5;  ///< meter
   };
 };

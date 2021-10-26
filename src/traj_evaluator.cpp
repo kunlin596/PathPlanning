@@ -47,7 +47,7 @@ double SDiffCost::Compute(const JMTTrajectory& traj,
                           const double requestTime,
                           const TrackedVehicleMap& trackedVehicleMap) {
   double cost = 0.0;
-  VehicleConfiguration finalConf = traj(requestTime);
+  VehicleConfiguration finalConf = traj(traj.elapsedTime);
   cost += Logistic(std::abs(finalConf.sPos - goalConf.sPos) /
                    Configuration::TrajectoryEvaluation::SIGMA_S[0]);
   cost += Logistic(std::abs(finalConf.sVel - goalConf.sVel) /
@@ -63,7 +63,7 @@ double DDiffCost::Compute(const JMTTrajectory& traj,
                           const double requestTime,
                           const TrackedVehicleMap& trackedVehicleMap) {
   double cost = 0.0;
-  VehicleConfiguration finalConf = traj(requestTime);
+  VehicleConfiguration finalConf = traj(traj.elapsedTime);
   cost += Logistic(std::abs(finalConf.dPos - goalConf.dPos) /
                    Configuration::TrajectoryEvaluation::SIGMA_D[0]);
   cost += Logistic(std::abs(finalConf.dVel - goalConf.dVel) /
@@ -77,53 +77,109 @@ double CollisionCost::Compute(const JMTTrajectory& traj,
                               const VehicleConfiguration& goalConf,
                               const double requestTime,
                               const TrackedVehicleMap& trackedVehicleMap) {
+  double dist = traj.ComputeNearestApproach(
+      trackedVehicleMap, Configuration::TIME_HORIZON, Configuration::TIME_STEP);
+  if (dist < Configuration::TrajectoryEvaluation::COLLISION_CHECKING_RADIUS) {
+    return 1.0;
+  }
   return 0.0;
 }
 double BufferCost::Compute(const JMTTrajectory& traj,
                            const VehicleConfiguration& goalConf,
                            const double requestTime,
                            const TrackedVehicleMap& trackedVehicleMap) {
-  return 0.0;
+  double dist = traj.ComputeNearestApproach(
+      trackedVehicleMap, Configuration::TIME_HORIZON, Configuration::TIME_STEP);
+  return Logistic(
+      Configuration::TrajectoryEvaluation::COLLISION_CHECKING_RADIUS / dist);
 }
 double StaysOnRoadCost::Compute(const JMTTrajectory& traj,
                                 const VehicleConfiguration& goalConf,
                                 const double requestTime,
                                 const TrackedVehicleMap& trackedVehicleMap) {
+  // TODO
   return 0.0;
 }
 double ExceedsSpeedLimitCost::Compute(
     const JMTTrajectory& traj, const VehicleConfiguration& goalConf,
     const double requestTime, const TrackedVehicleMap& trackedVehicleMap) {
+  // TODO
   return 0.0;
 }
 double EfficiencyCost::Compute(const JMTTrajectory& traj,
                                const VehicleConfiguration& goalConf,
                                const double requestTime,
                                const TrackedVehicleMap& trackedVehicleMap) {
-  return 0.0;
+  VehicleConfiguration finalConf = traj(traj.elapsedTime);
+  double avgVel = finalConf.sPos / traj.elapsedTime;
+  return Logistic(2.0 * (goalConf.sVel - avgVel) / avgVel);
 }
 double TotalAccelCost::Compute(const JMTTrajectory& traj,
                                const VehicleConfiguration& goalConf,
                                const double requestTime,
                                const TrackedVehicleMap& trackedVehicleMap) {
-  return 0.0;
+  // TODO: Check D as well
+  double currTime = 0.0;
+  double totalSAcc = 0.0;
+  while (currTime < Configuration::TIME_HORIZON) {
+    VehicleConfiguration currConf = traj(currTime);
+    totalSAcc += std::abs(currConf.sAcc * Configuration::TIME_STEP);
+    currTime += Configuration::TIME_STEP;
+  }
+  double sAccPerSec = totalSAcc / Configuration::TIME_HORIZON;
+
+  return Logistic(sAccPerSec /
+                  Configuration::TrajectoryEvaluation::EXPECTED_ACC_IN_ONE_SEC);
 }
 double MaxAccelCost::Compute(const JMTTrajectory& traj,
                              const VehicleConfiguration& goalConf,
                              const double requestTime,
                              const TrackedVehicleMap& trackedVehicleMap) {
+  // TODO: Check D as well
+  double currTime = 0.0;
+  while (currTime < Configuration::TIME_HORIZON) {
+    VehicleConfiguration currConf = traj(currTime);
+    if (currConf.sAcc > Configuration::TrajectoryEvaluation::MAX_ACC) {
+      return 1.0;
+    }
+    currTime += Configuration::TIME_STEP;
+  }
   return 0.0;
 }
+
 double TotalJerkCost::Compute(const JMTTrajectory& traj,
                               const VehicleConfiguration& goalConf,
                               const double requestTime,
                               const TrackedVehicleMap& trackedVehicleMap) {
-  return 0.0;
+  // TODO: Check D as well
+  double currTime = 0.0;
+  double totalSJerk = 0.0;
+  auto sJerkFunc = traj.GetSDFunc().GetSAccFunc().Differentiate();
+  while (currTime < Configuration::TIME_HORIZON) {
+    totalSJerk += std::abs(sJerkFunc(currTime) * Configuration::TIME_STEP);
+    currTime += Configuration::TIME_STEP;
+  }
+  double sJerkPerSec = totalSJerk / Configuration::TIME_HORIZON;
+
+  return Logistic(
+      sJerkPerSec /
+      Configuration::TrajectoryEvaluation::EXPECTED_JERK_IN_ONE_SEC);
 }
+
 double MaxJerkCost::Compute(const JMTTrajectory& traj,
                             const VehicleConfiguration& goalConf,
                             const double requestTime,
                             const TrackedVehicleMap& trackedVehicleMap) {
+  // TODO: Check D as well
+  double currTime = 0.0;
+  auto sJerkFunc = traj.GetSDFunc().GetSAccFunc().Differentiate();
+  while (currTime < Configuration::TIME_HORIZON) {
+    double jerk = sJerkFunc(currTime);
+    if (jerk > Configuration::TrajectoryEvaluation::MAX_JERK) {
+      return 1.0;
+    }
+    currTime += Configuration::TIME_STEP;
+  }
   return 0.0;
 }
 }  // namespace costs

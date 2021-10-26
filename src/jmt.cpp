@@ -78,12 +78,12 @@ JMTTrajectory JMT::ComputeTrajectory(const VehicleConfiguration &start,
 
 double JMTTrajectory::ComputeNearestApproach(const Vehicle &vehicle,
                                              double maxTimeDuration,
-                                             double timeStep) {
+                                             double timeStep) const {
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
   while (currTime < maxTimeDuration) {
     currTime += timeStep;
-    VehicleConfiguration trajConf = _sdFunc(currTime);
+    VehicleConfiguration trajConf = Eval(currTime);
     VehicleConfiguration vehicleConf = vehicle.GetConfiguration(currTime);
     double dist = GetDistance({trajConf.sPos, trajConf.dPos},
                               {vehicleConf.sPos, vehicleConf.dPos});
@@ -96,15 +96,37 @@ double JMTTrajectory::ComputeNearestApproach(const Vehicle &vehicle,
 
 double JMTTrajectory::ComputeNearestApproach(
     const std::vector<Vehicle> &vehicles, double maxTimeDuration,
-    double timeStep) {
+    double timeStep) const {
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
 
   while (currTime < maxTimeDuration) {
     currTime += timeStep;
-    VehicleConfiguration trajConf = _sdFunc(currTime);
+    VehicleConfiguration trajConf = Eval(currTime);
     for (const auto &vehicle : vehicles) {
       VehicleConfiguration vehicleConf = vehicle.GetConfiguration(currTime);
+      double dist = GetDistance({trajConf.sPos, trajConf.dPos},
+                                {vehicleConf.sPos, vehicleConf.dPos});
+      if (dist < minDist) {
+        minDist = dist;
+      }
+    }
+  }
+  return minDist;
+}
+
+double JMTTrajectory::ComputeNearestApproach(
+    const std::unordered_map<int, Vehicle> &vehicles, double maxTimeDuration,
+    double timeStep) const {
+  double minDist = std::numeric_limits<double>::infinity();
+  double currTime = 0.0;
+
+  while (currTime < maxTimeDuration) {
+    currTime += timeStep;
+    VehicleConfiguration trajConf = Eval(currTime);
+    for (const auto &vehicle : vehicles) {
+      VehicleConfiguration vehicleConf =
+          vehicle.second.GetConfiguration(currTime);
       double dist = GetDistance({trajConf.sPos, trajConf.dPos},
                                 {vehicleConf.sPos, vehicleConf.dPos});
       if (dist < minDist) {
