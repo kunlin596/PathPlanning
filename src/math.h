@@ -54,6 +54,8 @@ struct PolynomialFunctor {
     return result;
   }
 
+  double operator()(const double x) const { return Eval(x); }
+
   inline PolynomialFunctor<Order - 1> Differentiate() const {
     std::array<double, Order> newCoeffs;
     for (size_t i = 0; i < coeffs.size() - 1; ++i) {
@@ -62,11 +64,13 @@ struct PolynomialFunctor {
     return PolynomialFunctor<Order - 1>(newCoeffs);
   }
 
-  double operator()(const double x) const { return Eval(x); }
-
   std::array<double, Order + 1> coeffs;
 };
 
+using LinearFunctor = PolynomialFunctor<1>;
+using QuadraticFunctor = PolynomialFunctor<2>;
+using CubicFunctor = PolynomialFunctor<3>;
+using QuarticFunctor = PolynomialFunctor<4>;
 using QuinticFunctor = PolynomialFunctor<5>;
 
 template <typename T = double>

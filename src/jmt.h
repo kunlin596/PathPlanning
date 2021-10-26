@@ -44,11 +44,11 @@ class SDFunctor {
 
  private:
   QuinticFunctor _sPosFunc;
-  PolynomialFunctor<4> _sVelFunc;
-  PolynomialFunctor<3> _sAccFunc;
+  QuarticFunctor _sVelFunc;
+  CubicFunctor _sAccFunc;
   QuinticFunctor _dPosFunc;
-  PolynomialFunctor<4> _dVelFunc;
-  PolynomialFunctor<3> _dAccFunc;
+  QuarticFunctor _dVelFunc;
+  CubicFunctor _dAccFunc;
 };
 
 /**
