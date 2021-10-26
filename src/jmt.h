@@ -77,6 +77,22 @@ struct JMTTrajectory {
   }
 
   VehicleConfiguration operator()(const double t) const { return Eval(t); }
+
+  /**
+   * @brief      Get nearest approach from trajectory to predicted vehicle
+   * position
+   *
+   * @param[in]  v                Vehicle
+   * @param[in]  maxTimeDuration  The maximum time duration
+   * @param[in]  timeStep         The time step for checking
+   *
+   * @return     distance in meter
+   */
+  double ComputeNearestApproach(const Vehicle& vehicle, double maxTimeDuration,
+                                double timeStep);
+
+  double ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
+                                double maxTimeDuration, double timeStep);
 };
 
 /**

@@ -76,4 +76,43 @@ JMTTrajectory JMT::ComputeTrajectory(const VehicleConfiguration &start,
   // clang-format on
 }
 
+double JMTTrajectory::ComputeNearestApproach(const Vehicle &vehicle,
+                                             double maxTimeDuration,
+                                             double timeStep) {
+  double minDist = std::numeric_limits<double>::infinity();
+  double currTime = 0.0;
+  while (currTime < maxTimeDuration) {
+    currTime += timeStep;
+    VehicleConfiguration trajConf = _sdFunc(currTime);
+    VehicleConfiguration vehicleConf = vehicle.GetConfiguration(currTime);
+    double dist = GetDistance({trajConf.sPos, trajConf.dPos},
+                              {vehicleConf.sPos, vehicleConf.dPos});
+    if (dist < minDist) {
+      minDist = dist;
+    }
+  }
+  return minDist;
+}
+
+double JMTTrajectory::ComputeNearestApproach(
+    const std::vector<Vehicle> &vehicles, double maxTimeDuration,
+    double timeStep) {
+  double minDist = std::numeric_limits<double>::infinity();
+  double currTime = 0.0;
+
+  while (currTime < maxTimeDuration) {
+    currTime += timeStep;
+    VehicleConfiguration trajConf = _sdFunc(currTime);
+    for (const auto &vehicle : vehicles) {
+      VehicleConfiguration vehicleConf = vehicle.GetConfiguration(currTime);
+      double dist = GetDistance({trajConf.sPos, trajConf.dPos},
+                                {vehicleConf.sPos, vehicleConf.dPos});
+      if (dist < minDist) {
+        minDist = dist;
+      }
+    }
+  }
+  return minDist;
+}
+
 }  // namespace pathplanning
