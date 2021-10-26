@@ -65,8 +65,8 @@ std::pair<Waypoints, JMTTrajectory> PolynomialTrajectoryGenerator::GeneratePath(
       JMTTrajectory trajectory =
           JMT::ComputeTrajectory(startConf, goals[i], goalTimes[i]);
 
-      double cost =
-          _pEvaluator->Validate(trajectory, targetExecutionTime, predictions);
+      double cost = _pEvaluator->Evaluate(trajectory, goals[i],
+                                          targetExecutionTime, predictions);
       if (cost < minCost) {
         minCost = cost;
         pBestGoal = &goals[i];

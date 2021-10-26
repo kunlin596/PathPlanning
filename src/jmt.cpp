@@ -1,41 +1,9 @@
 #include "jmt.h"
 
 #include "Eigen-3.3/Eigen/Dense"
+#include "traj_evaluator.h"
 
 namespace pathplanning {
-
-namespace costs {
-std::shared_ptr<CostFunctor> CreateCostFunctor(const CostType &type) {
-  switch (type) {
-    case CostType::kTimeDiff:
-      return std::make_shared<TimeDiffCost>();
-    case CostType::kSDiff:
-      return std::make_shared<SDiffCost>();
-    case CostType::kDDiff:
-      return std::make_shared<DDiffCost>();
-    case CostType::kCollision:
-      return std::make_shared<CollisionCost>();
-    case CostType::kBuffer:
-      return std::make_shared<BufferCost>();
-    case CostType::kStaysOnRoad:
-      return std::make_shared<StaysOnRoadCost>();
-    case CostType::kExceedsSpeedLimit:
-      return std::make_shared<ExceedsSpeedLimitCost>();
-    case CostType::kEfficiency:
-      return std::make_shared<EfficiencyCost>();
-    case CostType::kTotalAccel:
-      return std::make_shared<TotalAccelCost>();
-    case CostType::kMaxAccel:
-      return std::make_shared<MaxAccelCost>();
-    case CostType::kTotalJerk:
-      return std::make_shared<TotalJerkCost>();
-    case CostType::kMaxJerk:
-      return std::make_shared<MaxJerkCost>();
-    default:
-      throw std::runtime_error("Not supported cost function");
-  }
-}
-}  // namespace costs
 
 QuinticFunctor JMT::Solve1D(const std::array<double, 3> &start,
                             const std::array<double, 3> &end, const double t) {
@@ -106,20 +74,6 @@ JMTTrajectory JMT::ComputeTrajectory(const VehicleConfiguration &start,
       t
     );
   // clang-format on
-}
-
-double JMTTrajectoryEvaluator::Validate(const JMTTrajectory &traj,
-                                        const double time,
-                                        const Predictions &predictions) {
-  double cost = 0.0;
-  for (const auto &costInfo : _costWeightMapping) {
-    if (_funcPtrs.count(costInfo.first) == 0) {
-      _funcPtrs[costInfo.first] = costs::CreateCostFunctor(costInfo.first);
-    }
-    cost += _funcPtrs[costInfo.first]->Compute(traj, time, predictions) *
-            costInfo.second;
-  }
-  return cost;
 }
 
 }  // namespace pathplanning

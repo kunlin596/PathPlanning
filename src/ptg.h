@@ -4,6 +4,7 @@
 
 #include "jmt.h"
 #include "tracker.h"
+#include "traj_evaluator.h"
 
 namespace pathplanning {
 

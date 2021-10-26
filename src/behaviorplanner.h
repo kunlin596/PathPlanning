@@ -1,11 +1,10 @@
 #ifndef PATHPLANNING_BEHAVIORPLANNER_H
 #define PATHPLANNING_BEHAVIORPLANNER_H
 
-#include <unordered_map>
-
 #include "map.h"
 #include "ptg.h"  // For generating goals for PTG
 #include "tracker.h"
+#include "traj_evaluator.h"
 
 namespace pathplanning {
 

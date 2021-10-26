@@ -23,13 +23,18 @@ Vehicle BehaviorPlanner::GenerateProposal(
     const Waypoint &endPrevPathSD,
     const std::vector<BehaviorState> successorStates,
     const Predictions &predictions) const {
-  // Dummy proposal to move the car 30 meter ahead.
+  // Find out the vehicle in front of ego
+  // leftVehicles
+  for (const auto &prediction : predictions) {
+    int id = prediction.first;
+    const auto &predictedVehicleStates = prediction.second;
+  }
+
   const auto &conf = ego.GetConfiguration();
   return Vehicle(
       ego.GetId(),
       VehicleConfiguration(conf.sPos + 30.0, mph2ms(Configuration::SPEED_LIMIT),
                            0.0, conf.dPos, 0.0, 0.0));
-  // }
 }
 
 }  // namespace pathplanning

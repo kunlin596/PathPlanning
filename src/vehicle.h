@@ -98,18 +98,20 @@ struct Ego {
 
   double x = 0.0;
   double y = 0.0;
-  double s = 0.0;
-  double d = 0.0;
   double yaw = 0.0;
   double speed = 0.0;
 
+  double s = 0.0;
+  double d = 0.0;
   double sVel = 0.0;
   double sAcc = 0.0;
   double dVel = 0.0;
   double dAcc = 0.0;
 
  private:
+
   void _Collect(double s, double d);
+
   std::vector<double>
       _sMeasursments;  ///< For calculating speed and accelaration.
   std::vector<double>
