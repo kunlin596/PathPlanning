@@ -9,7 +9,7 @@ using namespace pathplanning;
 
 void Test(PolynomialTrajectoryGenerator &g, const Map::ConstPtr &pMap,
           const VehicleConfiguration &start, const VehicleConfiguration &goal) {
-  Predictions predictions;
+  TrackedVehicleMap trackedVehicleMap;
   Waypoints prevPath;
 
   Vehicle startState(0, start);
@@ -21,8 +21,8 @@ void Test(PolynomialTrajectoryGenerator &g, const Map::ConstPtr &pMap,
 
   Waypoints xywaypoints;
   JMTTrajectory trajectory;
-  std::tie(xywaypoints, trajectory) =
-      g.GeneratePath(startState, goalState, predictions, targetExecutionTime);
+  std::tie(xywaypoints, trajectory) = g.GeneratePath(
+      startState, goalState, trackedVehicleMap, targetExecutionTime);
 
   auto computed = trajectory(targetExecutionTime);
 

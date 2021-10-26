@@ -17,17 +17,10 @@ namespace pathplanning {
  * non-ego vehicles.
  */
 
-using Predictions = std::unordered_map<int, std::vector<Vehicle>>;
+using TrackedVehicleMap = std::unordered_map<int, Vehicle>;
 
 class Tracker {
  public:
-  struct TrackedVehicle {
-    int id = -1;
-    std::vector<Vehicle> observations;  ///< Keep track of all observations
-
-    Predictions GeneratePredictions(const double time = 1.0) const;
-  };
-
   struct Options {
     std::array<double, 2> sdhorizon = Configuration::SD_HORIZON;
   };
@@ -43,53 +36,33 @@ class Tracker {
    */
   void Update(const Vehicle &ego, const Perceptions &perceptions);
 
-  Predictions GeneratePredictions() const;
+  const TrackedVehicleMap &GetVehicles() const { return _trackedVehicleMap; }
 
-  const std::unordered_map<int, TrackedVehicle> &GetVehicles() const {
-    return _trackedVehicles;
-  }
-
-  bool IsEmpty() const { return _trackedVehicles.empty(); }
+  bool IsEmpty() const { return _trackedVehicleMap.empty(); }
 
   bool HasVehicle(const int id) const {
-    return _trackedVehicles.count(id) != 0;
+    return _trackedVehicleMap.count(id) != 0;
   }
 
-  const TrackedVehicle &GetTrackedVehicle(const int id) const {
-    return _trackedVehicles.at(id);
+  const Vehicle &GetVehicle(const int id) const {
+    return _trackedVehicleMap.at(id);
   }
 
  private:
   Options _options;
   Map::ConstPtr _pMap;
-  std::unordered_map<int, TrackedVehicle> _trackedVehicles;
+  TrackedVehicleMap _trackedVehicleMap;
 };
 }  // namespace pathplanning
 
 // IO functions
 
 inline std::ostream &operator<<(
-    std::ostream &out, const pathplanning::Tracker::TrackedVehicle &v) {
-  return out << fmt::format("{:2d}: {{\n{:s}}}\n", v.id, v.observations);
-}
-
-inline std::ostream &operator<<(std::ostream &out,
-                                const pathplanning::Predictions &predictions) {
-  for (const auto &p : predictions) {
-    out << fmt::format("{:2d}: {:s}\n", p.first, p.second);
+    std::ostream &out, const pathplanning::TrackedVehicleMap &trackedVehicles) {
+  for (const auto &v : trackedVehicles) {
+    out << fmt::format("{:2d}: {:s}\n", v.first, v.second);
   }
   return out;
-}
-
-inline std::ostream &operator<<(
-    std::ostream &out,
-    const std::unordered_map<int, pathplanning::Tracker::TrackedVehicle>
-        &trackedVehicles) {
-  out << std::string("{\n");
-  for (const auto &v : trackedVehicles) {
-    out << fmt::format("{:s},\n", v.second);
-  }
-  return out << std::string("}\n");
 }
 
 #endif

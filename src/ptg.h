@@ -86,7 +86,7 @@ class PolynomialTrajectoryGenerator {
    */
   std::pair<Waypoints, JMTTrajectory> GeneratePath(
       const Vehicle &startState, const Vehicle &goalState,
-      const Predictions &predictions, const double targetExecutionTime = 1.0);
+      const TrackedVehicleMap &trackedVehicleMap, const double targetExecutionTime = 1.0);
 
   Vehicle ComputeStartState(const Vehicle &ego, const JMTTrajectory &prevTraj,
                             const Waypoints &prevPath,

@@ -76,6 +76,24 @@ VehicleConfiguration operator+(VehicleConfiguration lhs,
                                const VehicleConfiguration &rhs);
 
 /**
+ * @brief      This class describes a kinematics calculator.
+ *
+ * It collects position measurements and use it to compute velocity and
+ * accelaration .
+ */
+class KinematicsTracker {
+ public:
+  std::array<double, 3> GetValues() const { return _values; }
+
+  void UpdateObvervation(double pos);
+
+ private:
+  std::vector<double>
+      _measursments;  ///< For calculating speed and accelaration.
+  std::array<double, 3> _values = {0.0, 0.0, 0.0};
+};
+
+/**
  * @brief      A thin wrapper data class for ego vehicle
  *
  * Velocity and accelatation of s and d will be computed when ego collects 3 new
@@ -98,6 +116,8 @@ struct Ego {
    */
   void Update(double x, double y, double s, double d, double yaw, double speed);
 
+  void UpdateObvervation(double s, double d);
+
   double x = 0.0;
   double y = 0.0;
   double yaw = 0.0;
@@ -110,13 +130,8 @@ struct Ego {
   double dVel = 0.0;
   double dAcc = 0.0;
 
- private:
-  void _Collect(double s, double d);
-
-  std::vector<double>
-      _sMeasursments;  ///< For calculating speed and accelaration.
-  std::vector<double>
-      _dMeasursments;  ///< For calculating speed and accelaration.
+  KinematicsTracker _sTracker;
+  KinematicsTracker _dTracker;
 };
 
 /**
@@ -150,9 +165,14 @@ class Vehicle {
 
   static Vehicle CreateFromEgo(const Map::ConstPtr &pMap, const Ego &ego);
 
+  void UpdateObvervation(double s, double d);
+
  protected:
   int _id = -1;
   VehicleConfiguration _conf;
+
+  KinematicsTracker _sTracker;  ///< For estimating s kinematics
+  KinematicsTracker _dTracker;  ///< For estimating d kinematics
 };
 
 using Vehicles = std::vector<Vehicle>;

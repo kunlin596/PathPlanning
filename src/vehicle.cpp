@@ -75,7 +75,7 @@ VehicleConfiguration &VehicleConfiguration::operator-=(
 
 Ego::Ego(double x, double y, double s, double d, double yaw, double speed)
     : x(x), y(y), s(s), d(d), yaw(yaw), speed(speed) {
-  _Collect(s, d);
+  UpdateObvervation(s, d);
 }
 
 void Ego::Update(double x, double y, double s, double d, double yaw,
@@ -86,18 +86,22 @@ void Ego::Update(double x, double y, double s, double d, double yaw,
   this->d = d;
   this->yaw = yaw;
   this->speed = speed;
-  _Collect(s, d);
+  UpdateObvervation(s, d);
 }
 
-void Ego::_Collect(double s, double d) {
-  _sMeasursments.push_back(s);
-  if (_sMeasursments.size() > 3) {
-    _sMeasursments.erase(_sMeasursments.begin());
+void KinematicsTracker::UpdateObvervation(double pos) {
+  _measursments.push_back(pos);
+
+  if (_measursments.size() > 30) {
+    _measursments.erase(_measursments.begin());
   }
 
-  if (_sMeasursments.size() == 3) {
-    double dist1 = _sMeasursments[1] - _sMeasursments[0];
-    double dist2 = _sMeasursments[2] - _sMeasursments[0];
+  if (_measursments.size() > 2) {
+    size_t index3 = _measursments.size() - 1;
+    size_t index2 = _measursments.size() - 2;
+    size_t index1 = _measursments.size() - 3;
+    double dist1 = _measursments[index2] - _measursments[index1];
+    double dist2 = _measursments[index3] - _measursments[index1];
     double t1 = Configuration::TIME_STEP;
     double t2 = 2 * t1;
     Eigen::Matrix2d A;
@@ -105,30 +109,24 @@ void Ego::_Collect(double s, double d) {
     Eigen::Vector2d b;
     b << dist1, dist2;
     Eigen::Vector2d x = A.inverse() * b;
-    sVel = x[0];
-    sAcc = x[1];
-    // SPDLOG_INFO("s={}, sVel={}, sAcc={}", _sMeasursments[2], sVel, sAcc);
+    _values[0] = _measursments[2];
+    _values[1] = x[0];
+    _values[2] = x[1];
   }
+}
 
-  _dMeasursments.push_back(d);
-  if (_dMeasursments.size() > 3) {
-    _dMeasursments.erase(_dMeasursments.begin());
-  }
+void Ego::UpdateObvervation(double s, double d) {
+  _sTracker.UpdateObvervation(s);
+  auto sValues = _sTracker.GetValues();
+  this->s = sValues[0];
+  sVel = sValues[1];
+  sAcc = sValues[2];
 
-  if (_dMeasursments.size() == 3) {
-    double dist1 = _dMeasursments[1] - _dMeasursments[0];
-    double dist2 = _dMeasursments[2] - _dMeasursments[0];
-    double t1 = Configuration::TIME_STEP;
-    double t2 = 2 * t1;
-    Eigen::Matrix2d A;
-    A << t1, 0.5 * t1 * t1, t2, 0.5 * t2 * t2;
-    Eigen::Vector2d b;
-    b << dist1, dist2;
-    Eigen::Vector2d x = A.inverse() * b;
-    dVel = x[0];
-    dAcc = x[1];
-    // SPDLOG_INFO("d={}, dVel={}, dAcc={}", _dMeasursments[2], dVel, dAcc);
-  }
+  _dTracker.UpdateObvervation(d);
+  auto dValues = _dTracker.GetValues();
+  this->d = dValues[0];
+  dVel = dValues[1];
+  dAcc = dValues[2];
 }
 
 // void Vehicle::UpdateFromPerception(const Map::ConstPtr &pMap,
@@ -176,6 +174,20 @@ VehicleConfiguration VehicleConfiguration::GetConfiguration(
 
 VehicleConfiguration Vehicle::GetConfiguration(const double time) const {
   return _conf.GetConfiguration(time);
+}
+
+void Vehicle::UpdateObvervation(double s, double d) {
+  _sTracker.UpdateObvervation(s);
+  auto sValues = _sTracker.GetValues();
+  _conf.sPos = sValues[0];
+  _conf.sVel = sValues[1];
+  _conf.sAcc = sValues[2];
+
+  _dTracker.UpdateObvervation(d);
+  auto dValues = _dTracker.GetValues();
+  _conf.dPos = dValues[0];
+  _conf.dVel = dValues[1];
+  _conf.dAcc = dValues[2];
 }
 
 }  // namespace pathplanning

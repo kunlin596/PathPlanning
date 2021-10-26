@@ -22,14 +22,7 @@ Vehicle BehaviorPlanner::GenerateProposal(
     const Vehicle &ego, const Waypoints &prevPath,
     const Waypoint &endPrevPathSD,
     const std::vector<BehaviorState> successorStates,
-    const Predictions &predictions) const {
-  // Find out the vehicle in front of ego
-  // leftVehicles
-  for (const auto &prediction : predictions) {
-    int id = prediction.first;
-    const auto &predictedVehicleStates = prediction.second;
-  }
-
+    const TrackedVehicleMap &trackedVehicleMap) const {
   const auto &conf = ego.GetConfiguration();
   return Vehicle(
       ego.GetId(),

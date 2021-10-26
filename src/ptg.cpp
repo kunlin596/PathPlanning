@@ -20,7 +20,8 @@ VehicleConfiguration GoalSampler::Sample() const {
 
 std::pair<Waypoints, JMTTrajectory> PolynomialTrajectoryGenerator::GeneratePath(
     const Vehicle &startState, const Vehicle &goalState,
-    const Predictions &predictions, const double targetExecutionTime) {
+    const TrackedVehicleMap &trackedVehicleMap,
+    const double targetExecutionTime) {
   VehicleConfiguration startConf = startState.GetConfiguration();
   const int numPointsToBeGenerated =
       std::min(static_cast<int>(targetExecutionTime / _options.timeStep),
@@ -65,8 +66,8 @@ std::pair<Waypoints, JMTTrajectory> PolynomialTrajectoryGenerator::GeneratePath(
       JMTTrajectory trajectory =
           JMT::ComputeTrajectory(startConf, goals[i], goalTimes[i]);
 
-      double cost = _pEvaluator->Evaluate(trajectory, goals[i],
-                                          targetExecutionTime, predictions);
+      double cost = _pEvaluator->Evaluate(
+          trajectory, goals[i], targetExecutionTime, trackedVehicleMap);
       if (cost < minCost) {
         minCost = cost;
         pBestGoal = &goals[i];

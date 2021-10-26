@@ -93,7 +93,7 @@ class BehaviorPlanner {
   Vehicle GenerateProposal(const Vehicle &ego, const Waypoints &prevPath,
                            const Waypoint &endPrevPathSD,
                            const std::vector<BehaviorState> successorStates,
-                           const Predictions &predictions) const;
+                           const TrackedVehicleMap &trackedVehicleMap) const;
 
  private:
   const Map::ConstPtr &_pMap;

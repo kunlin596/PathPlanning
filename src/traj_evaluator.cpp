@@ -36,7 +36,7 @@ std::shared_ptr<CostFunctorBase> CreateCostFunctor(const CostType& type) {
 double TimeDiffCost::Compute(const JMTTrajectory& traj,
                              const VehicleConfiguration& goalConf,
                              const double requestTime,
-                             const Predictions& predictions) {
+                             const TrackedVehicleMap& trackedVehicleMap) {
   return Logistic(
       static_cast<double>(std::abs(traj.elapsedTime - requestTime)) /
       requestTime);
@@ -45,7 +45,7 @@ double TimeDiffCost::Compute(const JMTTrajectory& traj,
 double SDiffCost::Compute(const JMTTrajectory& traj,
                           const VehicleConfiguration& goalConf,
                           const double requestTime,
-                          const Predictions& predictions) {
+                          const TrackedVehicleMap& trackedVehicleMap) {
   double cost = 0.0;
   VehicleConfiguration finalConf = traj(requestTime);
   cost += Logistic(std::abs(finalConf.sPos - goalConf.sPos) /
@@ -61,7 +61,7 @@ double SDiffCost::Compute(const JMTTrajectory& traj,
 double DDiffCost::Compute(const JMTTrajectory& traj,
                           const VehicleConfiguration& goalConf,
                           const double requestTime,
-                          const Predictions& predictions) {
+                          const TrackedVehicleMap& trackedVehicleMap) {
   double cost = 0.0;
   VehicleConfiguration finalConf = traj(requestTime);
   cost += Logistic(std::abs(finalConf.dPos - goalConf.dPos) /
@@ -76,70 +76,68 @@ double DDiffCost::Compute(const JMTTrajectory& traj,
 double CollisionCost::Compute(const JMTTrajectory& traj,
                               const VehicleConfiguration& goalConf,
                               const double requestTime,
-                              const Predictions& predictions) {
+                              const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
 double BufferCost::Compute(const JMTTrajectory& traj,
                            const VehicleConfiguration& goalConf,
                            const double requestTime,
-                           const Predictions& predictions) {
+                           const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
 double StaysOnRoadCost::Compute(const JMTTrajectory& traj,
                                 const VehicleConfiguration& goalConf,
                                 const double requestTime,
-                                const Predictions& predictions) {
+                                const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
-double ExceedsSpeedLimitCost::Compute(const JMTTrajectory& traj,
-                                      const VehicleConfiguration& goalConf,
-                                      const double requestTime,
-                                      const Predictions& predictions) {
+double ExceedsSpeedLimitCost::Compute(
+    const JMTTrajectory& traj, const VehicleConfiguration& goalConf,
+    const double requestTime, const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
 double EfficiencyCost::Compute(const JMTTrajectory& traj,
                                const VehicleConfiguration& goalConf,
                                const double requestTime,
-                               const Predictions& predictions) {
+                               const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
 double TotalAccelCost::Compute(const JMTTrajectory& traj,
                                const VehicleConfiguration& goalConf,
                                const double requestTime,
-                               const Predictions& predictions) {
+                               const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
 double MaxAccelCost::Compute(const JMTTrajectory& traj,
                              const VehicleConfiguration& goalConf,
                              const double requestTime,
-                             const Predictions& predictions) {
+                             const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
 double TotalJerkCost::Compute(const JMTTrajectory& traj,
                               const VehicleConfiguration& goalConf,
                               const double requestTime,
-                              const Predictions& predictions) {
+                              const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
 double MaxJerkCost::Compute(const JMTTrajectory& traj,
                             const VehicleConfiguration& goalConf,
                             const double requestTime,
-                            const Predictions& predictions) {
+                            const TrackedVehicleMap& trackedVehicleMap) {
   return 0.0;
 }
 }  // namespace costs
 
-double JMTTrajectoryEvaluator::Evaluate(const JMTTrajectory& traj,
-                                        const VehicleConfiguration& goalConf,
-                                        const double requestTime,
-                                        const Predictions& predictions) {
+double JMTTrajectoryEvaluator::Evaluate(
+    const JMTTrajectory& traj, const VehicleConfiguration& goalConf,
+    const double requestTime, const TrackedVehicleMap& trackedVehicleMap) {
   double cost = 0.0;
   for (const auto& costInfo : _costWeightMapping) {
     if (_funcPtrs.count(costInfo.first) == 0) {
       _funcPtrs[costInfo.first] = costs::CreateCostFunctor(costInfo.first);
     }
     cost += _funcPtrs[costInfo.first]->Compute(traj, goalConf, requestTime,
-                                               predictions) *
+                                               trackedVehicleMap) *
             costInfo.second;
   }
   return cost;

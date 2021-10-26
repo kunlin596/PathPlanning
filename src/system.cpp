@@ -98,8 +98,8 @@ std::string System::SpinOnce(const std::string &commandString) {
       SPDLOG_DEBUG("perceptions={}", perceptions);
 
       _pTracker->Update(egoVehicle, perceptions);
-      Predictions predictions = _pTracker->GeneratePredictions();
-      SPDLOG_DEBUG("Generated predictions for {} vihicles", predictions.size());
+
+      const TrackedVehicleMap &trackedVehicleMap = _pTracker->GetVehicles();
 
       //
       // Behavior planning
@@ -113,7 +113,7 @@ std::string System::SpinOnce(const std::string &commandString) {
       SPDLOG_DEBUG("Computed startState={}", startState.GetConfiguration());
 
       Vehicle proposal = _pBehaviorPlanner->GenerateProposal(
-          startState, prevPath, endPathSD, successorStates, predictions);
+          startState, prevPath, endPathSD, successorStates, trackedVehicleMap);
 
       //
       // Path generation
@@ -124,7 +124,7 @@ std::string System::SpinOnce(const std::string &commandString) {
       Waypoints path;
       JMTTrajectory trajectory;
       std::tie(path, trajectory) = _pPathGenerator->GeneratePath(
-          startState, proposal, predictions, Configuration::TIME_HORIZON);
+          startState, proposal, trackedVehicleMap, Configuration::TIME_HORIZON);
 
       UpdateCachedTrajectory(trajectory);
 
