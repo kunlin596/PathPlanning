@@ -14,23 +14,26 @@ namespace pathplanning {
  * Goal sampler is trying to find the best goal w.r.t. target canonical
  * configuration.
  */
-class GoalSampler {
- public:
-  explicit GoalSampler(const VehicleConfiguration &canonicalConf,
-                       const std::array<double, 6> &sigmas);
+class GoalSampler
+{
+public:
+  explicit GoalSampler(const VehicleConfiguration& canonicalConf,
+                       const std::array<double, 6>& sigmas);
 
   VehicleConfiguration Sample() const;
 
- private:
+private:
   std::array<std::unique_ptr<GaussianSampler1D<>>, 6> _samplers;
 };
 
 /**
  * @brief      This class describes a polynomial trajectory generator.
  */
-class PolynomialTrajectoryGenerator {
- public:
-  struct Options {
+class PolynomialTrajectoryGenerator
+{
+public:
+  struct Options
+  {
     uint32_t numPoints = Configuration::NUM_POINTS;
     uint32_t numSamples = 10;
     double timeStep = Configuration::TIME_STEP;
@@ -43,10 +46,13 @@ class PolynomialTrajectoryGenerator {
   };
 
   PolynomialTrajectoryGenerator(
-      const Map::ConstPtr &pMap, const Options &options = Options(),
-      const costs::CostWeightMapping &costWeightMapping =
-          costs::CostWeightMapping())
-      : _pMap(pMap), _options(options) {
+    const Map::ConstPtr& pMap,
+    const Options& options = Options(),
+    const costs::CostWeightMapping& costWeightMapping =
+      costs::CostWeightMapping())
+    : _pMap(pMap)
+    , _options(options)
+  {
     _pEvaluator = std::make_unique<JMTTrajectoryEvaluator>(costWeightMapping);
   }
 
@@ -85,21 +91,24 @@ class PolynomialTrajectoryGenerator {
    * @return     { description_of_the_return_value }
    */
   std::pair<Waypoints, JMTTrajectory> GeneratePath(
-      const Vehicle &startState, const Vehicle &goalState,
-      const TrackedVehicleMap &trackedVehicleMap, const double targetExecutionTime = 1.0);
+    const Vehicle& startState,
+    const Vehicle& goalState,
+    const TrackedVehicleMap& trackedVehicleMap,
+    const double targetExecutionTime = 1.0);
 
-  Vehicle ComputeStartState(const Vehicle &ego, const JMTTrajectory &prevTraj,
-                            const Waypoints &prevPath,
-                            const Waypoint &endPrevPathSD);
+  Vehicle ComputeStartState(const Vehicle& ego,
+                            const JMTTrajectory& prevTraj,
+                            const Waypoints& prevPath,
+                            const Waypoint& endPrevPathSD);
 
- private:
+private:
   Map::ConstPtr _pMap;
   Options _options;
   std::unique_ptr<VehicleConfiguration>
-      _pPrevGoal;  ///< Cache the previous goal for continuous planning
+    _pPrevGoal; ///< Cache the previous goal for continuous planning
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };
 
-};  // namespace pathplanning
+}; // namespace pathplanning
 
 #endif

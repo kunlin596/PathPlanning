@@ -7,8 +7,12 @@
 namespace {
 using namespace pathplanning;
 
-void Test(PolynomialTrajectoryGenerator &g, const Map::ConstPtr &pMap,
-          const VehicleConfiguration &start, const VehicleConfiguration &goal) {
+void
+Test(PolynomialTrajectoryGenerator& g,
+     const Map::ConstPtr& pMap,
+     const VehicleConfiguration& start,
+     const VehicleConfiguration& goal)
+{
   TrackedVehicleMap trackedVehicleMap;
   Waypoints prevPath;
 
@@ -22,7 +26,7 @@ void Test(PolynomialTrajectoryGenerator &g, const Map::ConstPtr &pMap,
   Waypoints xywaypoints;
   JMTTrajectory trajectory;
   std::tie(xywaypoints, trajectory) = g.GeneratePath(
-      startState, goalState, trackedVehicleMap, targetExecutionTime);
+    startState, goalState, trackedVehicleMap, targetExecutionTime);
 
   auto computed = trajectory(targetExecutionTime);
 
@@ -38,8 +42,8 @@ void Test(PolynomialTrajectoryGenerator &g, const Map::ConstPtr &pMap,
   auto goalXY = pMap->GetXY(goal.sPos, goal.dPos);
   auto computedXY = pMap->GetXY(computed.sPos, computed.dPos);
 
-  SPDLOG_INFO("startXY={}, goalXY={}, computedXY={}", startXY, goalXY,
-              computedXY);
+  SPDLOG_INFO(
+    "startXY={}, goalXY={}, computedXY={}", startXY, goalXY, computedXY);
 
   double diffX = goalXY[0] - startXY[0];
   double diffY = goalXY[1] - startXY[1];
@@ -50,16 +54,18 @@ void Test(PolynomialTrajectoryGenerator &g, const Map::ConstPtr &pMap,
   double yError = std::abs(xywaypoints[0][1] + diffY -
                            xywaypoints[xywaypoints.size() - 1][1]);
 
-  SPDLOG_INFO("start{}, goal={}", xywaypoints[0],
-              xywaypoints[xywaypoints.size() - 1]);
+  SPDLOG_INFO(
+    "start{}, goal={}", xywaypoints[0], xywaypoints[xywaypoints.size() - 1]);
   SPDLOG_INFO("xError={}, yError={}", xError, yError);
 
   assert(xError < 0.8);
   assert(yError < 0.8);
 }
-}  // namespace
+} // namespace
 
-int main(int argc, char **argv) {
+int
+main(int argc, char** argv)
+{
   using namespace pathplanning;
   using nlohmann::json;
 

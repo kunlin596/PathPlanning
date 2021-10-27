@@ -11,19 +11,21 @@ using namespace pathplanning;
  *
  * @return     Vehicle map
  */
-std::unordered_map<std::string, Vehicle> _GetFrontBackVehicles(
-    const Vehicle &ego, const TrackedVehicleMap &trackedVehicleMap,
-    int targetLaneId = -1) {
-  const auto &egoConf = ego.GetConfiguration();
+std::unordered_map<std::string, Vehicle>
+_GetFrontBackVehicles(const Vehicle& ego,
+                      const TrackedVehicleMap& trackedVehicleMap,
+                      int targetLaneId = -1)
+{
+  const auto& egoConf = ego.GetConfiguration();
   int currentLaneId =
-      targetLaneId == -1 ? Map::GetLaneId(egoConf.dPos) : targetLaneId;
+    targetLaneId == -1 ? Map::GetLaneId(egoConf.dPos) : targetLaneId;
   double frontSDiff = std::numeric_limits<double>::max();
   double backSDiff = std::numeric_limits<double>::max();
   int frontId = -1;
   int backId = -1;
 
-  for (const auto &vehicleData : trackedVehicleMap) {
-    const auto &vehicleConf = vehicleData.second.GetConfiguration();
+  for (const auto& vehicleData : trackedVehicleMap) {
+    const auto& vehicleConf = vehicleData.second.GetConfiguration();
 
     int carLaneId = Map::GetLaneId(vehicleConf.dPos);
     if (carLaneId < 0) {
@@ -47,8 +49,8 @@ std::unordered_map<std::string, Vehicle> _GetFrontBackVehicles(
   std::unordered_map<std::string, Vehicle> result;
   if (frontId != -1 and frontSDiff < Configuration::NONEGO_SEARCH_RADIUS) {
     result["front"] = trackedVehicleMap.at(frontId);
-    SPDLOG_INFO("Found front id {:2d}, frontSDiff={:7.3f}", frontId,
-                frontSDiff);
+    SPDLOG_INFO(
+      "Found front id {:2d}, frontSDiff={:7.3f}", frontId, frontSDiff);
   }
   if (backId != -1 and backSDiff < Configuration::NONEGO_SEARCH_RADIUS) {
     result["back"] = trackedVehicleMap.at(backId);
@@ -56,28 +58,39 @@ std::unordered_map<std::string, Vehicle> _GetFrontBackVehicles(
   return result;
 }
 
-Vehicle _GenerateLKProposal(const Vehicle &ego,
-                            const TrackedVehicleMap &trackedVehicleMap) {
+Vehicle
+_GenerateLKProposal(const Vehicle& ego,
+                    const TrackedVehicleMap& trackedVehicleMap)
+{
   auto frontBackVehicles = _GetFrontBackVehicles(ego, trackedVehicleMap);
-  const auto &egoConf = ego.GetConfiguration();
+  const auto& egoConf = ego.GetConfiguration();
   if (frontBackVehicles.count("front")) {
     auto vehicleConf = frontBackVehicles["front"].GetConfiguration();
     // TODO: Properly set s offset w.r.t. leading car
-    return Vehicle(ego.GetId(), VehicleConfiguration(vehicleConf.sPos - 20.0,
-                                                     vehicleConf.sVel, 0.0,
-                                                     egoConf.dPos, 0.0, 0.0));
+    return Vehicle(ego.GetId(),
+                   VehicleConfiguration(vehicleConf.sPos - 20.0,
+                                        vehicleConf.sVel,
+                                        0.0,
+                                        egoConf.dPos,
+                                        0.0,
+                                        0.0));
   }
   return Vehicle(
-      ego.GetId(),
-      VehicleConfiguration(egoConf.sPos + 30.0, 5.0, 0.0,
-                           Map::GetLaneCenterD(Map::GetLaneId(egoConf.dPos)),
-                           0.0, 0.0));
+    ego.GetId(),
+    VehicleConfiguration(egoConf.sPos + 30.0,
+                         5.0,
+                         0.0,
+                         Map::GetLaneCenterD(Map::GetLaneId(egoConf.dPos)),
+                         0.0,
+                         0.0));
 }
 
-Vehicle _GenerateLCProposal(const Vehicle &ego,
-                            const TrackedVehicleMap &trackedVehicleMap,
-                            int laneOffset = -1) {
-  const auto &egoConf = ego.GetConfiguration();
+Vehicle
+_GenerateLCProposal(const Vehicle& ego,
+                    const TrackedVehicleMap& trackedVehicleMap,
+                    int laneOffset = -1)
+{
+  const auto& egoConf = ego.GetConfiguration();
   int currentLaneId = Map::GetLaneId(egoConf.dPos);
 
   if (currentLaneId + laneOffset < 0) {
@@ -86,35 +99,48 @@ Vehicle _GenerateLCProposal(const Vehicle &ego,
 
   int targetLaneId = currentLaneId + laneOffset;
   auto frontBackVehicles =
-      _GetFrontBackVehicles(ego, trackedVehicleMap, targetLaneId);
+    _GetFrontBackVehicles(ego, trackedVehicleMap, targetLaneId);
 
   if (frontBackVehicles.count("front")) {
     auto vehicleConf = frontBackVehicles["front"].GetConfiguration();
     // TODO: Properly set s offset w.r.t. leading car
-    return Vehicle(
-        ego.GetId(),
-        VehicleConfiguration(vehicleConf.sPos + 30.0, 5.0, 0.0,
-                             Map::GetLaneCenterD(targetLaneId), 0.0, 0.0));
+    return Vehicle(ego.GetId(),
+                   VehicleConfiguration(vehicleConf.sPos + 30.0,
+                                        5.0,
+                                        0.0,
+                                        Map::GetLaneCenterD(targetLaneId),
+                                        0.0,
+                                        0.0));
   }
-  return Vehicle(ego.GetId(), VehicleConfiguration(
-                                  egoConf.sPos + 30.0, 5.0, 0.0,
-                                  Map::GetLaneCenterD(targetLaneId), 0.0, 0.0));
+  return Vehicle(ego.GetId(),
+                 VehicleConfiguration(egoConf.sPos + 30.0,
+                                      5.0,
+                                      0.0,
+                                      Map::GetLaneCenterD(targetLaneId),
+                                      0.0,
+                                      0.0));
 }
 
-Vehicle _GenerateLLCProposal(const Vehicle &ego,
-                             const TrackedVehicleMap &trackedVehicleMap) {
+Vehicle
+_GenerateLLCProposal(const Vehicle& ego,
+                     const TrackedVehicleMap& trackedVehicleMap)
+{
   return _GenerateLCProposal(ego, trackedVehicleMap, -1);
 }
 
-Vehicle _GenerateRLCProposal(const Vehicle &ego,
-                             const TrackedVehicleMap &trackedVehicleMap) {
+Vehicle
+_GenerateRLCProposal(const Vehicle& ego,
+                     const TrackedVehicleMap& trackedVehicleMap)
+{
   return _GenerateLCProposal(ego, trackedVehicleMap, 1);
 }
 
-}  // namespace
+} // namespace
 
 namespace pathplanning {
-BehaviorPlanner::BehaviorPlanner(const Map::ConstPtr &pMap) : _pMap(pMap) {
+BehaviorPlanner::BehaviorPlanner(const Map::ConstPtr& pMap)
+  : _pMap(pMap)
+{
   costs::CostWeightMapping mapping;
   mapping[costs::CostType::kTimeDiff] = 1.0;
   mapping[costs::CostType::kSDiff] = 1.0;
@@ -132,8 +158,10 @@ BehaviorPlanner::BehaviorPlanner(const Map::ConstPtr &pMap) : _pMap(pMap) {
   _pEvaluator = std::make_unique<JMTTrajectoryEvaluator>(mapping);
 }
 
-std::vector<BehaviorState> BehaviorPlanner::GetSuccessorStates() const {
-  std::vector<BehaviorState> states = {BehaviorState::kLaneKeeping};
+std::vector<BehaviorState>
+BehaviorPlanner::GetSuccessorStates() const
+{
+  std::vector<BehaviorState> states = { BehaviorState::kLaneKeeping };
   // FIXME: Add LCP
   if (_currState == BehaviorState::kLaneKeeping) {
     // states.push_back(BehaviorState::kLeftLaneChangePreparation);
@@ -150,17 +178,20 @@ std::vector<BehaviorState> BehaviorPlanner::GetSuccessorStates() const {
   return states;
 }
 
-Vehicle BehaviorPlanner::GenerateProposal(
-    const Vehicle &ego, const Waypoints &prevPath,
-    const Waypoint &endPrevPathSD,
-    const std::vector<BehaviorState> successorStates,
-    const TrackedVehicleMap &trackedVehicleMap) const {
-  const auto &egoConf = ego.GetConfiguration();
+Vehicle
+BehaviorPlanner::GenerateProposal(
+  const Vehicle& ego,
+  const Waypoints& prevPath,
+  const Waypoint& endPrevPathSD,
+  const std::vector<BehaviorState> successorStates,
+  const TrackedVehicleMap& trackedVehicleMap) const
+{
+  const auto& egoConf = ego.GetConfiguration();
   VehicleConfiguration bestProposal;
   double minCost = std::numeric_limits<double>::max();
   BehaviorState bestState;
 
-  for (const auto &state : successorStates) {
+  for (const auto& state : successorStates) {
     Vehicle goalState;
     double time = 2.0;
     if (state == BehaviorState::kLaneKeeping) {
@@ -174,7 +205,7 @@ Vehicle BehaviorPlanner::GenerateProposal(
       goalState = _GenerateLKProposal(ego, trackedVehicleMap);
     }
 
-    const auto &goalConf = goalState.GetConfiguration();
+    const auto& goalConf = goalState.GetConfiguration();
 
     // HACK
     if (goalConf.dPos < 1e-6 or goalConf.dPos > (12.0 - 1e-6)) {
@@ -187,7 +218,7 @@ Vehicle BehaviorPlanner::GenerateProposal(
 
     auto traj = JMT::ComputeTrajectory(egoConf, goalConf, time);
     double cost =
-        _pEvaluator->Evaluate(traj, goalConf, time, trackedVehicleMap);
+      _pEvaluator->Evaluate(traj, goalConf, time, trackedVehicleMap);
 
     SPDLOG_ERROR("goalConf={}, Cost {:s}: {:7.3}", goalConf, state, cost);
     if (cost < minCost) {
@@ -203,4 +234,4 @@ Vehicle BehaviorPlanner::GenerateProposal(
   return Vehicle(ego.GetId(), bestProposal);
 }
 
-}  // namespace pathplanning
+} // namespace pathplanning

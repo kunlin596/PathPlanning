@@ -12,33 +12,36 @@ namespace pathplanning {
 /**
  * @brief      This class describes a system.
  */
-class System {
- public:
+class System
+{
+public:
   System() { Initialize(); };
   virtual ~System(){};
 
-  struct State {
+  struct State
+  {
     JMTTrajectory cachedTrajectory;
   };
 
   /**
    * @brief      System options/parameters
    */
-  struct Options {};
+  struct Options
+  {};
 
   /**
    * @brief      Initialize the system with input configuration file
    *
    * @param[in]  configFilename  The configuration filename
    */
-  void Initialize(const std::string &configFilename = "");
+  void Initialize(const std::string& configFilename = "");
 
   /**
    * @brief      Reset map
    *
    * @param[in]  filename  The map csv filename
    */
-  inline void ResetMap(const std::string &filename) { _pMap->Read(filename); }
+  inline void ResetMap(const std::string& filename) { _pMap->Read(filename); }
 
   /**
    * @brief      Spin the system once
@@ -47,7 +50,7 @@ class System {
    *
    * @return     Result message string
    */
-  std::string SpinOnce(const std::string &commandString);
+  std::string SpinOnce(const std::string& commandString);
 
   /**
    * @brief      Spin the planning server
@@ -56,13 +59,14 @@ class System {
    */
   int Spin();
 
-  void UpdateCachedTrajectory(const JMTTrajectory &traj) {
+  void UpdateCachedTrajectory(const JMTTrajectory& traj)
+  {
     _state.cachedTrajectory = traj;
   }
 
   State GetState() const { return _state; }
 
- private:
+private:
   Map::Ptr _pMap;
   std::unique_ptr<BehaviorPlanner> _pBehaviorPlanner;
   std::unique_ptr<Tracker> _pTracker;
@@ -74,6 +78,6 @@ class System {
   State _state;
 };
 
-}  // namespace pathplanning
+} // namespace pathplanning
 
 #endif

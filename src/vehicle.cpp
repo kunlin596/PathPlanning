@@ -4,9 +4,15 @@
 
 namespace pathplanning {
 
-double VehicleConfiguration::operator[](size_t index) { return At(index); }
+double
+VehicleConfiguration::operator[](size_t index)
+{
+  return At(index);
+}
 
-double VehicleConfiguration::At(size_t index) const {
+double
+VehicleConfiguration::At(size_t index) const
+{
   switch (index) {
     case 0:
       return sPos;
@@ -25,8 +31,9 @@ double VehicleConfiguration::At(size_t index) const {
   }
 }
 
-VehicleConfiguration operator+(VehicleConfiguration lhs,
-                               const VehicleConfiguration &rhs) {
+VehicleConfiguration
+operator+(VehicleConfiguration lhs, const VehicleConfiguration& rhs)
+{
   // friends defined inside class body are inline and are hidden from non-ADL
   // lookup
   lhs.sPos += rhs.sPos;
@@ -38,8 +45,9 @@ VehicleConfiguration operator+(VehicleConfiguration lhs,
   return lhs;
 }
 
-VehicleConfiguration operator-(VehicleConfiguration lhs,
-                               const VehicleConfiguration &rhs) {
+VehicleConfiguration
+operator-(VehicleConfiguration lhs, const VehicleConfiguration& rhs)
+{
   // friends defined inside class body are inline and are hidden from non-ADL
   // lookup
   lhs.sPos -= rhs.sPos;
@@ -51,8 +59,9 @@ VehicleConfiguration operator-(VehicleConfiguration lhs,
   return lhs;
 }
 
-VehicleConfiguration &VehicleConfiguration::operator+=(
-    const VehicleConfiguration &rhs) {
+VehicleConfiguration&
+VehicleConfiguration::operator+=(const VehicleConfiguration& rhs)
+{
   sPos += rhs.sPos;
   sVel += rhs.sVel;
   sAcc += rhs.sAcc;
@@ -62,8 +71,9 @@ VehicleConfiguration &VehicleConfiguration::operator+=(
   return *this;
 }
 
-VehicleConfiguration &VehicleConfiguration::operator-=(
-    const VehicleConfiguration &rhs) {
+VehicleConfiguration&
+VehicleConfiguration::operator-=(const VehicleConfiguration& rhs)
+{
   sPos -= rhs.sPos;
   sVel -= rhs.sVel;
   sAcc -= rhs.sAcc;
@@ -73,7 +83,9 @@ VehicleConfiguration &VehicleConfiguration::operator-=(
   return *this;
 }
 
-void KinematicsTracker::Update(double pos) {
+void
+KinematicsTracker::Update(double pos)
+{
   _measursments.push_back(pos);
 
   if (_measursments.size() > Configuration::NUM_MEASUREMENTS_TO_TRACK) {
@@ -99,26 +111,30 @@ void KinematicsTracker::Update(double pos) {
   }
 }
 
-void Vehicle::Update(const Perception &perception) {
-  const auto &sd = perception.sd;
+void
+Vehicle::Update(const Perception& perception)
+{
+  const auto& sd = perception.sd;
   _sTracker.Update(sd[0]);
   _dTracker.Update(sd[1]);
   auto sValues = _sTracker.GetValues();
   auto dValues = _dTracker.GetValues();
-  _conf = VehicleConfiguration(sValues[0], sValues[1], sValues[2], dValues[0],
-                               dValues[1], dValues[2]);
+  _conf = VehicleConfiguration(
+    sValues[0], sValues[1], sValues[2], dValues[0], dValues[1], dValues[2]);
 }
 
-Vehicle Vehicle::CreateFromPerception(const Map::ConstPtr &pMap,
-                                      const Perception &perception) {
+Vehicle
+Vehicle::CreateFromPerception(const Map::ConstPtr& pMap,
+                              const Perception& perception)
+{
   VehicleConfiguration conf;
   conf.sPos = perception.sd[0];
   conf.dPos = perception.sd[1];
 
   std::array<double, 2> sd2 =
-      pMap->GetSD(perception.xy[0] + perception.vel[0],
-                  perception.xy[1] + perception.vel[1],
-                  std::atan2(perception.vel[1], perception.vel[0]));
+    pMap->GetSD(perception.xy[0] + perception.vel[0],
+                perception.xy[1] + perception.vel[1],
+                std::atan2(perception.vel[1], perception.vel[0]));
 
   conf.sVel = (sd2[0] - conf.sPos);
   conf.dVel = (sd2[1] - conf.dPos);
@@ -127,8 +143,9 @@ Vehicle Vehicle::CreateFromPerception(const Map::ConstPtr &pMap,
   return Vehicle(perception.id, conf);
 }
 
-VehicleConfiguration VehicleConfiguration::GetConfiguration(
-    const double time) const {
+VehicleConfiguration
+VehicleConfiguration::GetConfiguration(const double time) const
+{
   // clang-format off
   return {
       CalculatePosition(sPos, sVel, sAcc, time),
@@ -141,17 +158,24 @@ VehicleConfiguration VehicleConfiguration::GetConfiguration(
   // clang-format on
 }
 
-VehicleConfiguration Vehicle::GetConfiguration(const double time) const {
+VehicleConfiguration
+Vehicle::GetConfiguration(const double time) const
+{
   return _conf.GetConfiguration(time);
 }
 
 Ego::Ego(double x, double y, double s, double d, double yaw, double speed)
-    : _x(x), _y(y), _yaw(yaw), _speed(speed) {
+  : _x(x)
+  , _y(y)
+  , _yaw(yaw)
+  , _speed(speed)
+{
   Update(x, y, s, d, yaw, speed);
 }
 
-void Ego::Update(double x, double y, double s, double d, double yaw,
-                 double speed) {
+void
+Ego::Update(double x, double y, double s, double d, double yaw, double speed)
+{
   _x = x;
   _y = y;
   _yaw = yaw;
@@ -161,8 +185,8 @@ void Ego::Update(double x, double y, double s, double d, double yaw,
   _dTracker.Update(d);
   auto sValues = _sTracker.GetValues();
   auto dValues = _dTracker.GetValues();
-  _conf = VehicleConfiguration(sValues[0], sValues[1], sValues[2], dValues[0],
-                               dValues[1], dValues[2]);
+  _conf = VehicleConfiguration(
+    sValues[0], sValues[1], sValues[2], dValues[0], dValues[1], dValues[2]);
 }
 
-}  // namespace pathplanning
+} // namespace pathplanning

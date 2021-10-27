@@ -5,8 +5,11 @@
 
 namespace pathplanning {
 
-QuinticFunctor JMT::Solve1D(const std::array<double, 3> &start,
-                            const std::array<double, 3> &end, const double t) {
+QuinticFunctor
+JMT::Solve1D(const std::array<double, 3>& start,
+             const std::array<double, 3>& end,
+             const double t)
+{
   std::array<double, 6> coeffs;
   Eigen::Matrix3d A;
   const double t2 = t * t;
@@ -39,26 +42,35 @@ QuinticFunctor JMT::Solve1D(const std::array<double, 3> &start,
   return QuinticFunctor(coeffs);
 }
 
-QuinticFunctor JMT::Solve1D(const std::array<double, 6> &params,
-                            const double t) {
-  return Solve1D({params[0], params[1], params[2]},
-                 {params[3], params[4], params[5]}, t);
+QuinticFunctor
+JMT::Solve1D(const std::array<double, 6>& params, const double t)
+{
+  return Solve1D({ params[0], params[1], params[2] },
+                 { params[3], params[4], params[5] },
+                 t);
 }
 
-SDFunctor JMT::Solve2D(const std::array<double, 6> &sParams,
-                       const std::array<double, 6> &dParams, const double t) {
+SDFunctor
+JMT::Solve2D(const std::array<double, 6>& sParams,
+             const std::array<double, 6>& dParams,
+             const double t)
+{
   return SDFunctor(JMT::Solve1D(sParams, t), JMT::Solve1D(dParams, t));
 }
 
-JMTTrajectory JMT::ComputeTrajectory(const std::array<double, 6> &sParams,
-                                     const std::array<double, 6> &dParams,
-                                     const double t) {
+JMTTrajectory
+JMT::ComputeTrajectory(const std::array<double, 6>& sParams,
+                       const std::array<double, 6>& dParams,
+                       const double t)
+{
   return JMTTrajectory(JMT::Solve2D(sParams, dParams, t), t);
 }
 
-JMTTrajectory JMT::ComputeTrajectory(const VehicleConfiguration &start,
-                                     const VehicleConfiguration &end,
-                                     const double t) {
+JMTTrajectory
+JMT::ComputeTrajectory(const VehicleConfiguration& start,
+                       const VehicleConfiguration& end,
+                       const double t)
+{
   // clang-format off
   return JMT::ComputeTrajectory(
       // sParams
@@ -76,17 +88,19 @@ JMTTrajectory JMT::ComputeTrajectory(const VehicleConfiguration &start,
   // clang-format on
 }
 
-double JMTTrajectory::ComputeNearestApproach(const Vehicle &vehicle,
-                                             double maxTimeDuration,
-                                             double timeStep) const {
+double
+JMTTrajectory::ComputeNearestApproach(const Vehicle& vehicle,
+                                      double maxTimeDuration,
+                                      double timeStep) const
+{
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
   while (currTime < maxTimeDuration) {
     currTime += timeStep;
     VehicleConfiguration trajConf = Eval(currTime);
     VehicleConfiguration vehicleConf = vehicle.GetConfiguration(currTime);
-    double dist = GetDistance({trajConf.sPos, trajConf.dPos},
-                              {vehicleConf.sPos, vehicleConf.dPos});
+    double dist = GetDistance({ trajConf.sPos, trajConf.dPos },
+                              { vehicleConf.sPos, vehicleConf.dPos });
     if (dist < minDist) {
       minDist = dist;
     }
@@ -94,19 +108,21 @@ double JMTTrajectory::ComputeNearestApproach(const Vehicle &vehicle,
   return minDist;
 }
 
-double JMTTrajectory::ComputeNearestApproach(
-    const std::vector<Vehicle> &vehicles, double maxTimeDuration,
-    double timeStep) const {
+double
+JMTTrajectory::ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
+                                      double maxTimeDuration,
+                                      double timeStep) const
+{
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
 
   while (currTime < maxTimeDuration) {
     currTime += timeStep;
     VehicleConfiguration trajConf = Eval(currTime);
-    for (const auto &vehicle : vehicles) {
+    for (const auto& vehicle : vehicles) {
       VehicleConfiguration vehicleConf = vehicle.GetConfiguration(currTime);
-      double dist = GetDistance({trajConf.sPos, trajConf.dPos},
-                                {vehicleConf.sPos, vehicleConf.dPos});
+      double dist = GetDistance({ trajConf.sPos, trajConf.dPos },
+                                { vehicleConf.sPos, vehicleConf.dPos });
       if (dist < minDist) {
         minDist = dist;
       }
@@ -115,20 +131,23 @@ double JMTTrajectory::ComputeNearestApproach(
   return minDist;
 }
 
-double JMTTrajectory::ComputeNearestApproach(
-    const std::unordered_map<int, Vehicle> &vehicles, double maxTimeDuration,
-    double timeStep) const {
+double
+JMTTrajectory::ComputeNearestApproach(
+  const std::unordered_map<int, Vehicle>& vehicles,
+  double maxTimeDuration,
+  double timeStep) const
+{
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
 
   while (currTime < maxTimeDuration) {
     currTime += timeStep;
     VehicleConfiguration trajConf = Eval(currTime);
-    for (const auto &vehicle : vehicles) {
+    for (const auto& vehicle : vehicles) {
       VehicleConfiguration vehicleConf =
-          vehicle.second.GetConfiguration(currTime);
-      double dist = GetDistance({trajConf.sPos, trajConf.dPos},
-                                {vehicleConf.sPos, vehicleConf.dPos});
+        vehicle.second.GetConfiguration(currTime);
+      double dist = GetDistance({ trajConf.sPos, trajConf.dPos },
+                                { vehicleConf.sPos, vehicleConf.dPos });
       if (dist < minDist) {
         minDist = dist;
       }
@@ -137,4 +156,4 @@ double JMTTrajectory::ComputeNearestApproach(
   return minDist;
 }
 
-}  // namespace pathplanning
+} // namespace pathplanning

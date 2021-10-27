@@ -2,8 +2,9 @@
 
 namespace pathplanning {
 
-std::tuple<std::vector<double>, std::vector<double>> Path::ConvertWaypointsToXY(
-    const Waypoints& waypoints) {
+std::tuple<std::vector<double>, std::vector<double>>
+Path::ConvertWaypointsToXY(const Waypoints& waypoints)
+{
   using std::vector;
   vector<double> x(waypoints.size()), y(waypoints.size());
   for (size_t i = 0; i < waypoints.size(); ++i) {
@@ -14,13 +15,15 @@ std::tuple<std::vector<double>, std::vector<double>> Path::ConvertWaypointsToXY(
   return std::make_pair(x, y);
 }
 
-Waypoints Path::ConvertXYToWaypoints(const std::vector<double>& x,
-                                     const std::vector<double>& y) {
+Waypoints
+Path::ConvertXYToWaypoints(const std::vector<double>& x,
+                           const std::vector<double>& y)
+{
   Waypoints waypoints;
   for (size_t i = 0; i < x.size(); ++i) {
-    waypoints.push_back({x[i], y[i]});
+    waypoints.push_back({ x[i], y[i] });
   }
   return waypoints;
 }
 
-}  // namespace pathplanning
+} // namespace pathplanning

@@ -12,7 +12,9 @@ namespace {
  *
  * @return     Normalized JSON string
  */
-std::string _NormalizeJsonString(std::string s) {
+std::string
+_NormalizeJsonString(std::string s)
+{
   using std::string;
   auto found_null = s.find("null");
   auto b1 = s.find_first_of("[");
@@ -25,18 +27,22 @@ std::string _NormalizeJsonString(std::string s) {
   return "";
 }
 
-std::string _EmptyControlMessage() {
+std::string
+_EmptyControlMessage()
+{
   nlohmann::json waypointsJson;
   waypointsJson["next_x"] = std::vector<double>();
   waypointsJson["next_y"] = std::vector<double>();
   return "42[\"control\"," + waypointsJson.dump() + "]";
 }
 
-}  // namespace
+} // namespace
 
 namespace pathplanning {
 
-void System::Initialize(const std::string &configFilename) {
+void
+System::Initialize(const std::string& configFilename)
+{
   _pMap = Map::CreateMap();
   _pHub = std::make_unique<uWS::Hub>();
   _pTracker = std::make_unique<Tracker>(_pMap);
@@ -45,7 +51,9 @@ void System::Initialize(const std::string &configFilename) {
   _pEgo = std::make_unique<Ego>();
 }
 
-std::string System::SpinOnce(const std::string &commandString) {
+std::string
+System::SpinOnce(const std::string& commandString)
+{
   using nlohmann::json;
   using std::cout;
   using std::endl;
@@ -63,7 +71,7 @@ std::string System::SpinOnce(const std::string &commandString) {
   if (!commandString.empty()) {
     json commandJson = json::parse(commandString);
     std::string event = commandJson[0].get<std::string>();
-    const json &data = commandJson[1];
+    const json& data = commandJson[1];
 
     if (event == "telemetry") {
       // Similator might not be able to consume all of the points, so it returns
@@ -81,10 +89,14 @@ std::string System::SpinOnce(const std::string &commandString) {
 
       cout << endl;
       SPDLOG_INFO("--- telemetry ---");
-      Waypoint endPathSD = {data["end_path_s"], data["end_path_d"]};
+      Waypoint endPathSD = { data["end_path_s"], data["end_path_d"] };
 
-      _pEgo->Update(data["x"], data["y"], data["s"], data["d"],
-                    deg2rad(data["yaw"]), mph2ms(data["speed"]));
+      _pEgo->Update(data["x"],
+                    data["y"],
+                    data["s"],
+                    data["d"],
+                    deg2rad(data["yaw"]),
+                    mph2ms(data["speed"]));
 
       //
       // Process perceptions
@@ -92,38 +104,38 @@ std::string System::SpinOnce(const std::string &commandString) {
 
       // Create the latest perceptions from input command
       Perceptions perceptions =
-          Perception::CreatePerceptions(data["sensor_fusion"]);
+        Perception::CreatePerceptions(data["sensor_fusion"]);
       SPDLOG_DEBUG("perceptions={}", perceptions);
 
       _pTracker->Update(*_pEgo, perceptions);
 
-      const TrackedVehicleMap &trackedVehicleMap = _pTracker->GetVehicles();
+      const TrackedVehicleMap& trackedVehicleMap = _pTracker->GetVehicles();
 
       //
       // Behavior planning
       //
 
-      const auto successorStates =
-          _pBehaviorPlanner->GetSuccessorStates();
+      const auto successorStates = _pBehaviorPlanner->GetSuccessorStates();
 
       Vehicle startState = _pPathGenerator->ComputeStartState(
-          *_pEgo, _state.cachedTrajectory, prevPath, endPathSD);
+        *_pEgo, _state.cachedTrajectory, prevPath, endPathSD);
       SPDLOG_DEBUG("Computed startState={}", startState.GetConfiguration());
 
       Vehicle proposal = _pBehaviorPlanner->GenerateProposal(
-          startState, prevPath, endPathSD, successorStates, trackedVehicleMap);
+        startState, prevPath, endPathSD, successorStates, trackedVehicleMap);
 
       //
       // Path generation
       //
 
       SPDLOG_INFO("Generating path for,\nstartState={}\npropoState={}",
-                  startState.GetConfiguration(), proposal.GetConfiguration());
+                  startState.GetConfiguration(),
+                  proposal.GetConfiguration());
 
       Waypoints path;
       JMTTrajectory trajectory;
       std::tie(path, trajectory) = _pPathGenerator->GeneratePath(
-          startState, proposal, trackedVehicleMap, 2.0);  // Fix time
+        startState, proposal, trackedVehicleMap, 2.0); // Fix time
 
       UpdateCachedTrajectory(trajectory);
 
@@ -133,7 +145,7 @@ std::string System::SpinOnce(const std::string &commandString) {
 
       json waypointsJson;
       std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) =
-          Path::ConvertWaypointsToXY(path);
+        Path::ConvertWaypointsToXY(path);
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
     }
@@ -144,11 +156,15 @@ std::string System::SpinOnce(const std::string &commandString) {
   return msg;
 }
 
-int System::Spin() {
+int
+System::Spin()
+{
   // Main event loop callback when we receive something from the simulator.
   // These parameters are specific to uWS communication.
-  _pHub->onMessage([this](uWS::WebSocket<uWS::SERVER> ws, char *data,
-                          size_t length, uWS::OpCode opCode) {
+  _pHub->onMessage([this](uWS::WebSocket<uWS::SERVER> ws,
+                          char* data,
+                          size_t length,
+                          uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -156,19 +172,20 @@ int System::Spin() {
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
       std::string msg = SpinOnce(_NormalizeJsonString(data));
       ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-    }  // end websocket if
-  });  // end _pHub->onMessage
+    } // end websocket if
+  }); // end _pHub->onMessage
 
   _pHub->onConnection(
-      [this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-        SPDLOG_INFO("Connected.");
-      });
+    [this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+      SPDLOG_INFO("Connected.");
+    });
 
-  _pHub->onDisconnection([this](uWS::WebSocket<uWS::SERVER> ws, int code,
-                                char *message, size_t length) {
-    ws.close();
-    SPDLOG_INFO("Disconnected.");
-  });
+  _pHub->onDisconnection(
+    [this](
+      uWS::WebSocket<uWS::SERVER> ws, int code, char* message, size_t length) {
+      ws.close();
+      SPDLOG_INFO("Disconnected.");
+    });
 
   if (_pHub->listen(_port)) {
     SPDLOG_INFO("Listening to port {}.", _port);
@@ -182,4 +199,4 @@ int System::Spin() {
   return 0;
 }
 
-}  // namespace pathplanning
+} // namespace pathplanning

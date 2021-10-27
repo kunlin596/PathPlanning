@@ -12,23 +12,30 @@
 
 namespace pathplanning {
 
-struct VehicleConfiguration {
+struct VehicleConfiguration
+{
   VehicleConfiguration() {}
-  VehicleConfiguration(double sPos, double sVel, double sAcc, double dPos,
-                       double dVel, double dAcc)
-      : sPos(sPos),
-        sVel(sVel),
-        sAcc(sAcc),
-        dPos(dPos),
-        dVel(dVel),
-        dAcc(dAcc) {}
-  VehicleConfiguration(const std::array<double, 6> &params)
-      : sPos(params[0]),
-        sVel(params[1]),
-        sAcc(params[2]),
-        dPos(params[3]),
-        dVel(params[4]),
-        dAcc(params[5]) {}
+  VehicleConfiguration(double sPos,
+                       double sVel,
+                       double sAcc,
+                       double dPos,
+                       double dVel,
+                       double dAcc)
+    : sPos(sPos)
+    , sVel(sVel)
+    , sAcc(sAcc)
+    , dPos(dPos)
+    , dVel(dVel)
+    , dAcc(dAcc)
+  {}
+  VehicleConfiguration(const std::array<double, 6>& params)
+    : sPos(params[0])
+    , sVel(params[1])
+    , sAcc(params[2])
+    , dPos(params[3])
+    , dVel(params[4])
+    , dAcc(params[5])
+  {}
 
   // VehicleConfiguration(const VehicleConfiguration &other)
   //     : sPos(other.sPos),
@@ -53,14 +60,14 @@ struct VehicleConfiguration {
   double At(size_t index) const;
 
   friend VehicleConfiguration operator+(VehicleConfiguration lhs,
-                                        const VehicleConfiguration &rhs);
+                                        const VehicleConfiguration& rhs);
 
   friend VehicleConfiguration operator-(VehicleConfiguration lhs,
-                                        const VehicleConfiguration &rhs);
+                                        const VehicleConfiguration& rhs);
 
-  VehicleConfiguration &operator+=(const VehicleConfiguration &rhs);
+  VehicleConfiguration& operator+=(const VehicleConfiguration& rhs);
 
-  VehicleConfiguration &operator-=(const VehicleConfiguration &rhs);
+  VehicleConfiguration& operator-=(const VehicleConfiguration& rhs);
 
   VehicleConfiguration GetConfiguration(const double time = 0.0) const;
 
@@ -72,8 +79,8 @@ struct VehicleConfiguration {
   double dAcc = 0.0;
 };
 
-VehicleConfiguration operator+(VehicleConfiguration lhs,
-                               const VehicleConfiguration &rhs);
+VehicleConfiguration
+operator+(VehicleConfiguration lhs, const VehicleConfiguration& rhs);
 
 /**
  * @brief      This class describes a kinematics calculator.
@@ -81,26 +88,30 @@ VehicleConfiguration operator+(VehicleConfiguration lhs,
  * It collects position measurements and use it to compute velocity and
  * accelaration .
  */
-class KinematicsTracker {
- public:
+class KinematicsTracker
+{
+public:
   std::array<double, 3> GetValues() const { return _values; }
 
   void Update(double pos);
 
- private:
+private:
   std::vector<double>
-      _measursments;  ///< For calculating speed and accelaration.
-  std::array<double, 3> _values = {0.0, 0.0, 0.0};
+    _measursments; ///< For calculating speed and accelaration.
+  std::array<double, 3> _values = { 0.0, 0.0, 0.0 };
 };
 
 /**
  * @brief      This class describes a vehicle.
  */
-class Vehicle {
- public:
+class Vehicle
+{
+public:
   Vehicle(){};
-  Vehicle(const int id, const VehicleConfiguration &conf)
-      : _id(id), _conf(conf) {}
+  Vehicle(const int id, const VehicleConfiguration& conf)
+    : _id(id)
+    , _conf(conf)
+  {}
   virtual ~Vehicle() {}
 
   inline int GetId() const { return _id; }
@@ -116,17 +127,17 @@ class Vehicle {
 
   bool IsEgo() const { return _id == std::numeric_limits<int>::max(); }
 
-  void Update(const Perception &perception);
+  void Update(const Perception& perception);
 
-  static Vehicle CreateFromPerception(const Map::ConstPtr &pMap,
-                                      const Perception &perception);
+  static Vehicle CreateFromPerception(const Map::ConstPtr& pMap,
+                                      const Perception& perception);
 
- protected:
+protected:
   int _id = -1;
   VehicleConfiguration _conf;
 
-  KinematicsTracker _sTracker;  ///< For estimating s kinematics
-  KinematicsTracker _dTracker;  ///< For estimating d kinematics
+  KinematicsTracker _sTracker; ///< For estimating s kinematics
+  KinematicsTracker _dTracker; ///< For estimating d kinematics
 };
 
 /**
@@ -136,8 +147,9 @@ class Vehicle {
  * localization (measurements) from simulator. They could be calculated using
  * simple kinematics equations.
  */
-class Ego : public Vehicle {
- public:
+class Ego : public Vehicle
+{
+public:
   Ego() {}
   Ego(double x, double y, double s, double d, double yaw, double speed);
 
@@ -155,7 +167,7 @@ class Ego : public Vehicle {
    */
   void Update(double x, double y, double s, double d, double yaw, double speed);
 
- private:
+private:
   double _x = 0.0;
   double _y = 0.0;
   double _yaw = 0.0;
@@ -164,32 +176,40 @@ class Ego : public Vehicle {
 
 using Vehicles = std::vector<Vehicle>;
 
-}  // namespace pathplanning
+} // namespace pathplanning
 
 // IO functions
 
-inline std::ostream &operator<<(
-    std::ostream &out, const pathplanning::VehicleConfiguration &conf) {
-  return out << fmt::format(
-             "VehicleConfiguration("
-             "sPos={:7.3f}, sVel={:7.3f}, sAcc={:7.3f}, "
-             "dPos={:7.3f}, dVel={:7.3f}, dAcc={:7.3f})",
-             conf.sPos, conf.sVel, conf.sAcc, conf.dPos, conf.dVel, conf.dAcc);
+inline std::ostream&
+operator<<(std::ostream& out, const pathplanning::VehicleConfiguration& conf)
+{
+  return out << fmt::format("VehicleConfiguration("
+                            "sPos={:7.3f}, sVel={:7.3f}, sAcc={:7.3f}, "
+                            "dPos={:7.3f}, dVel={:7.3f}, dAcc={:7.3f})",
+                            conf.sPos,
+                            conf.sVel,
+                            conf.sAcc,
+                            conf.dPos,
+                            conf.dVel,
+                            conf.dAcc);
 }
 
-inline std::ostream &operator<<(std::ostream &out,
-                                const pathplanning::Vehicle &vehicle) {
-  return out << fmt::format("Vehicle(id={:2d}, conf={:s}", vehicle.GetId(),
+inline std::ostream&
+operator<<(std::ostream& out, const pathplanning::Vehicle& vehicle)
+{
+  return out << fmt::format("Vehicle(id={:2d}, conf={:s}",
+                            vehicle.GetId(),
                             vehicle.GetConfiguration());
 }
 
-inline std::ostream &operator<<(std::ostream &out,
-                                const pathplanning::Vehicles &vehicles) {
+inline std::ostream&
+operator<<(std::ostream& out, const pathplanning::Vehicles& vehicles)
+{
   out << std::string("{\n");
-  for (const auto &v : vehicles) {
+  for (const auto& v : vehicles) {
     out << fmt::format("  {:s}\n", v);
   }
   return out << std::string("}\n");
 }
 
-#endif  // PATHPLANNING_VEHICLE_H
+#endif // PATHPLANNING_VEHICLE_H

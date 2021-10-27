@@ -2,7 +2,7 @@
 #define PATHPLANNING_BEHAVIORPLANNER_H
 
 #include "map.h"
-#include "ptg.h"  // For generating goals for PTG
+#include "ptg.h" // For generating goals for PTG
 #include "tracker.h"
 #include "traj_evaluator.h"
 
@@ -25,7 +25,8 @@ namespace pathplanning {
  *  - signal, activate turning signal
  *
  */
-enum class BehaviorState {
+enum class BehaviorState
+{
   kStart = 0,
   kStop,
   kConstSpeed,
@@ -67,9 +68,10 @@ enum class BehaviorState {
  * Finally, the best proposed end configuration to real trajectory generation
  * module.
  */
-class BehaviorPlanner {
- public:
-  BehaviorPlanner(const Map::ConstPtr &pMap);
+class BehaviorPlanner
+{
+public:
+  BehaviorPlanner(const Map::ConstPtr& pMap);
   virtual ~BehaviorPlanner() {}
 
   /**
@@ -89,21 +91,23 @@ class BehaviorPlanner {
    *
    * @return     Target vehicle state
    */
-  Vehicle GenerateProposal(const Vehicle &ego, const Waypoints &prevPath,
-                           const Waypoint &endPrevPathSD,
+  Vehicle GenerateProposal(const Vehicle& ego,
+                           const Waypoints& prevPath,
+                           const Waypoint& endPrevPathSD,
                            const std::vector<BehaviorState> successorStates,
-                           const TrackedVehicleMap &trackedVehicleMap) const;
+                           const TrackedVehicleMap& trackedVehicleMap) const;
 
- private:
-  const Map::ConstPtr &_pMap;
+private:
+  const Map::ConstPtr& _pMap;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
   BehaviorState _currState = BehaviorState::kLaneKeeping;
 };
 
-}  // namespace pathplanning
+} // namespace pathplanning
 
-inline std::ostream &operator<<(std::ostream &out,
-                                const pathplanning::BehaviorState &type) {
+inline std::ostream&
+operator<<(std::ostream& out, const pathplanning::BehaviorState& type)
+{
   using namespace pathplanning;
   switch (type) {
     case BehaviorState::kStart:

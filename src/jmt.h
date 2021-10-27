@@ -22,21 +22,25 @@ namespace pathplanning {
  *
  * FIXME: Move this class into JMTTrajectory
  */
-class SDFunctor {
- public:
+class SDFunctor
+{
+public:
   SDFunctor() {}
 
   SDFunctor(const QuinticFunctor& sFunc, const QuinticFunctor& dFunc)
-      : _sPosFunc(sFunc), _dPosFunc(dFunc) {
+    : _sPosFunc(sFunc)
+    , _dPosFunc(dFunc)
+  {
     _sVelFunc = _sPosFunc.Differentiate();
     _dVelFunc = _dPosFunc.Differentiate();
     _sAccFunc = _sVelFunc.Differentiate();
     _dAccFunc = _dVelFunc.Differentiate();
   }
 
-  std::array<double, 6> Eval(const double x) const {
-    return {_sPosFunc(x), _sVelFunc(x), _sAccFunc(x),
-            _dPosFunc(x), _dVelFunc(x), _dAccFunc(x)};
+  std::array<double, 6> Eval(const double x) const
+  {
+    return { _sPosFunc(x), _sVelFunc(x), _sAccFunc(x),
+             _dPosFunc(x), _dVelFunc(x), _dAccFunc(x) };
   }
 
   std::array<double, 6> operator()(const double x) const { return Eval(x); }
@@ -48,7 +52,7 @@ class SDFunctor {
   const CubicFunctor& GetSAccFunc() const { return _sAccFunc; }
   const CubicFunctor& GetDAccFunc() const { return _dAccFunc; }
 
- private:
+private:
   QuinticFunctor _sPosFunc;
   QuarticFunctor _sVelFunc;
   CubicFunctor _sAccFunc;
@@ -69,16 +73,20 @@ class SDFunctor {
  * Note that not all trajectory generators use the same information to produce
  * the same format of output, so trajecotry is per generator type.
  */
-struct JMTTrajectory {
+struct JMTTrajectory
+{
   SDFunctor _sdFunc;
   double elapsedTime = 0.0;
 
   JMTTrajectory() {}
 
   JMTTrajectory(const SDFunctor& sdFunc, const double elapsedTime)
-      : _sdFunc(sdFunc), elapsedTime(elapsedTime) {}
+    : _sdFunc(sdFunc)
+    , elapsedTime(elapsedTime)
+  {}
 
-  inline VehicleConfiguration Eval(const double t) const {
+  inline VehicleConfiguration Eval(const double t) const
+  {
     return VehicleConfiguration(_sdFunc(t));
   }
 
@@ -96,15 +104,18 @@ struct JMTTrajectory {
    *
    * @return     distance in meter
    */
-  double ComputeNearestApproach(const Vehicle& vehicle, double maxTimeDuration,
+  double ComputeNearestApproach(const Vehicle& vehicle,
+                                double maxTimeDuration,
                                 double timeStep) const;
 
   double ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
-                                double maxTimeDuration, double timeStep) const;
+                                double maxTimeDuration,
+                                double timeStep) const;
 
   double ComputeNearestApproach(
-      const std::unordered_map<int, Vehicle>& vehicles, double maxTimeDuration,
-      double timeStep) const;
+    const std::unordered_map<int, Vehicle>& vehicles,
+    double maxTimeDuration,
+    double timeStep) const;
 };
 
 /**
@@ -163,7 +174,8 @@ struct JMTTrajectory {
  * Combine these 2 resulrs, we get a real 2D drivable trajectory.
  *
  */
-struct JMT {
+struct JMT
+{
   static QuinticFunctor Solve1D(const std::array<double, 3>& start,
                                 const std::array<double, 3>& end,
                                 const double t);
@@ -196,18 +208,21 @@ struct JMT {
                                          const double t);
 };
 
-}  // namespace pathplanning
+} // namespace pathplanning
 
-inline std::ostream& operator<<(std::ostream& out,
-                                const pathplanning::SDFunctor& functor) {
+inline std::ostream&
+operator<<(std::ostream& out, const pathplanning::SDFunctor& functor)
+{
   return out << fmt::format("SDFunctor(QuinticFunctor({}), QuinticFunctor({}))",
-                            functor.GetSFunc(), functor.GetDFunc());
+                            functor.GetSFunc(),
+                            functor.GetDFunc());
 }
 
-inline std::ostream& operator<<(std::ostream& out,
-                                const pathplanning::JMTTrajectory& traj) {
-  return out << fmt::format("JMTTrajectory({}, {})", traj.elapsedTime,
-                            traj._sdFunc);
+inline std::ostream&
+operator<<(std::ostream& out, const pathplanning::JMTTrajectory& traj)
+{
+  return out << fmt::format(
+           "JMTTrajectory({}, {})", traj.elapsedTime, traj._sdFunc);
 }
 
 #endif

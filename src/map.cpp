@@ -8,7 +8,9 @@
 
 namespace pathplanning {
 
-void Map::Read(const std::string &filename) {
+void
+Map::Read(const std::string& filename)
+{
   std::ifstream in(filename.c_str(), std::ifstream::in);
 
   // Deserialize map data from file
@@ -33,7 +35,9 @@ void Map::Read(const std::string &filename) {
   }
 }
 
-int Map::GetClosestWaypoint(double x, double y) const {
+int
+Map::GetClosestWaypoint(double x, double y) const
+{
   double minDist = std::numeric_limits<double>::max();
   int closestWaypointIndex = 0;
 
@@ -49,10 +53,12 @@ int Map::GetClosestWaypoint(double x, double y) const {
 }
 
 // Returns next waypoint of the closest waypoint
-int Map::GetNextWaypoint(double x, double y, double theta) const {
+int
+Map::GetNextWaypoint(double x, double y, double theta) const
+{
   int closestWaypointIndex = GetClosestWaypoint(x, y);
-  double heading = std::atan2((_y[closestWaypointIndex] - y),
-                              (_x[closestWaypointIndex] - x));
+  double heading =
+    std::atan2((_y[closestWaypointIndex] - y), (_x[closestWaypointIndex] - x));
   double angle = std::fabs(theta - heading);
 
   angle = std::min(2.0 * M_PI - angle, angle);
@@ -67,7 +73,9 @@ int Map::GetNextWaypoint(double x, double y, double theta) const {
   return closestWaypointIndex;
 }
 
-std::array<double, 2> Map::GetSD(double x, double y, double theta) const {
+std::array<double, 2>
+Map::GetSD(double x, double y, double theta) const
+{
   int nextWaypointIndex = GetNextWaypoint(x, y, theta);
   int prevWaypointIndex = nextWaypointIndex - 1;
 
@@ -105,10 +113,12 @@ std::array<double, 2> Map::GetSD(double x, double y, double theta) const {
 
   frenetS += GetDistance(0, 0, projX, projY);
 
-  return {frenetS, frenetD};
+  return { frenetS, frenetD };
 }
 
-std::array<double, 2> Map::GetXY(double s, double d) const {
+std::array<double, 2>
+Map::GetXY(double s, double d) const
+{
   int prevWaypointIndex = -1;
 
   while (s > (_s[prevWaypointIndex + 1] - 1e-6) &&
@@ -131,11 +141,19 @@ std::array<double, 2> Map::GetXY(double s, double d) const {
   double x = segX + d * std::cos(perpHeading);
   double y = segY + d * std::sin(perpHeading);
 
-  return {x, y};
+  return { x, y };
 }
 
-double GetKMFromMile(double mile) { return mile / 2.24; }
+double
+GetKMFromMile(double mile)
+{
+  return mile / 2.24;
+}
 
-double GetMileFromKM(double km) { return km * 2.24; }
+double
+GetMileFromKM(double km)
+{
+  return km * 2.24;
+}
 
-}  // namespace pathplanning
+} // namespace pathplanning

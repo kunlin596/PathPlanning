@@ -1,3 +1,3 @@
 #include "perception.h"
 
-namespace pathplanning {};  // namespace pathplanning
+namespace pathplanning {}; // namespace pathplanning

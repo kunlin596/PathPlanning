@@ -16,7 +16,8 @@ namespace pathplanning {
 /**
  * @brief      Perception data format from simulator
  */
-struct Perception {
+struct Perception
+{
   int id = -1;
   std::array<double, 2> xy;
   std::array<double, 2> vel;
@@ -24,16 +25,26 @@ struct Perception {
   double speed;
 
   Perception() {}
-  Perception(int id, double x, double y, double vx, double vy, double s,
+  Perception(int id,
+             double x,
+             double y,
+             double vx,
+             double vy,
+             double s,
              double d)
-      : id(id), xy({x, y}), vel({vx, vy}), sd({s, d}) {
+    : id(id)
+    , xy({ x, y })
+    , vel({ vx, vy })
+    , sd({ s, d })
+  {
     speed = std::sqrt(vel[0] * vel[0] + vel[1] * vel[1]);
   }
 
   virtual ~Perception() {}
 
   static std::unordered_map<int, Perception> CreatePerceptions(
-      const std::vector<std::vector<double>> &data) {
+    const std::vector<std::vector<double>>& data)
+  {
     std::unordered_map<int, Perception> perceptions;
     for (size_t i = 0; i < data.size(); ++i) {
       const std::vector<double> d = data[i];
@@ -45,24 +56,30 @@ struct Perception {
 
 using Perceptions = std::unordered_map<int, Perception>;
 
-}  // namespace pathplanning
+} // namespace pathplanning
 
 // IO functions
 
-inline std::ostream &operator<<(std::ostream &out,
-                                const pathplanning::Perception &perception) {
+inline std::ostream&
+operator<<(std::ostream& out, const pathplanning::Perception& perception)
+{
   return out << fmt::format(
-             "Perception=(id={:3d}, xy=[{:7.3f}, {:7.3f}], vel=[{:7.3f}, "
-             "{:7.3f}], sd=[{:7.3f}, {:7.3f}])",
-             perception.id, perception.xy[0], perception.xy[1],
-             perception.vel[0], perception.vel[1], perception.sd[0],
-             perception.sd[1]);
+           "Perception=(id={:3d}, xy=[{:7.3f}, {:7.3f}], vel=[{:7.3f}, "
+           "{:7.3f}], sd=[{:7.3f}, {:7.3f}])",
+           perception.id,
+           perception.xy[0],
+           perception.xy[1],
+           perception.vel[0],
+           perception.vel[1],
+           perception.sd[0],
+           perception.sd[1]);
 }
 
-inline std::ostream &operator<<(std::ostream &out,
-                                const pathplanning::Perceptions &perceptions) {
+inline std::ostream&
+operator<<(std::ostream& out, const pathplanning::Perceptions& perceptions)
+{
   out << std::string("{\n");
-  for (const auto &p : perceptions) {
+  for (const auto& p : perceptions) {
     out << fmt::format("  {:3d}: {:s},\n", p.first, p.second);
   }
   return out << std::string("}\n");

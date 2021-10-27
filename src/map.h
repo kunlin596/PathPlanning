@@ -13,15 +13,16 @@ namespace pathplanning {
 /**
  * @brief      This class describes a map for navigation.
  */
-class Map {
- public:
+class Map
+{
+public:
   static constexpr double MaxS = 6945.554;
   static constexpr double LANE_WIDTH = 4.0;
   static constexpr double HALF_LANE_WIDTH = LANE_WIDTH / 2.0;
   static constexpr int NUM_LANES = 3;
 
   Map() {}
-  Map(const std::string &filename) { Read(filename); }
+  Map(const std::string& filename) { Read(filename); }
 
   virtual ~Map() {}
 
@@ -46,7 +47,8 @@ class Map {
   // Transform from Frenet s,d coordinates to Cartesian x,y
   std::array<double, 2> GetXY(double s, double d) const;
 
-  static inline int GetLaneId(double d) {
+  static inline int GetLaneId(double d)
+  {
     for (int i = 0; i < NUM_LANES; ++i) {
       if (Map::IsInLane(d, i)) {
         return i;
@@ -62,40 +64,44 @@ class Map {
    *
    * @return     Waypoint array
    */
-  std::array<double, 5> Get(int index) const {
+  std::array<double, 5> Get(int index) const
+  {
     // TODO: Add boundary checking
-    return {_x[index], _y[index], _s[index], _dx[index], _dy[index]};
+    return { _x[index], _y[index], _s[index], _dx[index], _dy[index] };
   }
 
-  static inline double GetLaneCenterD(int laneId) {
+  static inline double GetLaneCenterD(int laneId)
+  {
     return HALF_LANE_WIDTH + LANE_WIDTH * static_cast<double>(laneId);
   }
 
-  static inline bool IsInLane(double d, int laneId) {
+  static inline bool IsInLane(double d, int laneId)
+  {
     return (static_cast<double>(laneId) * LANE_WIDTH) < d and
            d < (static_cast<double>(laneId + 1) * LANE_WIDTH);
   }
 
-  void Read(const std::string &filename);
+  void Read(const std::string& filename);
 
   static std::shared_ptr<Map> CreateMap() { return std::make_shared<Map>(); }
-  static std::shared_ptr<Map> CreateMap(const std::string filename) {
+  static std::shared_ptr<Map> CreateMap(const std::string filename)
+  {
     return std::make_shared<Map>(filename);
   }
 
   using Ptr = std::shared_ptr<Map>;
   using ConstPtr = std::shared_ptr<const Map>;
 
- private:
-  std::vector<double> _x;  ///< All x coords
-  std::vector<double> _y;  ///< All y coords
-  std::vector<double> _s;  ///< All s coords
+private:
+  std::vector<double> _x; ///< All x coords
+  std::vector<double> _y; ///< All y coords
+  std::vector<double> _s; ///< All s coords
   std::vector<double>
-      _dx;  ///< All x components of tangent unit direction vector
+    _dx; ///< All x components of tangent unit direction vector
   std::vector<double>
-      _dy;  ///< All y components of tangent unit direction vector
+    _dy; ///< All y components of tangent unit direction vector
 };
 
-}  // namespace pathplanning
+} // namespace pathplanning
 
 #endif

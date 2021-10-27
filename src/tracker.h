@@ -19,13 +19,17 @@ namespace pathplanning {
 
 using TrackedVehicleMap = std::unordered_map<int, Vehicle>;
 
-class Tracker {
- public:
-  struct Options {
+class Tracker
+{
+public:
+  struct Options
+  {
     std::array<double, 2> sdhorizon = Configuration::SD_HORIZON;
   };
 
-  Tracker(const Map::ConstPtr &pMap) : _pMap(pMap) {}
+  Tracker(const Map::ConstPtr& pMap)
+    : _pMap(pMap)
+  {}
 
   virtual ~Tracker() {}
 
@@ -34,32 +38,36 @@ class Tracker {
    *
    * @param[in]  perceptions  The new perceptions results
    */
-  void Update(const Vehicle &ego, const Perceptions &perceptions);
+  void Update(const Vehicle& ego, const Perceptions& perceptions);
 
-  const TrackedVehicleMap &GetVehicles() const { return _trackedVehicleMap; }
+  const TrackedVehicleMap& GetVehicles() const { return _trackedVehicleMap; }
 
   bool IsEmpty() const { return _trackedVehicleMap.empty(); }
 
-  bool HasVehicle(const int id) const {
+  bool HasVehicle(const int id) const
+  {
     return _trackedVehicleMap.count(id) != 0;
   }
 
-  const Vehicle &GetVehicle(const int id) const {
+  const Vehicle& GetVehicle(const int id) const
+  {
     return _trackedVehicleMap.at(id);
   }
 
- private:
+private:
   Options _options;
   Map::ConstPtr _pMap;
   TrackedVehicleMap _trackedVehicleMap;
 };
-}  // namespace pathplanning
+} // namespace pathplanning
 
 // IO functions
 
-inline std::ostream &operator<<(
-    std::ostream &out, const pathplanning::TrackedVehicleMap &trackedVehicles) {
-  for (const auto &v : trackedVehicles) {
+inline std::ostream&
+operator<<(std::ostream& out,
+           const pathplanning::TrackedVehicleMap& trackedVehicles)
+{
+  for (const auto& v : trackedVehicles) {
     out << fmt::format("{:2d}: {:s}\n", v.first, v.second);
   }
   return out;
