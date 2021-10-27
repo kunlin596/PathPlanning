@@ -73,26 +73,10 @@ VehicleConfiguration &VehicleConfiguration::operator-=(
   return *this;
 }
 
-Ego::Ego(double x, double y, double s, double d, double yaw, double speed)
-    : x(x), y(y), s(s), d(d), yaw(yaw), speed(speed) {
-  UpdateObvervation(s, d);
-}
-
-void Ego::Update(double x, double y, double s, double d, double yaw,
-                 double speed) {
-  this->x = x;
-  this->y = y;
-  this->s = s;
-  this->d = d;
-  this->yaw = yaw;
-  this->speed = speed;
-  UpdateObvervation(s, d);
-}
-
-void KinematicsTracker::UpdateObvervation(double pos) {
+void KinematicsTracker::Update(double pos) {
   _measursments.push_back(pos);
 
-  if (_measursments.size() > 30) {
+  if (_measursments.size() > Configuration::NUM_MEASUREMENTS_TO_TRACK) {
     _measursments.erase(_measursments.begin());
   }
 
@@ -109,30 +93,21 @@ void KinematicsTracker::UpdateObvervation(double pos) {
     Eigen::Vector2d b;
     b << dist1, dist2;
     Eigen::Vector2d x = A.inverse() * b;
-    _values[0] = _measursments[2];
+    _values[0] = pos;
     _values[1] = x[0];
     _values[2] = x[1];
   }
 }
 
-void Ego::UpdateObvervation(double s, double d) {
-  _sTracker.UpdateObvervation(s);
+void Vehicle::Update(const Perception &perception) {
+  const auto &sd = perception.sd;
+  _sTracker.Update(sd[0]);
+  _dTracker.Update(sd[1]);
   auto sValues = _sTracker.GetValues();
-  this->s = sValues[0];
-  sVel = sValues[1];
-  sAcc = sValues[2];
-
-  _dTracker.UpdateObvervation(d);
   auto dValues = _dTracker.GetValues();
-  this->d = dValues[0];
-  dVel = dValues[1];
-  dAcc = dValues[2];
+  _conf = VehicleConfiguration(sValues[0], sValues[1], sValues[2], dValues[0],
+                               dValues[1], dValues[2]);
 }
-
-// void Vehicle::UpdateFromPerception(const Map::ConstPtr &pMap,
-//                                    const Perception &perception) {
-//   // TODO
-// }
 
 Vehicle Vehicle::CreateFromPerception(const Map::ConstPtr &pMap,
                                       const Perception &perception) {
@@ -150,12 +125,6 @@ Vehicle Vehicle::CreateFromPerception(const Map::ConstPtr &pMap,
   // Assume constant accelaration
 
   return Vehicle(perception.id, conf);
-}
-
-Vehicle Vehicle::CreateFromEgo(const Map::ConstPtr &pMap, const Ego &ego) {
-  return Vehicle(std::numeric_limits<int>::max(),
-                 VehicleConfiguration(ego.s, ego.sVel, ego.sAcc, ego.d,
-                                      ego.dVel, ego.dAcc));
 }
 
 VehicleConfiguration VehicleConfiguration::GetConfiguration(
@@ -176,18 +145,24 @@ VehicleConfiguration Vehicle::GetConfiguration(const double time) const {
   return _conf.GetConfiguration(time);
 }
 
-void Vehicle::UpdateObvervation(double s, double d) {
-  _sTracker.UpdateObvervation(s);
-  auto sValues = _sTracker.GetValues();
-  _conf.sPos = sValues[0];
-  _conf.sVel = sValues[1];
-  _conf.sAcc = sValues[2];
+Ego::Ego(double x, double y, double s, double d, double yaw, double speed)
+    : _x(x), _y(y), _yaw(yaw), _speed(speed) {
+  Update(x, y, s, d, yaw, speed);
+}
 
-  _dTracker.UpdateObvervation(d);
+void Ego::Update(double x, double y, double s, double d, double yaw,
+                 double speed) {
+  _x = x;
+  _y = y;
+  _yaw = yaw;
+  _speed = speed;
+
+  _sTracker.Update(s);
+  _dTracker.Update(d);
+  auto sValues = _sTracker.GetValues();
   auto dValues = _dTracker.GetValues();
-  _conf.dPos = dValues[0];
-  _conf.dVel = dValues[1];
-  _conf.dAcc = dValues[2];
+  _conf = VehicleConfiguration(sValues[0], sValues[1], sValues[2], dValues[0],
+                               dValues[1], dValues[2]);
 }
 
 }  // namespace pathplanning

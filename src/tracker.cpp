@@ -43,12 +43,15 @@ void Tracker::Update(const Vehicle &ego, const Perceptions &perceptions) {
     }
 
     const int id = perception.first;
-    _trackedVehicleMap[id] =
-        Vehicle::CreateFromPerception(_pMap, perception.second);
-    // SPDLOG_INFO("Append new observation to {}, in lane {}", id,
-    //             Map::GetLaneId(perception.second.sd[1]));
+    _trackedVehicleMap[id].Update(perception.second);
+    SPDLOG_INFO(
+        "In lane {:1d}, add to id {:3d}, distance in sd: "
+        "[{:7.3f}, {:7.3f}]",
+        Map::GetLaneId(perception.second.sd[1]), id,
+        perception.second.sd[0] - egoConf.sPos,
+        perception.second.sd[1] - egoConf.dPos);
   }
-  // SPDLOG_INFO("Size of tracked vehicles {}", _trackedVehicles.size());
+  SPDLOG_INFO("Size of tracked vehicles {}", _trackedVehicleMap.size());
 }
 
 }  // namespace pathplanning

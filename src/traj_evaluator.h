@@ -46,7 +46,7 @@ struct CostFunctorBase {
   virtual double Compute(const JMTTrajectory& traj,
                          const VehicleConfiguration& goalConf,
                          const double requestTime,
-                         const TrackedVehicleMap &trackedVehicleMap) = 0;
+                         const TrackedVehicleMap& trackedVehicleMap) = 0;
   virtual ~CostFunctorBase() {}
 };
 
@@ -59,7 +59,7 @@ struct CostFunctorBase {
 struct TimeDiffCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -71,7 +71,7 @@ struct TimeDiffCost : public CostFunctorBase {
 struct SDiffCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -83,7 +83,7 @@ struct SDiffCost : public CostFunctorBase {
 struct DDiffCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -92,7 +92,7 @@ struct DDiffCost : public CostFunctorBase {
 struct CollisionCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -103,7 +103,7 @@ struct CollisionCost : public CostFunctorBase {
 struct BufferCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -112,7 +112,7 @@ struct BufferCost : public CostFunctorBase {
 struct StaysOnRoadCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -121,7 +121,7 @@ struct StaysOnRoadCost : public CostFunctorBase {
 struct ExceedsSpeedLimitCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -130,7 +130,7 @@ struct ExceedsSpeedLimitCost : public CostFunctorBase {
 struct EfficiencyCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -139,7 +139,7 @@ struct EfficiencyCost : public CostFunctorBase {
 struct TotalAccelCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -148,7 +148,7 @@ struct TotalAccelCost : public CostFunctorBase {
 struct MaxAccelCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -157,7 +157,7 @@ struct MaxAccelCost : public CostFunctorBase {
 struct TotalJerkCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 /**
@@ -166,7 +166,7 @@ struct TotalJerkCost : public CostFunctorBase {
 struct MaxJerkCost : public CostFunctorBase {
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf, const double requestTime,
-                 const TrackedVehicleMap &trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap) override;
 };
 
 }  // namespace costs
@@ -179,7 +179,8 @@ struct MaxJerkCost : public CostFunctorBase {
  */
 class JMTTrajectoryEvaluator {
  public:
-  JMTTrajectoryEvaluator(const costs::CostWeightMapping& costWeightMapping)
+  JMTTrajectoryEvaluator(const costs::CostWeightMapping& costWeightMapping =
+                             costs::CostWeightMapping())
       : _costWeightMapping(costWeightMapping) {}
 
   /**
@@ -194,11 +195,46 @@ class JMTTrajectoryEvaluator {
    */
   double Evaluate(const JMTTrajectory& traj,
                   const VehicleConfiguration& goalConf,
-                  const double requestTime, const TrackedVehicleMap &trackedVehicleMap);
+                  const double requestTime,
+                  const TrackedVehicleMap& trackedVehicleMap);
 
  private:
   costs::CostWeightMapping _costWeightMapping;  ///< Cost function weight map
   std::unordered_map<costs::CostType, std::shared_ptr<costs::CostFunctorBase>>
       _funcPtrs;  ///< Cost funtions
 };
+
 }  // namespace pathplanning
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const pathplanning::costs::CostType& type) {
+  using namespace pathplanning::costs;
+  switch (type) {
+    case CostType::kTimeDiff:
+      return out << "TimeDiffCost";
+    case CostType::kSDiff:
+      return out << "SDiffCost";
+    case CostType::kDDiff:
+      return out << "DDiffCost";
+    case CostType::kCollision:
+      return out << "CollisionCost";
+    case CostType::kBuffer:
+      return out << "BufferCost";
+    case CostType::kStaysOnRoad:
+      return out << "StaysOnRoadCost";
+    case CostType::kExceedsSpeedLimit:
+      return out << "ExceedsSpeedLimitCost";
+    case CostType::kEfficiency:
+      return out << "EfficiencyCost";
+    case CostType::kTotalAccel:
+      return out << "TotalAccelCost";
+    case CostType::kMaxAccel:
+      return out << "MaxAccelCost";
+    case CostType::kTotalJerk:
+      return out << "TotalJerkCost";
+    case CostType::kMaxJerk:
+      return out << "MaxJerkCost";
+    default:
+      throw std::runtime_error("Not supported cost function");
+  }
+}

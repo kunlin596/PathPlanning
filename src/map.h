@@ -55,17 +55,25 @@ class Map {
     return -1;
   }
 
+  /**
+   * @brief      Gets the way point in map.
+   *
+   * @param[in]  index  The index
+   *
+   * @return     Waypoint array
+   */
   std::array<double, 5> Get(int index) const {
     // TODO: Add boundary checking
     return {_x[index], _y[index], _s[index], _dx[index], _dy[index]};
   }
 
-  static inline int GetLaneCenterD(int laneId) {
-    return HALF_LANE_WIDTH + HALF_LANE_WIDTH * static_cast<double>(laneId);
+  static inline double GetLaneCenterD(int laneId) {
+    return HALF_LANE_WIDTH + LANE_WIDTH * static_cast<double>(laneId);
   }
 
-  static inline bool IsInLane(int d, int laneId) {
-    return (laneId * LANE_WIDTH) < d and d < ((laneId + 1) * LANE_WIDTH);
+  static inline bool IsInLane(double d, int laneId) {
+    return (static_cast<double>(laneId) * LANE_WIDTH) < d and
+           d < (static_cast<double>(laneId + 1) * LANE_WIDTH);
   }
 
   void Read(const std::string &filename);

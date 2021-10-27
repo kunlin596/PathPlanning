@@ -85,53 +85,12 @@ class KinematicsTracker {
  public:
   std::array<double, 3> GetValues() const { return _values; }
 
-  void UpdateObvervation(double pos);
+  void Update(double pos);
 
  private:
   std::vector<double>
       _measursments;  ///< For calculating speed and accelaration.
   std::array<double, 3> _values = {0.0, 0.0, 0.0};
-};
-
-/**
- * @brief      A thin wrapper data class for ego vehicle
- *
- * Velocity and accelatation of s and d will be computed when ego collects 3 new
- * localization (measurements) from simulator. They could be calculated using
- * simple kinematics equations.
- */
-struct Ego {
-  Ego() {}
-  Ego(double x, double y, double s, double d, double yaw, double speed);
-
-  /**
-   * @brief      Update new localization (measurements) from simulator
-   *
-   * @param[in]  x      New x
-   * @param[in]  y      New y
-   * @param[in]  s      New s
-   * @param[in]  d      New d
-   * @param[in]  yaw    The yaw angle in degrees
-   * @param[in]  speed  The speed in meters/second
-   */
-  void Update(double x, double y, double s, double d, double yaw, double speed);
-
-  void UpdateObvervation(double s, double d);
-
-  double x = 0.0;
-  double y = 0.0;
-  double yaw = 0.0;
-  double speed = 0.0;
-
-  double s = 0.0;
-  double d = 0.0;
-  double sVel = 0.0;
-  double sAcc = 0.0;
-  double dVel = 0.0;
-  double dAcc = 0.0;
-
-  KinematicsTracker _sTracker;
-  KinematicsTracker _dTracker;
 };
 
 /**
@@ -157,15 +116,10 @@ class Vehicle {
 
   bool IsEgo() const { return _id == std::numeric_limits<int>::max(); }
 
-  // void UpdateFromPerception(const Map::ConstPtr &pMap,
-  //                           const Perception &perception);
+  void Update(const Perception &perception);
 
   static Vehicle CreateFromPerception(const Map::ConstPtr &pMap,
                                       const Perception &perception);
-
-  static Vehicle CreateFromEgo(const Map::ConstPtr &pMap, const Ego &ego);
-
-  void UpdateObvervation(double s, double d);
 
  protected:
   int _id = -1;
@@ -173,6 +127,39 @@ class Vehicle {
 
   KinematicsTracker _sTracker;  ///< For estimating s kinematics
   KinematicsTracker _dTracker;  ///< For estimating d kinematics
+};
+
+/**
+ * @brief      A thin wrapper data class for ego vehicle
+ *
+ * Velocity and accelatation of s and d will be computed when ego collects 3 new
+ * localization (measurements) from simulator. They could be calculated using
+ * simple kinematics equations.
+ */
+class Ego : public Vehicle {
+ public:
+  Ego() {}
+  Ego(double x, double y, double s, double d, double yaw, double speed);
+
+  virtual ~Ego() {}
+
+  /**
+   * @brief      Update new localization (measurements) from simulator
+   *
+   * @param[in]  x      New x
+   * @param[in]  y      New y
+   * @param[in]  s      New s
+   * @param[in]  d      New d
+   * @param[in]  yaw    The yaw angle in degrees
+   * @param[in]  speed  The speed in meters/second
+   */
+  void Update(double x, double y, double s, double d, double yaw, double speed);
+
+ private:
+  double _x = 0.0;
+  double _y = 0.0;
+  double _yaw = 0.0;
+  double _speed = 0.0;
 };
 
 using Vehicles = std::vector<Vehicle>;

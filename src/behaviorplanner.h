@@ -25,7 +25,7 @@ namespace pathplanning {
  *  - signal, activate turning signal
  *
  */
-enum class BehaviorState : uint8_t {
+enum class BehaviorState {
   kStart = 0,
   kStop,
   kConstSpeed,
@@ -69,7 +69,7 @@ enum class BehaviorState : uint8_t {
  */
 class BehaviorPlanner {
  public:
-  BehaviorPlanner(const Map::ConstPtr &pMap) : _pMap(pMap) {}
+  BehaviorPlanner(const Map::ConstPtr &pMap);
   virtual ~BehaviorPlanner() {}
 
   /**
@@ -79,8 +79,7 @@ class BehaviorPlanner {
    *
    * @return     The successor states.
    */
-  std::vector<BehaviorState> GetSuccessorStates(
-      const BehaviorState &state) const;
+  std::vector<BehaviorState> GetSuccessorStates() const;
 
   /**
    * @brief      Generate maneuver proposal
@@ -98,8 +97,34 @@ class BehaviorPlanner {
  private:
   const Map::ConstPtr &_pMap;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
+  BehaviorState _currState = BehaviorState::kLaneKeeping;
 };
 
 }  // namespace pathplanning
+
+inline std::ostream &operator<<(std::ostream &out,
+                                const pathplanning::BehaviorState &type) {
+  using namespace pathplanning;
+  switch (type) {
+    case BehaviorState::kStart:
+      return out << "Start";
+    case BehaviorState::kStop:
+      return out << "Stop";
+    case BehaviorState::kConstSpeed:
+      return out << "ConstSpeed";
+    case BehaviorState::kLaneKeeping:
+      return out << "LaneKeeping";
+    case BehaviorState::kLeftLaneChangePreparation:
+      return out << "LeftLaneChangePreparation";
+    case BehaviorState::kLeftLaneChange:
+      return out << "LeftLaneChange";
+    case BehaviorState::kRightLaneChangePreparation:
+      return out << "RightLaneChangePreparation";
+    case BehaviorState::kRightLaneChange:
+      return out << "RightLaneChange";
+    default:
+      throw std::runtime_error("Not supported BehaviorState.");
+  }
+}
 
 #endif

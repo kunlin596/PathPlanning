@@ -112,7 +112,7 @@ double EfficiencyCost::Compute(const JMTTrajectory& traj,
                                const TrackedVehicleMap& trackedVehicleMap) {
   VehicleConfiguration finalConf = traj(traj.elapsedTime);
   double avgVel = finalConf.sPos / traj.elapsedTime;
-  return Logistic(2.0 * (goalConf.sVel - avgVel) / avgVel);
+  return Logistic(2.0 * std::abs(goalConf.sVel - avgVel) / avgVel);
 }
 double TotalAccelCost::Compute(const JMTTrajectory& traj,
                                const VehicleConfiguration& goalConf,
@@ -187,16 +187,18 @@ double MaxJerkCost::Compute(const JMTTrajectory& traj,
 double JMTTrajectoryEvaluator::Evaluate(
     const JMTTrajectory& traj, const VehicleConfiguration& goalConf,
     const double requestTime, const TrackedVehicleMap& trackedVehicleMap) {
-  double cost = 0.0;
+  double totalCost = 0.0;
   for (const auto& costInfo : _costWeightMapping) {
     if (_funcPtrs.count(costInfo.first) == 0) {
       _funcPtrs[costInfo.first] = costs::CreateCostFunctor(costInfo.first);
     }
-    cost += _funcPtrs[costInfo.first]->Compute(traj, goalConf, requestTime,
-                                               trackedVehicleMap) *
-            costInfo.second;
+    double cost = _funcPtrs[costInfo.first]->Compute(
+                      traj, goalConf, requestTime, trackedVehicleMap) *
+                  costInfo.second;
+    totalCost += cost;
+    SPDLOG_ERROR("    {:20s}: {:7.3}", costInfo.first, cost);
   }
-  return cost;
+  return totalCost;
 }
 
 }  // namespace pathplanning

@@ -79,14 +79,12 @@ std::string System::SpinOnce(const std::string &commandString) {
       // ["yaw"] The car's yaw angle in the map int degrees
       // ["speed"] The car's speed in MPH
 
-      std::cout << std::endl;
+      cout << endl;
       SPDLOG_INFO("--- telemetry ---");
       Waypoint endPathSD = {data["end_path_s"], data["end_path_d"]};
 
       _pEgo->Update(data["x"], data["y"], data["s"], data["d"],
                     deg2rad(data["yaw"]), mph2ms(data["speed"]));
-
-      Vehicle egoVehicle = Vehicle::CreateFromEgo(_pMap, *_pEgo);
 
       //
       // Process perceptions
@@ -97,7 +95,7 @@ std::string System::SpinOnce(const std::string &commandString) {
           Perception::CreatePerceptions(data["sensor_fusion"]);
       SPDLOG_DEBUG("perceptions={}", perceptions);
 
-      _pTracker->Update(egoVehicle, perceptions);
+      _pTracker->Update(*_pEgo, perceptions);
 
       const TrackedVehicleMap &trackedVehicleMap = _pTracker->GetVehicles();
 
@@ -106,10 +104,10 @@ std::string System::SpinOnce(const std::string &commandString) {
       //
 
       const auto successorStates =
-          _pBehaviorPlanner->GetSuccessorStates(BehaviorState::kLaneKeeping);
+          _pBehaviorPlanner->GetSuccessorStates();
 
       Vehicle startState = _pPathGenerator->ComputeStartState(
-          egoVehicle, _state.cachedTrajectory, prevPath, endPathSD);
+          *_pEgo, _state.cachedTrajectory, prevPath, endPathSD);
       SPDLOG_DEBUG("Computed startState={}", startState.GetConfiguration());
 
       Vehicle proposal = _pBehaviorPlanner->GenerateProposal(
@@ -121,10 +119,11 @@ std::string System::SpinOnce(const std::string &commandString) {
 
       SPDLOG_INFO("Generating path for,\nstartState={}\npropoState={}",
                   startState.GetConfiguration(), proposal.GetConfiguration());
+
       Waypoints path;
       JMTTrajectory trajectory;
       std::tie(path, trajectory) = _pPathGenerator->GeneratePath(
-          startState, proposal, trackedVehicleMap, Configuration::TIME_HORIZON);
+          startState, proposal, trackedVehicleMap, 2.0);  // Fix time
 
       UpdateCachedTrajectory(trajectory);
 
