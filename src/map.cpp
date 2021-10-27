@@ -5,8 +5,17 @@
 #include <sstream>
 
 #include "math.h"
+#include "spline.h"
 
 namespace pathplanning {
+
+struct Map::Impl
+{
+  tk::spline sXSpline;
+  tk::spline sYSpline;
+  tk::spline sDxSpline;
+  tk::spline sDySpline;
+};
 
 void
 Map::Read(const std::string& filename)
@@ -33,6 +42,21 @@ Map::Read(const std::string& filename)
     _dx.push_back(dx);
     _dy.push_back(dy);
   }
+  // Smoothing the map waypoints
+  _pImpl->sXSpline.set_points(_s, _x);
+  _pImpl->sYSpline.set_points(_s, _y);
+  _pImpl->sDxSpline.set_points(_s, _dx);
+  _pImpl->sDySpline.set_points(_s, _dy);
+}
+
+Map::Map()
+  : _pImpl(std::make_shared<Impl>())
+{}
+
+Map::Map(const std::string& filename)
+  : _pImpl(std::make_shared<Impl>())
+{
+  Read(filename);
 }
 
 int
@@ -119,29 +143,33 @@ Map::GetSD(double x, double y, double theta) const
 std::array<double, 2>
 Map::GetXY(double s, double d) const
 {
-  int prevWaypointIndex = -1;
+  // Default implementation comes with upstream, which provides low resolution.
+  //
+  // int prevWaypointIndex = -1;
 
-  while (s > (_s[prevWaypointIndex + 1] - 1e-6) &&
-         (prevWaypointIndex < static_cast<int>(_s.size() - 1))) {
-    ++prevWaypointIndex;
-  }
+  // while (s > (_s[prevWaypointIndex + 1] - 1e-6) &&
+  //        (prevWaypointIndex < static_cast<int>(_s.size() - 1))) {
+  //   ++prevWaypointIndex;
+  // }
 
-  int waypoint2 = (prevWaypointIndex + 1) % _x.size();
+  // int waypoint2 = (prevWaypointIndex + 1) % _x.size();
 
-  double heading = std::atan2((_y[waypoint2] - _y[prevWaypointIndex]),
-                              (_x[waypoint2] - _x[prevWaypointIndex]));
-  // the x,y,s along the segment
-  double segS = (s - _s[prevWaypointIndex]);
+  // double heading = std::atan2((_y[waypoint2] - _y[prevWaypointIndex]),
+  //                             (_x[waypoint2] - _x[prevWaypointIndex]));
+  // // the x,y,s along the segment
+  // double segS = (s - _s[prevWaypointIndex]);
 
-  double segX = _x[prevWaypointIndex] + segS * cos(heading);
-  double segY = _y[prevWaypointIndex] + segS * sin(heading);
+  // double segX = _x[prevWaypointIndex] + segS * cos(heading);
+  // double segY = _y[prevWaypointIndex] + segS * sin(heading);
 
-  double perpHeading = heading - M_PI / 2.0;
+  // double perpHeading = heading - M_PI / 2.0;
 
-  double x = segX + d * std::cos(perpHeading);
-  double y = segY + d * std::sin(perpHeading);
+  // double x = segX + d * std::cos(perpHeading);
+  // double y = segY + d * std::sin(perpHeading);
 
-  return { x, y };
+  // return { x, y };
+  return { _pImpl->sXSpline(s) + d * _pImpl->sDxSpline(s),
+           _pImpl->sYSpline(s) + d * _pImpl->sDySpline(s) };
 }
 
 double

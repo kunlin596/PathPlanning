@@ -80,15 +80,6 @@ public:
    * `perceptions` is a map of {id: Vehicle}. The vehicle represents the current
    * state of the vehicle, and can be used to predict future states.
    *
-   *
-   * @param[in]  startParams      The start ego configuration
-   * @param[in]  endParams        The end ego configuration
-   * @param[in]  predictions      The non-ego vehicle perceived configuration
-   * @param[in]  targetVehicleId  The target vehicle identifier
-   * @param[in]  deltaConf        The configuration delta w.r.t. target vehicle
-   * @param[in]  t                Target trajectory execution time
-   *
-   * @return     { description_of_the_return_value }
    */
   std::pair<Waypoints, JMTTrajectory> GeneratePath(
     const Vehicle& startState,

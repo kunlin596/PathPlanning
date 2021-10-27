@@ -21,8 +21,8 @@ public:
   static constexpr double HALF_LANE_WIDTH = LANE_WIDTH / 2.0;
   static constexpr int NUM_LANES = 3;
 
-  Map() {}
-  Map(const std::string& filename) { Read(filename); }
+  Map();
+  Map(const std::string& filename);
 
   virtual ~Map() {}
 
@@ -100,6 +100,22 @@ private:
     _dx; ///< All x components of tangent unit direction vector
   std::vector<double>
     _dy; ///< All y components of tangent unit direction vector
+
+  /**
+   * @brief      For hiding spline implemenetation
+   *
+   * Spline is implemented in a anonymous namespace, which will cause the
+   * warning below when put in header file.
+   *
+   * warning: ‘pathplanning::Map’ has a
+   * field ‘pathplanning::Map::_sySpline’ whose type uses the anonymous
+   * namespace [-Wsubobject-linkage]
+   *
+   * Here I didn't bother to put all members into pimpl pattern, but once used,
+   * I should, but just being lazy here.
+   */
+  struct Impl;
+  std::shared_ptr<Impl> _pImpl;
 };
 
 } // namespace pathplanning
