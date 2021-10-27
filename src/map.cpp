@@ -168,6 +168,7 @@ Map::GetXY(double s, double d) const
   // double y = segY + d * std::sin(perpHeading);
 
   // return { x, y };
+  s = std::fmod(s, Map::MaxS);
   return { _pImpl->sXSpline(s) + d * _pImpl->sDxSpline(s),
            _pImpl->sYSpline(s) + d * _pImpl->sDySpline(s) };
 }
