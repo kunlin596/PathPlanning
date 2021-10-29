@@ -147,7 +147,7 @@ BehaviorPlanner::BehaviorPlanner(const Map::ConstPtr& pMap)
   mapping[costs::CostType::kSDiff] = 1.0;
   mapping[costs::CostType::kDDiff] = 1.0;
   mapping[costs::CostType::kCollision] = 1e6;
-  mapping[costs::CostType::kBuffer] = 100.0;
+  mapping[costs::CostType::kBuffer] = 1.0;
   mapping[costs::CostType::kStaysOnRoad] = 1.0;
   mapping[costs::CostType::kExceedsSpeedLimit] = 1.0;
   mapping[costs::CostType::kEfficiency] = 1.0;

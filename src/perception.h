@@ -20,7 +20,7 @@ struct Perception
 {
   int id = -1;
   std::array<double, 2> xy;
-  std::array<double, 2> vel;
+  std::array<double, 2> vel; ///< meters/sec
   std::array<double, 2> sd;
   double speed;
 
@@ -53,8 +53,8 @@ struct Perception
     return perceptions;
   }
 
-  friend std::ostream&
-  operator<<(std::ostream& out, const pathplanning::Perception& perception);
+  friend std::ostream& operator<<(std::ostream& out,
+                                  const pathplanning::Perception& perception);
 };
 
 using Perceptions = std::unordered_map<int, Perception>;

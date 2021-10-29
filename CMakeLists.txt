@@ -23,6 +23,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 find_package(spdlog REQUIRED)
+find_package(Boost COMPONENTS program_options REQUIRED)
 
 add_library(
   driving
@@ -52,6 +53,7 @@ add_executable(
 target_link_libraries(
   pathplanningserver
   PRIVATE
+  Boost::program_options
   z
   ssl
   uv

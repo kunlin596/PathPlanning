@@ -103,6 +103,7 @@ System::SpinOnce(const std::string& commandString)
       //
 
       // Create the latest perceptions from input command
+      // Velocity is already meters per seconds no need to convert
       Perceptions perceptions =
         Perception::CreatePerceptions(data["sensor_fusion"]);
       SPDLOG_DEBUG("perceptions={}", perceptions);

@@ -12,12 +12,13 @@ namespace pathplanning {
 // Unit Converters
 //
 
-inline double
+constexpr inline double
 Mph2Mps(const double mph)
 {
   return mph * 0.44704;
 }
-inline double
+
+constexpr inline double
 Mps2Mph(const double mps)
 {
   return mps * 2.2369362920544;
