@@ -8,16 +8,35 @@
 
 namespace pathplanning {
 
+//
+// Unit Converters
+//
+
 inline double
-mph2ms(const double mph)
+Mph2Mps(const double mph)
 {
-  return mph / 2.24;
+  return mph * 0.44704;
 }
 inline double
-ms2mph(const double ms)
+Mps2Mph(const double mps)
 {
-  return ms * 2.24;
+  return mps * 2.2369362920544;
 }
+
+inline double
+Deg2Rad(double x)
+{
+  return x * M_PI / 180.0;
+}
+inline double
+Rad2Deg(double x)
+{
+  return x * 180.0 / M_PI;
+}
+
+//
+// Physics
+//
 
 inline double
 CalculateVelocity(double vel, double acc, double time)
@@ -32,27 +51,20 @@ CalculatePosition(double pos, double vel, double acc, double time)
 }
 
 inline double
-deg2rad(double x)
-{
-  return x * M_PI / 180.0;
-}
-inline double
-rad2deg(double x)
-{
-  return x * 180.0 / M_PI;
-}
-
-inline double
 GetDistance(double x1, double y1, double x2, double y2)
 {
   return std::sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
 inline double
-GetDistance(std::array<double, 2> p1, std::array<double, 2> p2)
+GetDistance(const std::array<double, 2>& p1, const std::array<double, 2>& p2)
 {
   return GetDistance(p1[0], p1[1], p2[0], p2[1]);
 }
+
+//
+// Helper functions
+//
 
 inline double
 Logistic(const double x)

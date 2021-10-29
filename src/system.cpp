@@ -95,8 +95,8 @@ System::SpinOnce(const std::string& commandString)
                     data["y"],
                     data["s"],
                     data["d"],
-                    deg2rad(data["yaw"]),
-                    mph2ms(data["speed"]));
+                    Deg2Rad(data["yaw"]),
+                    Mph2Mps(data["speed"]));
 
       //
       // Process perceptions
