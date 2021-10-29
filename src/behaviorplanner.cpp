@@ -1,4 +1,5 @@
 #include "behaviorplanner.h"
+#include <memory>
 
 namespace {
 using namespace pathplanning;

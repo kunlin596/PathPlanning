@@ -52,6 +52,9 @@ struct Perception
     }
     return perceptions;
   }
+
+  friend std::ostream&
+  operator<<(std::ostream& out, const pathplanning::Perception& perception);
 };
 
 using Perceptions = std::unordered_map<int, Perception>;

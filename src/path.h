@@ -20,20 +20,15 @@ public:
 
   static Waypoints ConvertXYToWaypoints(const std::vector<double>& x,
                                         const std::vector<double>& y);
+  friend std::ostream& operator<<(std::ostream& out,
+                                  const pathplanning::Waypoints& waypoints);
 };
+
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::Waypoints& waypoints);
 
 } // namespace pathplanning
 
 // IO functions
-
-inline std::ostream&
-operator<<(std::ostream& out, const pathplanning::Waypoints& waypoints)
-{
-  out << std::string("{\n");
-  for (const auto& p : waypoints) {
-    out << fmt::format("{:s},\n", p);
-  }
-  return out << std::string("}\n");
-}
 
 #endif

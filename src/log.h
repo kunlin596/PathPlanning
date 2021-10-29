@@ -1,6 +1,7 @@
 #ifndef PATHPLANNING_LOG_H
 #define PATHPLANNING_LOG_H
 
+#include <spdlog/fmt/bundled/ranges.h>
 #include <spdlog/fmt/ostr.h> // must be included
 #include <spdlog/spdlog.h>
 
@@ -10,6 +11,7 @@
 
 // NOTE: Workaround for std array.
 
+namespace pathplanning {
 template<typename _DType, uint32_t _Size>
 inline std::ostream&
 _Print(std::ostream& out, const std::array<_DType, _Size>& arr)
@@ -53,5 +55,6 @@ operator<<(std::ostream& out, const std::array<double, 6>& arr)
 {
   return _Print<double, 6>(out, arr);
 }
+} // namespace pathplanning
 
 #endif

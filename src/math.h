@@ -118,14 +118,14 @@ struct GaussianSampler1D
   std::normal_distribution<T> dist;
 };
 
-} // namespace pathplanning
-
 template<uint32_t Order>
-inline std::ostream&
+std::ostream&
 operator<<(std::ostream& out,
            const pathplanning::PolynomialFunctor<Order>& functor)
 {
   return out << functor.coeffs;
 }
+
+} // namespace pathplanning
 
 #endif

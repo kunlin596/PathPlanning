@@ -71,6 +71,9 @@ struct VehicleConfiguration
 
   VehicleConfiguration GetConfiguration(const double time = 0.0) const;
 
+  friend std::ostream& operator<<(std::ostream& out,
+                                  const VehicleConfiguration& vehicle);
+
   double sPos = 0.0;
   double sVel = 0.0;
   double sAcc = 0.0;
@@ -132,6 +135,8 @@ public:
   static Vehicle CreateFromPerception(const Map::ConstPtr& pMap,
                                       const Perception& perception);
 
+  friend std::ostream& operator<<(std::ostream& out, const Vehicle& vehicle);
+
 protected:
   int _id = -1;
   VehicleConfiguration _conf;
@@ -176,40 +181,17 @@ private:
 
 using Vehicles = std::vector<Vehicle>;
 
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::VehicleConfiguration& conf);
+
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::Vehicle& vehicle);
+
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::Vehicles& vehicles);
+
 } // namespace pathplanning
 
 // IO functions
-
-inline std::ostream&
-operator<<(std::ostream& out, const pathplanning::VehicleConfiguration& conf)
-{
-  return out << fmt::format("VehicleConfiguration("
-                            "sPos={:7.3f}, sVel={:7.3f}, sAcc={:7.3f}, "
-                            "dPos={:7.3f}, dVel={:7.3f}, dAcc={:7.3f})",
-                            conf.sPos,
-                            conf.sVel,
-                            conf.sAcc,
-                            conf.dPos,
-                            conf.dVel,
-                            conf.dAcc);
-}
-
-inline std::ostream&
-operator<<(std::ostream& out, const pathplanning::Vehicle& vehicle)
-{
-  return out << fmt::format("Vehicle(id={:2d}, conf={:s}",
-                            vehicle.GetId(),
-                            vehicle.GetConfiguration());
-}
-
-inline std::ostream&
-operator<<(std::ostream& out, const pathplanning::Vehicles& vehicles)
-{
-  out << std::string("{\n");
-  for (const auto& v : vehicles) {
-    out << fmt::format("  {:s}\n", v);
-  }
-  return out << std::string("}\n");
-}
 
 #endif // PATHPLANNING_VEHICLE_H

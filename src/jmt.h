@@ -53,6 +53,8 @@ public:
   const CubicFunctor& GetDAccFunc() const { return _dAccFunc; }
 
 private:
+  friend std::ostream& operator<<(std::ostream& out, const SDFunctor& functor);
+
   QuinticFunctor _sPosFunc;
   QuarticFunctor _sVelFunc;
   CubicFunctor _sAccFunc;
@@ -116,6 +118,8 @@ struct JMTTrajectory
     const std::unordered_map<int, Vehicle>& vehicles,
     double maxTimeDuration,
     double timeStep) const;
+
+  friend std::ostream& operator<<(std::ostream& out, const JMTTrajectory& traj);
 };
 
 /**
@@ -208,21 +212,12 @@ struct JMT
                                          const double t);
 };
 
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::SDFunctor& functor);
+
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::JMTTrajectory& traj);
+
 } // namespace pathplanning
-
-inline std::ostream&
-operator<<(std::ostream& out, const pathplanning::SDFunctor& functor)
-{
-  return out << fmt::format("SDFunctor(QuinticFunctor({}), QuinticFunctor({}))",
-                            functor.GetSFunc(),
-                            functor.GetDFunc());
-}
-
-inline std::ostream&
-operator<<(std::ostream& out, const pathplanning::JMTTrajectory& traj)
-{
-  return out << fmt::format(
-           "JMTTrajectory({}, {})", traj.elapsedTime, traj._sdFunc);
-}
 
 #endif

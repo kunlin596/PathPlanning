@@ -156,4 +156,19 @@ JMTTrajectory::ComputeNearestApproach(
   return minDist;
 }
 
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::SDFunctor& functor)
+{
+  return out << fmt::format("SDFunctor(QuinticFunctor({}), QuinticFunctor({}))",
+                            functor.GetSFunc(),
+                            functor.GetDFunc());
+}
+
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::JMTTrajectory& traj)
+{
+  return out << fmt::format(
+           "JMTTrajectory({}, {})", traj.elapsedTime, traj._sdFunc);
+}
+
 } // namespace pathplanning

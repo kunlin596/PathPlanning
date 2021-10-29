@@ -189,4 +189,36 @@ Ego::Update(double x, double y, double s, double d, double yaw, double speed)
     sValues[0], sValues[1], sValues[2], dValues[0], dValues[1], dValues[2]);
 }
 
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::VehicleConfiguration& conf)
+{
+  return out << fmt::format("VehicleConfiguration("
+                            "sPos={:7.3f}, sVel={:7.3f}, sAcc={:7.3f}, "
+                            "dPos={:7.3f}, dVel={:7.3f}, dAcc={:7.3f})",
+                            conf.sPos,
+                            conf.sVel,
+                            conf.sAcc,
+                            conf.dPos,
+                            conf.dVel,
+                            conf.dAcc);
+}
+
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::Vehicle& vehicle)
+{
+  return out << fmt::format("Vehicle(id={:2d}, conf={:s}",
+                            vehicle.GetId(),
+                            vehicle.GetConfiguration());
+}
+
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::Vehicles& vehicles)
+{
+  out << std::string("{\n");
+  for (const auto& v : vehicles) {
+    out << fmt::format("  {:s}\n", v);
+  }
+  return out << std::string("}\n");
+}
+
 } // namespace pathplanning
