@@ -94,11 +94,18 @@ operator+(VehicleConfiguration lhs, const VehicleConfiguration& rhs);
 class KinematicsTracker
 {
 public:
+  KinematicsTracker() {}
+  KinematicsTracker(int numMeasurementsToTrack, double timeStep)
+    : _numMeasurementsToTrack(numMeasurementsToTrack)
+    , _timeStep(timeStep)
+  {}
   std::array<double, 3> GetValues() const { return _values; }
 
   void Update(double pos);
 
 private:
+  int _numMeasurementsToTrack = 30;
+  double _timeStep = 0.02;
   std::vector<double>
     _measursments; ///< For calculating speed and accelaration.
   std::array<double, 3> _values = { 0.0, 0.0, 0.0 };
@@ -111,9 +118,14 @@ class Vehicle
 {
 public:
   Vehicle(){};
-  Vehicle(const int id, const VehicleConfiguration& conf)
+  Vehicle(const int id,
+          const VehicleConfiguration& conf,
+          int numMeasurementsToTrack,
+          double timeStep)
     : _id(id)
     , _conf(conf)
+    , _sTracker(KinematicsTracker(numMeasurementsToTrack, timeStep))
+    , _dTracker(KinematicsTracker(numMeasurementsToTrack, timeStep))
   {}
   virtual ~Vehicle() {}
 
@@ -133,7 +145,9 @@ public:
   void Update(const Perception& perception);
 
   static Vehicle CreateFromPerception(const Map::ConstPtr& pMap,
-                                      const Perception& perception);
+                                      const Perception& perception,
+                                      int numMeasurementsToTrack,
+                                      double timeStep);
 
   friend std::ostream& operator<<(std::ostream& out, const Vehicle& vehicle);
 

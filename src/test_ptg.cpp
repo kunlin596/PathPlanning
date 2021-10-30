@@ -16,8 +16,8 @@ Test(PolynomialTrajectoryGenerator& g,
   TrackedVehicleMap trackedVehicleMap;
   Waypoints prevPath;
 
-  Vehicle startState(0, start);
-  Vehicle goalState(0, goal);
+  Vehicle startState(0, start, 30, 0.02);
+  Vehicle goalState(0, goal, 30, 0.02);
 
   SPDLOG_INFO(start);
   SPDLOG_INFO(goal);
@@ -71,7 +71,8 @@ main(int argc, char** argv)
 
   Map::ConstPtr pMap = Map::CreateMap("../data/highway_map.csv");
 
-  PolynomialTrajectoryGenerator g(pMap);
+  PolynomialTrajectoryGenerator::Options options;
+  PolynomialTrajectoryGenerator g(pMap, options);
 
   auto record = pMap->Get(0);
   double offset = 30.0;

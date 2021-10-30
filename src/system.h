@@ -74,7 +74,8 @@ private:
   std::unique_ptr<PolynomialTrajectoryGenerator> _pPathGenerator;
   std::unique_ptr<uWS::Hub> _pHub;
   std::unique_ptr<Ego> _pEgo;
-  int _port = Configuration::SERVER_PORT;
+  std::unique_ptr<Configuration> _pConf;
+  int _port = 4567;
   State _state;
 };
 

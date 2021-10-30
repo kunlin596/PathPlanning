@@ -8,11 +8,17 @@ main(int argc, char** argv)
   namespace po = boost::program_options;
   using namespace pathplanning;
 
+  std::string confFileName;
   try {
 
     po::options_description desc("Allowed options");
-    desc.add_options()("help", "Produce help message")(
-      "conf,c", po::value<std::string>()->required(), "Configuration file");
+
+    // clang-format off
+    desc.add_options()
+      ("help,h", po::value<std::string>(), "Help message")
+      ("conf,c", po::value<std::string>(&confFileName)->required(),
+        "System configuration file name.");
+    // clang-format on
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -30,6 +36,7 @@ main(int argc, char** argv)
   }
 
   System system;
+  system.Initialize(confFileName);
   system.ResetMap("../data/highway_map.csv");
   system.Spin();
   return 0;

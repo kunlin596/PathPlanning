@@ -24,11 +24,20 @@ class Tracker
 public:
   struct Options
   {
-    std::array<double, 2> sdhorizon = Configuration::SD_HORIZON;
+    double nonEgoSearchRadius = 30.0;
+    double timeStep = 0.02;
+    int numMeasurementsToTrack = 30;
+    Options(const Configuration& conf)
+    {
+      timeStep = conf.timeStep;
+      nonEgoSearchRadius = conf.tracker.nonEgoSearchRadius;
+      numMeasurementsToTrack = conf.tracker.numMeasurementsToTrack;
+    }
   };
 
-  Tracker(const Map::ConstPtr& pMap)
+  Tracker(const Map::ConstPtr& pMap, const Options& options)
     : _pMap(pMap)
+    , _options(options)
   {}
 
   virtual ~Tracker() {}

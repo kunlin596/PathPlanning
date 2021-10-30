@@ -6,6 +6,7 @@
 #include "jmt.h"
 
 namespace pathplanning {
+
 namespace costs {
 enum class CostType
 {
@@ -24,6 +25,74 @@ enum class CostType
 };
 
 using CostWeightMapping = std::unordered_map<CostType, double>;
+
+struct CostFunctorBase;
+
+}
+
+/**
+ * @brief      This class describes a jmt trajectory evaluator.
+ *
+ * Given cost weight mapping, create the cost functions defined in the mapping
+ * and sum up all of the cost w.r.t. give weight.
+ */
+class JMTTrajectoryEvaluator
+{
+public:
+  struct Options
+  {
+    double timeHorizon = 2.0;
+    double timeStep = 0.02;
+    double collisionCheckingRadius = 30.0;
+    double expectedAccInOneSec = 2.0;
+    double expectedJerkInOneSec = 1.0;
+    double maxAcc = 10.0;
+    double maxJerk = 10.0;
+    std::array<double, 6> evalSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
+
+    Options() {}
+    Options(const Configuration& conf)
+    {
+      evalSigmas = conf.trajectoryEvaluation.evalSigmas;
+      expectedAccInOneSec = conf.trajectoryEvaluation.expectedAccInOneSec;
+      expectedJerkInOneSec = conf.trajectoryEvaluation.expectedJerkInOneSec;
+      collisionCheckingRadius =
+        conf.trajectoryEvaluation.collisionCheckingRadius;
+      timeHorizon = conf.timeHorizon;
+      timeStep = conf.timeStep;
+    }
+  };
+
+  JMTTrajectoryEvaluator(const Options& options,
+                         const costs::CostWeightMapping& costWeightMapping =
+                           costs::CostWeightMapping())
+    : _options(options)
+    , _costWeightMapping(costWeightMapping)
+  {}
+
+  /**
+   * @brief      Evaluate the trajecory
+   *
+   * @param[in]  traj         The traj
+   * @param[in]  goalConf     The goal conf
+   * @param[in]  requestTime  The request time
+   * @param[in]  predictions  The predictions
+   *
+   * @return     Total cost
+   */
+  double Evaluate(const JMTTrajectory& traj,
+                  const VehicleConfiguration& goalConf,
+                  const double requestTime,
+                  const TrackedVehicleMap& trackedVehicleMap);
+
+private:
+  costs::CostWeightMapping _costWeightMapping; ///< Cost function weight map
+  std::unordered_map<costs::CostType, std::shared_ptr<costs::CostFunctorBase>>
+    _funcPtrs; ///< Cost funtions
+  Options _options;
+};
+
+namespace costs {
 
 /**
  * @brief Cost functor base
@@ -48,7 +117,8 @@ struct CostFunctorBase
   virtual double Compute(const JMTTrajectory& traj,
                          const VehicleConfiguration& goalConf,
                          const double requestTime,
-                         const TrackedVehicleMap& trackedVehicleMap) = 0;
+                         const TrackedVehicleMap& trackedVehicleMap,
+                         const JMTTrajectoryEvaluator::Options& options) = 0;
   virtual ~CostFunctorBase() {}
 };
 
@@ -63,7 +133,8 @@ struct TimeDiffCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -77,7 +148,8 @@ struct SDiffCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -91,7 +163,8 @@ struct DDiffCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -102,7 +175,8 @@ struct CollisionCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -115,7 +189,8 @@ struct BufferCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -126,7 +201,8 @@ struct StaysOnRoadCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -137,7 +213,8 @@ struct ExceedsSpeedLimitCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -148,7 +225,8 @@ struct EfficiencyCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -156,10 +234,12 @@ struct EfficiencyCost : public CostFunctorBase
  */
 struct TotalAccelCost : public CostFunctorBase
 {
+
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -170,7 +250,8 @@ struct MaxAccelCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -181,7 +262,8 @@ struct TotalJerkCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 /**
@@ -192,45 +274,11 @@ struct MaxJerkCost : public CostFunctorBase
   double Compute(const JMTTrajectory& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap) override;
+                 const TrackedVehicleMap& trackedVehicleMap,
+                 const JMTTrajectoryEvaluator::Options& options) override;
 };
 
 } // namespace costs
-
-/**
- * @brief      This class describes a jmt trajectory evaluator.
- *
- * Given cost weight mapping, create the cost functions defined in the mapping
- * and sum up all of the cost w.r.t. give weight.
- */
-class JMTTrajectoryEvaluator
-{
-public:
-  JMTTrajectoryEvaluator(const costs::CostWeightMapping& costWeightMapping =
-                           costs::CostWeightMapping())
-    : _costWeightMapping(costWeightMapping)
-  {}
-
-  /**
-   * @brief      Evaluate the trajecory
-   *
-   * @param[in]  traj         The traj
-   * @param[in]  goalConf     The goal conf
-   * @param[in]  requestTime  The request time
-   * @param[in]  predictions  The predictions
-   *
-   * @return     Total cost
-   */
-  double Evaluate(const JMTTrajectory& traj,
-                  const VehicleConfiguration& goalConf,
-                  const double requestTime,
-                  const TrackedVehicleMap& trackedVehicleMap);
-
-private:
-  costs::CostWeightMapping _costWeightMapping; ///< Cost function weight map
-  std::unordered_map<costs::CostType, std::shared_ptr<costs::CostFunctorBase>>
-    _funcPtrs; ///< Cost funtions
-};
 
 std::ostream&
 operator<<(std::ostream& out, const costs::CostType& type);

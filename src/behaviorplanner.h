@@ -71,7 +71,26 @@ enum class BehaviorState
 class BehaviorPlanner
 {
 public:
-  BehaviorPlanner(const Map::ConstPtr& pMap);
+  struct Options
+  {
+    JMTTrajectoryEvaluator::Options trajEvaluationOptions;
+    costs::CostWeightMapping costWeightMapping;
+
+    int numMeasurementsToTrack = 30;
+    double nonEgoSearchRadius = 30.0;
+    double timeStep = 0.02;
+
+    Options(const Configuration& conf)
+      : trajEvaluationOptions(conf)
+    {
+      timeStep = conf.timeStep;
+
+      nonEgoSearchRadius = conf.tracker.nonEgoSearchRadius;
+      numMeasurementsToTrack = conf.tracker.numMeasurementsToTrack;
+    }
+  };
+
+  BehaviorPlanner(const Map::ConstPtr& pMap, const Options& options);
   virtual ~BehaviorPlanner() {}
 
   /**
@@ -99,6 +118,7 @@ public:
 
 private:
   const Map::ConstPtr& _pMap;
+  Options _options;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
   BehaviorState _currState = BehaviorState::kLaneKeeping;
 };

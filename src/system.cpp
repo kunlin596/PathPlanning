@@ -41,13 +41,21 @@ _EmptyControlMessage()
 namespace pathplanning {
 
 void
-System::Initialize(const std::string& configFilename)
+System::Initialize(const std::string& configFileName)
 {
+  _pConf = std::make_unique<Configuration>(configFileName);
   _pMap = Map::CreateMap();
   _pHub = std::make_unique<uWS::Hub>();
-  _pTracker = std::make_unique<Tracker>(_pMap);
-  _pBehaviorPlanner = std::make_unique<BehaviorPlanner>(_pMap);
-  _pPathGenerator = std::make_unique<PolynomialTrajectoryGenerator>(_pMap);
+
+  Tracker::Options trackerOptions(*_pConf);
+  _pTracker = std::make_unique<Tracker>(_pMap, trackerOptions);
+
+  BehaviorPlanner::Options behaviorOptions(*_pConf);
+  _pBehaviorPlanner = std::make_unique<BehaviorPlanner>(_pMap, behaviorOptions);
+
+  PolynomialTrajectoryGenerator::Options ptgOptions(*_pConf);
+  _pPathGenerator =
+    std::make_unique<PolynomialTrajectoryGenerator>(_pMap, ptgOptions);
   _pEgo = std::make_unique<Ego>();
 }
 

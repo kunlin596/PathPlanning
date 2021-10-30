@@ -34,14 +34,14 @@ PolynomialTrajectoryGenerator::GeneratePath(
   VehicleConfiguration startConf = startState.GetConfiguration();
   const int numPointsToBeGenerated =
     std::min(static_cast<int>(targetExecutionTime / _options.timeStep),
-             Configuration::NUM_POINTS);
+             _options.numPoints);
 
   Waypoints waypoints(numPointsToBeGenerated);
 
   JMTTrajectory bestTrajectory;
   VehicleConfiguration* pBestGoal;
 
-  if (_options.useGoalSampler) {
+  if (_options.use) {
     //
     // Generate perturbed goals
     //
@@ -49,7 +49,7 @@ PolynomialTrajectoryGenerator::GeneratePath(
     std::vector<VehicleConfiguration> goals;
     std::vector<int> goalTimes;
     const double sampleTimeStart =
-      targetExecutionTime - 4 * _options.goalTimeSampleStep;
+      targetExecutionTime - 4 * _options.sampleTimeStep;
     double sampleTime = sampleTimeStart;
 
     //
@@ -67,7 +67,7 @@ PolynomialTrajectoryGenerator::GeneratePath(
         goalTimes.push_back(sampleTime);
       }
 
-      sampleTime += _options.goalTimeSampleStep;
+      sampleTime += _options.sampleTimeStep;
     }
 
     double minCost = std::numeric_limits<double>::max();
@@ -117,7 +117,7 @@ PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
     return ego;
   }
   double executedTime =
-    (Configuration::NUM_POINTS - prevPath.size()) * Configuration::TIME_STEP;
+    (_options.numPoints - prevPath.size()) * _options.timeStep;
 
   // clang-format off
   VehicleConfiguration result = prevTraj(executedTime);
@@ -128,7 +128,8 @@ PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
   SPDLOG_DEBUG(
     "executedTime={:7.3f}, diff={}, {}", executedTime, diff[0], diff[3]);
 
-  return Vehicle(ego.GetId(), result);
+  return Vehicle(
+    ego.GetId(), result, _options.numMeasurementsToTrack, _options.timeStep);
 }
 
 } // namespace pathplanning

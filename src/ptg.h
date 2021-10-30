@@ -34,26 +34,47 @@ class PolynomialTrajectoryGenerator
 public:
   struct Options
   {
-    uint32_t numPoints = Configuration::NUM_POINTS;
-    uint32_t numSamples = 10;
-    double timeStep = Configuration::TIME_STEP;
+    int numPoints = 50;
+    int numSamples = 10;
+    double timeStep = 0.02;
 
-    bool useGoalSampler = false;
-    double goalTimeSampleStep = 0.5;
-    std::array<double, 6> sampleSigmas;
-    Options(){};
-    virtual ~Options() {}
+    bool use = false;
+    double sampleTimeStep = 0.5;
+    std::array<double, 6> sampleSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
+
+    int numMeasurementsToTrack = 30;
+    double nonEgoSearchRadius = 30.0;
+
+    JMTTrajectoryEvaluator::Options trajEvaluation;
+
+    Options() {}
+
+    Options(const Configuration& conf)
+      : trajEvaluation(conf)
+    {
+      numMeasurementsToTrack = conf.tracker.numMeasurementsToTrack;
+      nonEgoSearchRadius = conf.tracker.nonEgoSearchRadius;
+
+      numPoints = conf.numPoints;
+      timeStep = conf.timeStep;
+
+      use = conf.goalSampler.use;
+      numSamples = conf.goalSampler.numSamples;
+      sampleTimeStep = conf.goalSampler.sampleTimeStep;
+      sampleSigmas = conf.goalSampler.sampleSigmas;
+    };
   };
 
   PolynomialTrajectoryGenerator(
     const Map::ConstPtr& pMap,
-    const Options& options = Options(),
+    const Options& options,
     const costs::CostWeightMapping& costWeightMapping =
       costs::CostWeightMapping())
     : _pMap(pMap)
     , _options(options)
   {
-    _pEvaluator = std::make_unique<JMTTrajectoryEvaluator>(costWeightMapping);
+    _pEvaluator = std::make_unique<JMTTrajectoryEvaluator>(
+      _options.trajEvaluation, costWeightMapping);
   }
 
   /**

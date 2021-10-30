@@ -88,7 +88,7 @@ KinematicsTracker::Update(double pos)
 {
   _measursments.push_back(pos);
 
-  if (_measursments.size() > Configuration::NUM_MEASUREMENTS_TO_TRACK) {
+  if (_measursments.size() > _numMeasurementsToTrack) {
     _measursments.erase(_measursments.begin());
   }
 
@@ -98,10 +98,16 @@ KinematicsTracker::Update(double pos)
     size_t index1 = _measursments.size() - 3;
     double dist1 = _measursments[index2] - _measursments[index1];
     double dist2 = _measursments[index3] - _measursments[index1];
-    double t1 = Configuration::TIME_STEP;
-    double t2 = 2 * t1;
+    double t1 = _timeStep;
+    double t2 = t1 * t1;
     Eigen::Matrix2d A;
-    A << t1, 0.5 * t1 * t1, t2, 0.5 * t2 * t2;
+
+    // clang-format off
+    A <<
+      t1, 0.5 * t2,
+      t2, 0.5 * t2;
+    // clang-format on
+
     Eigen::Vector2d b;
     b << dist1, dist2;
     Eigen::Vector2d x = A.inverse() * b;
@@ -125,7 +131,9 @@ Vehicle::Update(const Perception& perception)
 
 Vehicle
 Vehicle::CreateFromPerception(const Map::ConstPtr& pMap,
-                              const Perception& perception)
+                              const Perception& perception,
+                              int numMeasurementsToTrack,
+                              double timeStep)
 {
   VehicleConfiguration conf;
   conf.sPos = perception.sd[0];
@@ -140,7 +148,7 @@ Vehicle::CreateFromPerception(const Map::ConstPtr& pMap,
   conf.dVel = (sd2[1] - conf.dPos);
   // Assume constant accelaration
 
-  return Vehicle(perception.id, conf);
+  return Vehicle(perception.id, conf, numMeasurementsToTrack, timeStep);
 }
 
 VehicleConfiguration
