@@ -232,38 +232,7 @@ private:
     _funcPtrs; ///< Cost funtions
 };
 
-} // namespace pathplanning
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::costs::CostType& type);
 
-inline std::ostream&
-operator<<(std::ostream& out, const pathplanning::costs::CostType& type)
-{
-  using namespace pathplanning::costs;
-  switch (type) {
-    case CostType::kTimeDiff:
-      return out << "TimeDiffCost";
-    case CostType::kSDiff:
-      return out << "SDiffCost";
-    case CostType::kDDiff:
-      return out << "DDiffCost";
-    case CostType::kCollision:
-      return out << "CollisionCost";
-    case CostType::kBuffer:
-      return out << "BufferCost";
-    case CostType::kStaysOnRoad:
-      return out << "StaysOnRoadCost";
-    case CostType::kExceedsSpeedLimit:
-      return out << "ExceedsSpeedLimitCost";
-    case CostType::kEfficiency:
-      return out << "EfficiencyCost";
-    case CostType::kTotalAccel:
-      return out << "TotalAccelCost";
-    case CostType::kMaxAccel:
-      return out << "MaxAccelCost";
-    case CostType::kTotalJerk:
-      return out << "TotalJerkCost";
-    case CostType::kMaxJerk:
-      return out << "MaxJerkCost";
-    default:
-      throw std::runtime_error("Not supported cost function");
-  }
-}
+} // namespace pathplanning
