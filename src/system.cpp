@@ -44,6 +44,7 @@ void
 System::Initialize(const std::string& configFileName)
 {
   _pConf = std::make_unique<Configuration>(configFileName);
+  _port = _pConf->serverPort;
   _pMap = Map::CreateMap();
   _pHub = std::make_unique<uWS::Hub>();
 
