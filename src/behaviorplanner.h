@@ -103,32 +103,9 @@ private:
   BehaviorState _currState = BehaviorState::kLaneKeeping;
 };
 
-} // namespace pathplanning
+std::ostream&
+operator<<(std::ostream& out, const BehaviorState& type);
 
-inline std::ostream&
-operator<<(std::ostream& out, const pathplanning::BehaviorState& type)
-{
-  using namespace pathplanning;
-  switch (type) {
-    case BehaviorState::kStart:
-      return out << "Start";
-    case BehaviorState::kStop:
-      return out << "Stop";
-    case BehaviorState::kConstSpeed:
-      return out << "ConstSpeed";
-    case BehaviorState::kLaneKeeping:
-      return out << "LaneKeeping";
-    case BehaviorState::kLeftLaneChangePreparation:
-      return out << "LeftLaneChangePreparation";
-    case BehaviorState::kLeftLaneChange:
-      return out << "LeftLaneChange";
-    case BehaviorState::kRightLaneChangePreparation:
-      return out << "RightLaneChangePreparation";
-    case BehaviorState::kRightLaneChange:
-      return out << "RightLaneChange";
-    default:
-      throw std::runtime_error("Not supported BehaviorState.");
-  }
-}
+} // namespace pathplanning
 
 #endif

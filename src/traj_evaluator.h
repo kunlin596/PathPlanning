@@ -233,6 +233,6 @@ private:
 };
 
 std::ostream&
-operator<<(std::ostream& out, const pathplanning::costs::CostType& type);
+operator<<(std::ostream& out, const costs::CostType& type);
 
 } // namespace pathplanning

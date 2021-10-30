@@ -56,8 +56,7 @@ Tracker::Update(const Vehicle& ego, const Perceptions& perceptions)
   SPDLOG_INFO("Size of tracked vehicles {}", _trackedVehicleMap.size());
 }
 std::ostream&
-operator<<(std::ostream& out,
-           const pathplanning::TrackedVehicleMap& trackedVehicles)
+operator<<(std::ostream& out, const TrackedVehicleMap& trackedVehicles)
 {
   for (const auto& v : trackedVehicles) {
     out << fmt::format("{:2d}: {:s}\n", v.first, v.second);
