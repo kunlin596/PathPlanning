@@ -155,20 +155,6 @@ BehaviorPlanner::BehaviorPlanner(const Map::ConstPtr& pMap,
   : _pMap(pMap)
   , _options(options)
 {
-  costs::CostWeightMapping mapping = _options.costWeightMapping;
-  // mapping[costs::CostType::kTimeDiff] = 1.0;
-  // mapping[costs::CostType::kSDiff] = 1.0;
-  // mapping[costs::CostType::kDDiff] = 1.0;
-  // mapping[costs::CostType::kCollision] = 1e6;
-  // mapping[costs::CostType::kBuffer] = 1.0;
-  // mapping[costs::CostType::kStaysOnRoad] = 1.0;
-  // mapping[costs::CostType::kExceedsSpeedLimit] = 1.0;
-  // mapping[costs::CostType::kEfficiency] = 1.0;
-  // mapping[costs::CostType::kTotalAccel] = 1.0;
-  // mapping[costs::CostType::kMaxAccel] = 1.0;
-  // mapping[costs::CostType::kTotalJerk] = 1.0;
-  // mapping[costs::CostType::kMaxJerk] = 1.0;
-
   _pEvaluator =
     std::make_unique<JMTTrajectoryEvaluator>(_options.trajEvaluationOptions);
 }

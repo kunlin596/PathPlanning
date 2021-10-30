@@ -24,8 +24,6 @@ enum class CostType
   kMaxJerk
 };
 
-using CostWeightMapping = std::unordered_map<CostType, double>;
-
 struct CostFunctorBase;
 
 }
@@ -50,9 +48,13 @@ public:
     double maxJerk = 10.0;
     std::array<double, 6> evalSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
 
+    std::string driverProfileName;
+    std::unordered_map<costs::CostType, double> driverProfile;
+
     Options() {}
     Options(const Configuration& conf)
     {
+      using namespace ::pathplanning::costs;
       evalSigmas = conf.trajectoryEvaluation.evalSigmas;
       expectedAccInOneSec = conf.trajectoryEvaluation.expectedAccInOneSec;
       expectedJerkInOneSec = conf.trajectoryEvaluation.expectedJerkInOneSec;
@@ -60,14 +62,26 @@ public:
         conf.trajectoryEvaluation.collisionCheckingRadius;
       timeHorizon = conf.timeHorizon;
       timeStep = conf.timeStep;
+
+      driverProfileName = conf.driverProfileName;
+      driverProfile[CostType::kTimeDiff] = conf.driverProfile.timeDiff;
+      driverProfile[CostType::kSDiff] = conf.driverProfile.sDiff;
+      driverProfile[CostType::kDDiff] = conf.driverProfile.dDiff;
+      driverProfile[CostType::kCollision] = conf.driverProfile.collision;
+      driverProfile[CostType::kBuffer] = conf.driverProfile.buffer;
+      driverProfile[CostType::kStaysOnRoad] = conf.driverProfile.staysOnRoad;
+      driverProfile[CostType::kExceedsSpeedLimit] =
+        conf.driverProfile.exceedsSpeedLimit;
+      driverProfile[CostType::kEfficiency] = conf.driverProfile.efficiency;
+      driverProfile[CostType::kTotalAccel] = conf.driverProfile.totalAccel;
+      driverProfile[CostType::kMaxAccel] = conf.driverProfile.maxAccel;
+      driverProfile[CostType::kTotalJerk] = conf.driverProfile.totalJerk;
+      driverProfile[CostType::kMaxJerk] = conf.driverProfile.maxJerk;
     }
   };
 
-  JMTTrajectoryEvaluator(const Options& options,
-                         const costs::CostWeightMapping& costWeightMapping =
-                           costs::CostWeightMapping())
+  JMTTrajectoryEvaluator(const Options& options)
     : _options(options)
-    , _costWeightMapping(costWeightMapping)
   {}
 
   /**
@@ -86,7 +100,6 @@ public:
                   const TrackedVehicleMap& trackedVehicleMap);
 
 private:
-  costs::CostWeightMapping _costWeightMapping; ///< Cost function weight map
   std::unordered_map<costs::CostType, std::shared_ptr<costs::CostFunctorBase>>
     _funcPtrs; ///< Cost funtions
   Options _options;

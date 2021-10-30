@@ -41,6 +41,23 @@ public:
 
   } trajectoryEvaluation;
 
+  std::string driverProfileName;
+  struct
+  {
+    double timeDiff = 1.0;
+    double sDiff = 1.0;
+    double dDiff = 1.0;
+    double collision = 1.0;
+    double buffer = 1.0;
+    double staysOnRoad = 1.0;
+    double exceedsSpeedLimit = 1.0;
+    double efficiency = 1.0;
+    double totalAccel = 1.0;
+    double maxAccel = 1.0;
+    double totalJerk = 1.0;
+    double maxJerk = 1.0;
+  } driverProfile;
+
   struct
   {
     bool use = true;

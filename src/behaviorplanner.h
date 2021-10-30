@@ -74,7 +74,6 @@ public:
   struct Options
   {
     JMTTrajectoryEvaluator::Options trajEvaluationOptions;
-    costs::CostWeightMapping costWeightMapping;
 
     int numMeasurementsToTrack = 30;
     double nonEgoSearchRadius = 30.0;

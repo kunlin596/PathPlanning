@@ -20,5 +20,22 @@
       10.0, 1.0, 2.0,
       1.0, 1.0, 1.0
     ]
+  },
+  "driverProfileName": "default",
+  "driverProfiles": {
+    "default": {
+      "timeDiff": 1.0,
+      "sDiff": 1.0,
+      "dDiff": 1.0,
+      "collision": 1.0,
+      "buffer": 1.0,
+      "staysOnRoad": 1.0,
+      "exceedsSpeedLimit": 1.0,
+      "efficiency": 1.0,
+      "totalAccel": 1.0,
+      "maxAccel": 1.0,
+      "totalJerk": 1.0,
+      "maxJerk": 1.0
+    }
   }
 }

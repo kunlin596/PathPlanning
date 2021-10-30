@@ -65,16 +65,13 @@ public:
     };
   };
 
-  PolynomialTrajectoryGenerator(
-    const Map::ConstPtr& pMap,
-    const Options& options,
-    const costs::CostWeightMapping& costWeightMapping =
-      costs::CostWeightMapping())
+  PolynomialTrajectoryGenerator(const Map::ConstPtr& pMap,
+                                const Options& options)
     : _pMap(pMap)
     , _options(options)
   {
-    _pEvaluator = std::make_unique<JMTTrajectoryEvaluator>(
-      _options.trajEvaluation, costWeightMapping);
+    _pEvaluator =
+      std::make_unique<JMTTrajectoryEvaluator>(_options.trajEvaluation);
   }
 
   /**

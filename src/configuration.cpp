@@ -80,5 +80,54 @@ Configuration::Parse(const std::string& filename)
       goalSampler.sampleSigmas = goalSamplerJson["sampleSigmas"];
     }
   }
+  if (j.count("driverProfileName")) {
+    driverProfileName = j["driverProfileName"];
+  }
+
+  if (!driverProfileName.empty()) {
+    if (j.count("driverProfiles")) {
+      const auto& driverProfilesJson = j["driverProfiles"];
+      if (driverProfilesJson.count(driverProfileName)) {
+        const auto& driverProfileJson = driverProfilesJson[driverProfileName];
+        if (driverProfileJson.count("timeDiff")) {
+          driverProfile.timeDiff = driverProfileJson["timeDiff"];
+        }
+        if (driverProfileJson.count("sDiff")) {
+          driverProfile.sDiff = driverProfileJson["sDiff"];
+        }
+        if (driverProfileJson.count("dDiff")) {
+          driverProfile.dDiff = driverProfileJson["dDiff"];
+        }
+        if (driverProfileJson.count("collision")) {
+          driverProfile.collision = driverProfileJson["collision"];
+        }
+        if (driverProfileJson.count("buffer")) {
+          driverProfile.buffer = driverProfileJson["buffer"];
+        }
+        if (driverProfileJson.count("staysOnRoad")) {
+          driverProfile.staysOnRoad = driverProfileJson["staysOnRoad"];
+        }
+        if (driverProfileJson.count("exceedsSpeedLimit")) {
+          driverProfile.exceedsSpeedLimit =
+            driverProfileJson["exceedsSpeedLimit"];
+        }
+        if (driverProfileJson.count("efficiency")) {
+          driverProfile.efficiency = driverProfileJson["efficiency"];
+        }
+        if (driverProfileJson.count("totalAccel")) {
+          driverProfile.totalAccel = driverProfileJson["totalAccel"];
+        }
+        if (driverProfileJson.count("maxAccel")) {
+          driverProfile.maxAccel = driverProfileJson["maxAccel"];
+        }
+        if (driverProfileJson.count("totalJerk")) {
+          driverProfile.totalJerk = driverProfileJson["totalJerk"];
+        }
+        if (driverProfileJson.count("maxJerk")) {
+          driverProfile.maxJerk = driverProfileJson["maxJerk"];
+        }
+      }
+    }
+  }
 }
 } // namespace pathplannin

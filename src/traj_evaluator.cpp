@@ -226,7 +226,10 @@ JMTTrajectoryEvaluator::Evaluate(const JMTTrajectory& traj,
                                  const TrackedVehicleMap& trackedVehicleMap)
 {
   double totalCost = 0.0;
-  for (const auto& costInfo : _costWeightMapping) {
+  for (const auto& costInfo : _options.driverProfile) {
+    if (costInfo.second < 0.0) {
+      continue;
+    }
     if (_funcPtrs.count(costInfo.first) == 0) {
       _funcPtrs[costInfo.first] = costs::CreateCostFunctor(costInfo.first);
     }
