@@ -1,0 +1,24 @@
+{
+  "serverPort": 4567,
+  "speedLimit": 50,
+  "timeStep": 0.02,
+  "timeHorizon": 0.02,
+  "nonEgoSearchRadius": 30,
+  "numMeasurementsToTrack": 30,
+  "trajectoryEvaluation": {
+    "maxJerk": 10,
+    "maxAcc": 10,
+    "expectedAccInOneSec": 2,
+    "expectedJerkInOneSec": 1,
+    "collisionCheckingRadius": 1.5
+  },
+  "goalSampler": {
+    "use": true,
+    "numSamples": 20,
+    "sampleTimeStep": 0.5,
+    "sampleSigmas": [
+      10.0, 1.0, 2.0,
+      1.0, 1.0, 1.0
+    ]
+  }
+}
