@@ -8,6 +8,7 @@
 #include "path.h"
 #include "tracker.h"
 #include "vehicle.h"
+#include "json.hpp"
 
 namespace pathplanning {
 
@@ -57,6 +58,8 @@ struct JMTTrajectory1D
   {
     return Eval(t);
   }
+
+  nlohmann::json Dump() const;
 
   const QuinticFunctor& GetFunc5() const { return _func5; }
   const QuarticFunctor& GetFunc4() const { return _func4; }

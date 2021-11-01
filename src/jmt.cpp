@@ -94,18 +94,30 @@ JMTTrajectory1D::IsValid(const ValidationParams& params) const
   double currtime = 0.0;
   while (currtime < _time + 1e-6) {
     auto values = Eval(currtime);
-    SPDLOG_INFO("{}", values);
     if (params.speedRange[0] > values[1] or values[1] > params.speedRange[1]) {
-      SPDLOG_ERROR("speed limit: {}", values);
       return false;
     }
     if (params.accelRange[0] > values[2] or values[2] > params.accelRange[1]) {
-      SPDLOG_ERROR("accel limit: {}", values);
       return false;
     }
     currtime += params.timeResolution;
   }
   return true;
+}
+
+nlohmann::json
+JMTTrajectory1D::Dump() const
+{
+  using namespace nlohmann;
+  json j;
+  j["func5"] = GetFunc5().coeffs;
+  j["func4"] = GetFunc4().coeffs;
+  j["func3"] = GetFunc3().coeffs;
+  j["func2"] = GetFunc2().coeffs;
+  j["func1"] = GetFunc1().coeffs;
+  j["func0"] = GetFunc0().coeffs;
+  j["time"] = GetTime();
+  return j;
 }
 
 double

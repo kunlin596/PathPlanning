@@ -1,4 +1,5 @@
 #include "jmt.h"
+// #include "json.hpp"
 #include "log.h"
 
 #include <gtest/gtest.h>
@@ -59,14 +60,18 @@ TEST(JMTTest, ValidationTest)
 {
   double vel = 30.0;
   double accel = 5.0;
-  double time = 10.0;
+  double time = 1.0;
   double s = vel * time;
   double dt = 0.02;
 
-  JMTTrajectory1D::ValidationParams params({ 0.0, 50.0 }, { 0.0, 10.0 });
+  // using namespace nlohmann;
+  // json j;
+
+  JMTTrajectory1D::ValidationParams params({ 0.0, 50.0 }, { -10.0, 10.0 });
 
   JMTTrajectory1D traj1d =
     JMT::Solve1D({ 0.0, 0.0, 0.0 }, { s, vel, accel }, time);
+  // j["traj1d_1"] = traj1d.Dump();
 
   EXPECT_NEAR(traj1d(time)[0], s, 1e-8);
   EXPECT_NEAR(traj1d(time)[1], vel, 1e-8);
@@ -77,12 +82,16 @@ TEST(JMTTest, ValidationTest)
   EXPECT_NEAR(traj1d(time)[0], s, 1e-8);
   EXPECT_NEAR(traj1d(time)[1], vel, 1e-8);
   EXPECT_NEAR(traj1d(time)[2], -accel, 1e-8);
-  EXPECT_FALSE(traj1d.IsValid(params));
+  EXPECT_TRUE(traj1d.IsValid(params));
+  // j["traj1d_2"] = traj1d.Dump();
 
   traj1d = JMT::Solve1D({ 0.0, 0.0, 0.0 }, { s, vel / 2.0, accel / 2.0 }, time);
 
   EXPECT_NEAR(traj1d(time)[0], s, 1e-8);
   EXPECT_NEAR(traj1d(time)[1], vel / 2.0, 1e-8);
-  EXPECT_NEAR(traj1d(time)[2], accel, 1e-8);
-  EXPECT_TRUE(traj1d.IsValid(params));
+  EXPECT_NEAR(traj1d(time)[2], accel / 2.0, 1e-8);
+  EXPECT_FALSE(traj1d.IsValid(params));
+  // j["traj1d_3"] = traj1d.Dump();
+  // std::ofstream o(fmt::format("traj1d_time_{:0.3f}.json", time));
+  // o << std::setw(4) << j << std::endl;
 }
