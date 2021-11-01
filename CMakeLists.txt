@@ -29,7 +29,6 @@ add_library(
   driving
   SHARED
   src/configuration.cpp
-  src/kalman_filter.cpp
   src/path.cpp
   src/vehicle.cpp
   src/perception.cpp

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import numpy as np
 from numpy.polynomial import Polynomial
 
@@ -44,8 +45,8 @@ if __name__ == '__main__':
 
     plt.plot(t, ss)
     plt.plot(t, dd)
+    plt.ion()
     plt.show(block=False)
-    plt.show()
 
     from IPython import embed
 
