@@ -96,6 +96,22 @@ TEST(JMTTest, ValidationTest)
   // o << std::setw(4) << j << std::endl;
 }
 
+TEST(JMTTest, TimeTest)
+{
+  using namespace nlohmann;
+  json j;
+
+  double time = 1.0;
+  do {
+    JMTTrajectory1D traj1d =
+      JMT::Solve1D({ 0.0, 0.0, 0.0 }, { 30.0, 20.0, 2.0 }, time);
+    j[fmt::format("traj1d_time_exp,{:.3f}", time)] = traj1d.Dump();
+    time += 0.2;
+  } while (time < 10.0);
+  std::ofstream o("traj1d_time_exp.json");
+  o << std::setw(4) << j << std::endl;
+}
+
 TEST(JMTTest, MergeTest)
 {
   std::vector<std::array<double, 3>> points = { { 0.0, 0.0, 0.0 },
