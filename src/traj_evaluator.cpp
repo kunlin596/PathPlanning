@@ -43,7 +43,7 @@ TimeDiffCost::Compute(const JMTTrajectory2D& traj,
                       const JMTTrajectoryEvaluator::Options& options)
 {
   return Logistic(
-    static_cast<double>(std::abs(traj.elapsedTime - requestTime)) /
+    static_cast<double>(std::abs(traj.GetTime() - requestTime)) /
     requestTime);
 }
 
@@ -55,7 +55,7 @@ SDiffCost::Compute(const JMTTrajectory2D& traj,
                    const JMTTrajectoryEvaluator::Options& options)
 {
   double cost = 0.0;
-  VehicleConfiguration finalConf = traj(traj.elapsedTime);
+  VehicleConfiguration finalConf = traj(traj.GetTime());
   cost +=
     Logistic(std::abs(finalConf.sPos - goalConf.sPos) / options.evalSigmas[0]);
   cost +=
@@ -74,7 +74,7 @@ DDiffCost::Compute(const JMTTrajectory2D& traj,
                    const JMTTrajectoryEvaluator::Options& options)
 {
   double cost = 0.0;
-  VehicleConfiguration finalConf = traj(traj.elapsedTime);
+  VehicleConfiguration finalConf = traj(traj.GetTime());
   cost +=
     Logistic(std::abs(finalConf.dPos - goalConf.dPos) / options.evalSigmas[3]);
   cost +=
@@ -119,7 +119,7 @@ StaysOnRoadCost::Compute(const JMTTrajectory2D& traj,
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
   double timeStep = options.timeStep;
-  while (currTime < (traj.elapsedTime + 1e-6)) {
+  while (currTime < (traj.GetTime() + 1e-6)) {
     currTime += timeStep;
     VehicleConfiguration trajConf = traj.Eval(currTime);
     if (not Map::IsInRoad(trajConf.dPos)) {
@@ -146,8 +146,8 @@ EfficiencyCost::Compute(const JMTTrajectory2D& traj,
                         const TrackedVehicleMap& trackedVehicleMap,
                         const JMTTrajectoryEvaluator::Options& options)
 {
-  VehicleConfiguration finalConf = traj(traj.elapsedTime);
-  double avgVel = finalConf.sPos / traj.elapsedTime;
+  VehicleConfiguration finalConf = traj(traj.GetTime());
+  double avgVel = finalConf.sPos / traj.GetTime();
   return Logistic(2.0 * std::abs(goalConf.sVel - avgVel) / avgVel);
 }
 double

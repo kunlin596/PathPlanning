@@ -180,7 +180,7 @@ std::ostream&
 operator<<(std::ostream& out, const pathplanning::JMTTrajectory2D& traj)
 {
   return out << fmt::format("JMTTrajectory2D(time={}, sCoeffs={}, dCoeffs{})",
-                            traj.elapsedTime,
+                            traj.GetTime(),
                             traj.GetSFunc(),
                             traj.GetDFunc());
 }
