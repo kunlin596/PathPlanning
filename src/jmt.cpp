@@ -18,7 +18,7 @@ JMT::Solve1D(const std::array<double, 3>& start,
   double t5 = t4 * t;
   // clang-format off
   A <<
-    t3     , t4      , t5      ,
+    t3       , t4        , t5        ,
     3.0 * t2 , 4.0 * t3  , 5.0 * t4  ,
     6.0 * t  , 12.0 * t2 , 20.0 * t3 ;
 

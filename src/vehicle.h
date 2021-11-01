@@ -5,7 +5,6 @@
 
 #include "Eigen-3.3/Eigen/Dense"
 #include "configuration.h"
-#include "kalman_filter.h"
 #include "log.h"
 #include "map.h"
 #include "math.h"
