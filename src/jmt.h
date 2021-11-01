@@ -20,6 +20,21 @@ namespace pathplanning {
 struct JMTTrajectory1D
 {
 
+  struct ValidationParams
+  {
+    std::array<double, 2> speedRange;
+    std::array<double, 2> accelRange;
+    double timeResolution = 0.1;
+
+    ValidationParams(const std::array<double, 2>& speedRange,
+                     const std::array<double, 2>& accelRange,
+                     double timeResolution = 0.1)
+      : speedRange(speedRange)
+      , accelRange(accelRange)
+      , timeResolution(timeResolution)
+    {}
+  };
+
   JMTTrajectory1D() {}
 
   JMTTrajectory1D(const QuinticFunctor& func, const double time)
@@ -49,6 +64,8 @@ struct JMTTrajectory1D
   const LinearFunctor& GetFunc1() const { return _func1; }
   const ConstantFunctor& GetFunc0() const { return _func0; }
   double GetTime() const { return _time; }
+
+  bool IsValid(const ValidationParams& params) const;
 
 private:
   QuinticFunctor _func5;

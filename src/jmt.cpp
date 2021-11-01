@@ -88,6 +88,26 @@ JMT::ComputeTrajectory(const VehicleConfiguration& start,
   // clang-format on
 }
 
+bool
+JMTTrajectory1D::IsValid(const ValidationParams& params) const
+{
+  double currtime = 0.0;
+  while (currtime < _time + 1e-6) {
+    auto values = Eval(currtime);
+    SPDLOG_INFO("{}", values);
+    if (params.speedRange[0] > values[1] or values[1] > params.speedRange[1]) {
+      SPDLOG_ERROR("speed limit: {}", values);
+      return false;
+    }
+    if (params.accelRange[0] > values[2] or values[2] > params.accelRange[1]) {
+      SPDLOG_ERROR("accel limit: {}", values);
+      return false;
+    }
+    currtime += params.timeResolution;
+  }
+  return true;
+}
+
 double
 JMTTrajectory2D::ComputeNearestApproach(const Vehicle& vehicle,
                                         double maxTimeDuration,

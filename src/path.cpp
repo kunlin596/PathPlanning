@@ -29,11 +29,11 @@ Path::ConvertXYToWaypoints(const std::vector<double>& x,
 std::ostream&
 operator<<(std::ostream& out, const pathplanning::Waypoints& waypoints)
 {
-  out << std::string("{\n");
+  out << std::string("[\n");
   for (const auto& p : waypoints) {
     out << fmt::format("{:s},\n", p);
   }
-  return out << std::string("}\n");
+  return out << std::string("]\n");
 }
 
 } // namespace pathplanning

@@ -14,7 +14,6 @@ TEST(JMTTest, Solve1DConstantSpeedTest)
   double time = 10.0;
   double s = vel * time;
   double dt = 0.02;
-  int numPoints = static_cast<int>(time / dt);
 
   JMTTrajectory1D traj1d =
     JMT::Solve1D({ 0.0, vel, 0.0 }, { s, vel, 0.0 }, time);
@@ -36,7 +35,6 @@ TEST(JMTTest, Solve1DEndKinematicTest)
   double time = 10.0;
   double s = vel * time;
   double dt = 0.02;
-  int numPoints = static_cast<int>(time / dt);
 
   JMTTrajectory1D traj1d =
     JMT::Solve1D({ 0.0, 0.0, 0.0 }, { s, vel, accel }, time);
@@ -57,16 +55,34 @@ TEST(JMTTest, Solve1DEndKinematicTest)
   EXPECT_NEAR(traj1d(time)[2], -accel, 1e-8);
 }
 
-TEST(JMTTest, Merging1DTest)
+TEST(JMTTest, ValidationTest)
 {
-  // std::vector<std::array<double, 3>> states = {
-  //   {0.0, 0.0, 0.0},
-  //   {30.0, 10.0, 1.0},
-  //   {60.0, 10.0, 1.0},
-  // }
-  // JMTTrajectory1D traj1(
-  //   JMT::Solve1D({ 0.0, 0.0, 0.0 }, { 20.0, vel, accel }, time), time);
+  double vel = 30.0;
+  double accel = 5.0;
+  double time = 10.0;
+  double s = vel * time;
+  double dt = 0.02;
 
-  // JMTTrajectory1D traj2(
-  //   JMT::Solve1D({ 0.0, 0.0, 0.0 }, { s, vel, accel }, time), time);
+  JMTTrajectory1D::ValidationParams params({ 0.0, 50.0 }, { 0.0, 10.0 });
+
+  JMTTrajectory1D traj1d =
+    JMT::Solve1D({ 0.0, 0.0, 0.0 }, { s, vel, accel }, time);
+
+  EXPECT_NEAR(traj1d(time)[0], s, 1e-8);
+  EXPECT_NEAR(traj1d(time)[1], vel, 1e-8);
+  EXPECT_NEAR(traj1d(time)[2], accel, 1e-8);
+  EXPECT_FALSE(traj1d.IsValid(params));
+
+  traj1d = JMT::Solve1D({ 0.0, vel, accel / 2.0 }, { s, vel, -accel }, time);
+  EXPECT_NEAR(traj1d(time)[0], s, 1e-8);
+  EXPECT_NEAR(traj1d(time)[1], vel, 1e-8);
+  EXPECT_NEAR(traj1d(time)[2], -accel, 1e-8);
+  EXPECT_FALSE(traj1d.IsValid(params));
+
+  traj1d = JMT::Solve1D({ 0.0, 0.0, 0.0 }, { s, vel / 2.0, accel / 2.0 }, time);
+
+  EXPECT_NEAR(traj1d(time)[0], s, 1e-8);
+  EXPECT_NEAR(traj1d(time)[1], vel / 2.0, 1e-8);
+  EXPECT_NEAR(traj1d(time)[2], accel, 1e-8);
+  EXPECT_TRUE(traj1d.IsValid(params));
 }
