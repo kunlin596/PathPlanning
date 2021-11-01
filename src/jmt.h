@@ -35,6 +35,7 @@ struct JMTTrajectory1D
       , accelRange(accelRange)
       , timeResolution(timeResolution)
     {}
+    virtual ~ValidationParams() {}
   };
 
   JMTTrajectory1D(const QuinticFunctor& func, const double time)
@@ -93,19 +94,7 @@ struct JMTTrajectory2D
 {
 
   struct ValidationParams : public JMTTrajectory1D::ValidationParams
-  {
-    std::array<double, 2> steeringAngleRange;
-
-    ValidationParams(const std::array<double, 2>& speedRange,
-                     const std::array<double, 2>& accelRange,
-                     const std::array<double, 2>& steeringAngleRange,
-                     double timeResolution = 0.1)
-      : JMTTrajectory1D::ValidationParams(speedRange,
-                                          accelRange,
-                                          timeResolution)
-      , steeringAngleRange(steeringAngleRange)
-    {}
-  };
+  {};
 
   JMTTrajectory2D() {}
 
@@ -116,10 +105,7 @@ struct JMTTrajectory2D
     assert(traj1.GetTime() == traj2.GetTime());
   }
 
-  bool IsValid(const ValidationParams& params) const
-  {
-    return _traj1.IsValid(params) and _traj2.IsValid(params);
-  }
+  bool IsValid(const ValidationParams& params) const;
 
   inline VehicleConfiguration Eval(const double t) const
   {

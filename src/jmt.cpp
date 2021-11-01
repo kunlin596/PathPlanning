@@ -176,6 +176,15 @@ JMTTrajectory2D::ComputeNearestApproach(
   return minDist;
 }
 
+bool
+JMTTrajectory2D::IsValid(const ValidationParams& params) const
+{
+  if (not _traj1.IsValid(params) or not _traj2.IsValid(params)) {
+    return false;
+  }
+  return true;
+}
+
 std::ostream&
 operator<<(std::ostream& out, const pathplanning::JMTTrajectory2D& traj)
 {
