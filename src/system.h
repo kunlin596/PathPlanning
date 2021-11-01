@@ -20,7 +20,7 @@ public:
 
   struct State
   {
-    JMTTrajectory cachedTrajectory;
+    JMTTrajectory2D cachedTrajectory;
   };
 
   /**
@@ -59,7 +59,7 @@ public:
    */
   int Spin();
 
-  void UpdateCachedTrajectory(const JMTTrajectory& traj)
+  void UpdateCachedTrajectory(const JMTTrajectory2D& traj)
   {
     _state.cachedTrajectory = traj;
   }

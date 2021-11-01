@@ -29,8 +29,10 @@ add_library(
   driving
   SHARED
   src/configuration.cpp
+  src/kalman_filter.cpp
   src/path.cpp
   src/vehicle.cpp
+  src/perception.cpp
   src/jmt.cpp
   src/traj_evaluator.cpp
   src/ptg.cpp
@@ -60,11 +62,25 @@ target_link_libraries(
   uWS
   driving)
 
+enable_testing()
+find_package(GTest REQUIRED)
+
 add_executable(test_math src/test_math.cpp)
 target_link_libraries(
   test_math
   PRIVATE
-  spdlog::spdlog
+  driving
+  gtest
+  gtest_main
+)
+
+add_executable(test_jmt src/test_jmt.cpp)
+target_link_libraries(
+  test_jmt
+  PRIVATE
+  driving
+  gtest
+  gtest_main
 )
 
 add_executable(test_ptg src/test_ptg.cpp)
@@ -73,3 +89,7 @@ target_link_libraries(
   PRIVATE
   driving
 )
+
+include(GoogleTest)
+gtest_discover_tests(test_jmt)
+gtest_discover_tests(test_math)

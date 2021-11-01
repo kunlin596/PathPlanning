@@ -10,15 +10,15 @@
 
 namespace pathplanning {
 
+using TrackedVehicleMap = std::unordered_map<int, Vehicle>;
+
+
 /**
  * @brief      This class describes a non-ego vehicle tracker.
  *
  * This class is responsible for creating predictions and keep track of the
  * non-ego vehicles.
  */
-
-using TrackedVehicleMap = std::unordered_map<int, Vehicle>;
-
 class Tracker
 {
 public:

@@ -17,50 +17,47 @@ namespace pathplanning {
 //
 /* -------------------------------------------------------------------------- */
 
-/**
- * @brief      This class describes a sd waypoint function.
- *
- * FIXME: Move this class into JMTTrajectory
- */
-class SDFunctor
+struct JMTTrajectory1D
 {
-public:
-  SDFunctor() {}
 
-  SDFunctor(const QuinticFunctor& sFunc, const QuinticFunctor& dFunc)
-    : _sPosFunc(sFunc)
-    , _dPosFunc(dFunc)
+  JMTTrajectory1D() {}
+
+  JMTTrajectory1D(const QuinticFunctor& func, const double time)
+    : _func5(func)
+    , _func4(_func5.Differentiate())
+    , _func3(_func4.Differentiate())
+    , _func2(_func3.Differentiate())
+    , _func1(_func2.Differentiate())
+    , _func0(_func1.Differentiate())
+    , _time(time)
+  {}
+
+  inline std::array<double, 6> Eval(const double t) const
   {
-    _sVelFunc = _sPosFunc.Differentiate();
-    _dVelFunc = _dPosFunc.Differentiate();
-    _sAccFunc = _sVelFunc.Differentiate();
-    _dAccFunc = _dVelFunc.Differentiate();
+    return { _func5(t), _func4(t), _func3(t), _func2(t), _func1(t), _func0(t) };
   }
 
-  std::array<double, 6> Eval(const double x) const
+  inline std::array<double, 6> operator()(const double t) const
   {
-    return { _sPosFunc(x), _sVelFunc(x), _sAccFunc(x),
-             _dPosFunc(x), _dVelFunc(x), _dAccFunc(x) };
+    return Eval(t);
   }
 
-  std::array<double, 6> operator()(const double x) const { return Eval(x); }
-
-  const QuinticFunctor& GetSFunc() const { return _sPosFunc; }
-  const QuinticFunctor& GetDFunc() const { return _dPosFunc; }
-  const QuarticFunctor& GetSVelFunc() const { return _sVelFunc; }
-  const QuarticFunctor& GetDVelFunc() const { return _dVelFunc; }
-  const CubicFunctor& GetSAccFunc() const { return _sAccFunc; }
-  const CubicFunctor& GetDAccFunc() const { return _dAccFunc; }
+  const QuinticFunctor& GetFunc5() const { return _func5; }
+  const QuarticFunctor& GetFunc4() const { return _func4; }
+  const CubicFunctor& GetFunc3() const { return _func3; }
+  const QuadraticFunctor& GetFunc2() const { return _func2; }
+  const LinearFunctor& GetFunc1() const { return _func1; }
+  const ConstantFunctor& GetFunc0() const { return _func0; }
+  double GetTime() const { return _time; }
 
 private:
-  friend std::ostream& operator<<(std::ostream& out, const SDFunctor& functor);
-
-  QuinticFunctor _sPosFunc;
-  QuarticFunctor _sVelFunc;
-  CubicFunctor _sAccFunc;
-  QuinticFunctor _dPosFunc;
-  QuarticFunctor _dVelFunc;
-  CubicFunctor _dAccFunc;
+  QuinticFunctor _func5;
+  QuarticFunctor _func4;
+  CubicFunctor _func3;
+  QuadraticFunctor _func2;
+  LinearFunctor _func1;
+  ConstantFunctor _func0;
+  double _time = 0.0;
 };
 
 /**
@@ -75,26 +72,34 @@ private:
  * Note that not all trajectory generators use the same information to produce
  * the same format of output, so trajecotry is per generator type.
  */
-struct JMTTrajectory
+struct JMTTrajectory2D
 {
-  SDFunctor _sdFunc;
   double elapsedTime = 0.0;
 
-  JMTTrajectory() {}
+  JMTTrajectory2D() {}
 
-  JMTTrajectory(const SDFunctor& sdFunc, const double elapsedTime)
-    : _sdFunc(sdFunc)
-    , elapsedTime(elapsedTime)
-  {}
+  JMTTrajectory2D(const JMTTrajectory1D& traj1, const JMTTrajectory1D& traj2)
+    : _traj1(traj1)
+    , _traj2(traj2)
+  {
+    assert(traj1.GetTime() == traj2.GetTime());
+  }
 
   inline VehicleConfiguration Eval(const double t) const
   {
-    return VehicleConfiguration(_sdFunc(t));
+    return VehicleConfiguration(_traj1.GetFunc5()(t),
+                                _traj1.GetFunc4()(t),
+                                _traj1.GetFunc3()(t),
+                                _traj2.GetFunc5()(t),
+                                _traj2.GetFunc4()(t),
+                                _traj2.GetFunc3()(t));
   }
 
   VehicleConfiguration operator()(const double t) const { return Eval(t); }
 
-  const SDFunctor& GetSDFunc() const { return _sdFunc; }
+  const JMTTrajectory1D& GetTraj1() const { return _traj1; }
+  const JMTTrajectory1D& GetTraj2() const { return _traj2; }
+  double GetTime() const { return _traj1.GetTime(); }
 
   /**
    * @brief      Get nearest approach from trajectory to predicted vehicle
@@ -119,7 +124,21 @@ struct JMTTrajectory
     double maxTimeDuration,
     double timeStep) const;
 
-  friend std::ostream& operator<<(std::ostream& out, const JMTTrajectory& traj);
+  const QuinticFunctor& GetSFunc() const { return _traj1.GetFunc5(); }
+  const QuinticFunctor& GetDFunc() const { return _traj2.GetFunc5(); }
+
+  const QuarticFunctor& GetSVelFunc() const { return _traj1.GetFunc4(); }
+  const QuarticFunctor& GetDVelFunc() const { return _traj2.GetFunc4(); }
+
+  const CubicFunctor& GetSAccFunc() const { return _traj1.GetFunc3(); }
+  const CubicFunctor& GetDAccFunc() const { return _traj2.GetFunc3(); }
+
+  friend std::ostream& operator<<(std::ostream& out,
+                                  const JMTTrajectory2D& traj);
+
+private:
+  JMTTrajectory1D _traj1;
+  JMTTrajectory1D _traj2;
 };
 
 /**
@@ -155,8 +174,8 @@ struct JMTTrajectory
  * s'(t_f) = 3 * a3 * t_f^2 + 4 * a4 * t_f^3 + 5 * a5 * t_f^4     + C2
  * s"(t_f) = 6 * a3 * t_f^2 + 12 * a4 * t_f^2 + 20 * a5 * t_f^3   + C3
  *
- * s(t_f), s'(t_f), s"(t_f) and t_f are the boundary conditions set by the user,
- * so they are known quantities.
+ * s(t_f), s'(t_f), s"(t_f) and t_f are the boundary conditions set by the
+ * user, so they are known quantities.
  *
  * So it becomes a linear system with 3 equations and 3 unknowns.
  *
@@ -180,12 +199,12 @@ struct JMTTrajectory
  */
 struct JMT
 {
-  static QuinticFunctor Solve1D(const std::array<double, 3>& start,
-                                const std::array<double, 3>& end,
-                                const double t);
+  static JMTTrajectory1D Solve1D(const std::array<double, 3>& start,
+                                 const std::array<double, 3>& end,
+                                 const double t);
 
-  static QuinticFunctor Solve1D(const std::array<double, 6>& params,
-                                const double t);
+  static JMTTrajectory1D Solve1D(const std::array<double, 6>& params,
+                                 const double t);
 
   /**
    * @brief      Compute a SDFunctor
@@ -199,24 +218,21 @@ struct JMT
    *
    * @return     The sd waypoint function.
    */
-  static SDFunctor Solve2D(const std::array<double, 6>& sParams,
-                           const std::array<double, 6>& dParams,
-                           const double t);
+  static JMTTrajectory2D Solve2D(const std::array<double, 6>& sParams,
+                                 const std::array<double, 6>& dParams,
+                                 const double t);
 
-  static JMTTrajectory ComputeTrajectory(const std::array<double, 6>& sParams,
-                                         const std::array<double, 6>& dParams,
-                                         const double t);
+  static JMTTrajectory2D ComputeTrajectory(const std::array<double, 6>& sParams,
+                                           const std::array<double, 6>& dParams,
+                                           const double t);
 
-  static JMTTrajectory ComputeTrajectory(const VehicleConfiguration& start,
-                                         const VehicleConfiguration& end,
-                                         const double t);
+  static JMTTrajectory2D ComputeTrajectory(const VehicleConfiguration& start,
+                                           const VehicleConfiguration& end,
+                                           const double t);
 };
 
 std::ostream&
-operator<<(std::ostream& out, const pathplanning::SDFunctor& functor);
-
-std::ostream&
-operator<<(std::ostream& out, const pathplanning::JMTTrajectory& traj);
+operator<<(std::ostream& out, const pathplanning::JMTTrajectory2D& traj);
 
 } // namespace pathplanning
 

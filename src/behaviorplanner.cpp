@@ -19,10 +19,9 @@ _GetFrontBackVehicles(const Vehicle& ego,
                       double nonEgoSearchRadius = 30.0)
 {
   const auto& egoConf = ego.GetConfiguration();
-  int currentLaneId =
-    targetLaneId == -1 ? Map::GetLaneId(egoConf.dPos) : targetLaneId;
   double frontSDiff = std::numeric_limits<double>::max();
   double backSDiff = std::numeric_limits<double>::max();
+
   int frontId = -1;
   int backId = -1;
 
@@ -30,14 +29,15 @@ _GetFrontBackVehicles(const Vehicle& ego,
     const auto& vehicleConf = vehicleData.second.GetConfiguration();
 
     int carLaneId = Map::GetLaneId(vehicleConf.dPos);
+
     if (carLaneId < 0) {
       continue;
     }
 
-    SPDLOG_ERROR("currentLaneId={}, carLaneId={}", currentLaneId, carLaneId);
-    if (carLaneId == currentLaneId) {
+    if (carLaneId == targetLaneId) {
       double currFrontSDiff = vehicleConf.sPos - egoConf.sPos;
       double currBackSDiff = egoConf.sPos - vehicleConf.sPos;
+
       if (0.0 < currFrontSDiff and currFrontSDiff < frontSDiff) {
         frontSDiff = currFrontSDiff;
         frontId = vehicleData.first;
@@ -49,13 +49,15 @@ _GetFrontBackVehicles(const Vehicle& ego,
     }
   }
   std::unordered_map<std::string, Vehicle> result;
+
   if (frontId != -1 and frontSDiff < nonEgoSearchRadius) {
     result["front"] = trackedVehicleMap.at(frontId);
-    SPDLOG_INFO(
+    SPDLOG_DEBUG(
       "Found front id {:2d}, frontSDiff={:7.3f}", frontId, frontSDiff);
   }
   if (backId != -1 and backSDiff < nonEgoSearchRadius) {
     result["back"] = trackedVehicleMap.at(backId);
+    SPDLOG_DEBUG("Found back id {:2d}, backSDiff={:7.3f}", backId, backSDiff);
   }
   return result;
 }
@@ -65,29 +67,59 @@ _GenerateLKProposal(const Vehicle& ego,
                     const TrackedVehicleMap& trackedVehicleMap,
                     const BehaviorPlanner::Options& options)
 {
-  auto frontBackVehicles = _GetFrontBackVehicles(
-    ego, trackedVehicleMap, -1, options.nonEgoSearchRadius);
   const auto& egoConf = ego.GetConfiguration();
+  auto frontBackVehicles = _GetFrontBackVehicles(ego,
+                                                 trackedVehicleMap,
+                                                 Map::GetLaneId(egoConf.dPos),
+                                                 options.nonEgoSearchRadius);
   if (frontBackVehicles.count("front")) {
-    auto vehicleConf = frontBackVehicles["front"].GetConfiguration();
+    auto fronVehicleConf =
+      frontBackVehicles["front"].GetConfiguration(options.timeHorizon);
+
+    SPDLOG_INFO("Tracing {:2d}", frontBackVehicles["front"].GetId());
+
     // TODO: Properly set s offset w.r.t. leading car
-    return Vehicle(
-      ego.GetId(),
-      VehicleConfiguration(
-        vehicleConf.sPos - 20.0, vehicleConf.sVel, 0.0, egoConf.dPos, 0.0, 0.0),
-      options.numMeasurementsToTrack,
-      options.timeStep);
+    return Vehicle(ego.GetId(),
+                   VehicleConfiguration(fronVehicleConf.sPos - 20.0,
+                                        fronVehicleConf.sVel,
+                                        0.0,
+                                        egoConf.dPos,
+                                        0.0,
+                                        0.0));
   }
   return Vehicle(
     ego.GetId(),
-    VehicleConfiguration(egoConf.sPos + 30.0,
-                         5.0,
+    VehicleConfiguration(egoConf.sPos + 10.0,
+                         Mph2Mps(49.5),
                          0.0,
                          Map::GetLaneCenterD(Map::GetLaneId(egoConf.dPos)),
                          0.0,
-                         0.0),
-    options.numMeasurementsToTrack,
-    options.timeStep);
+                         0.0));
+}
+
+Vehicle
+_GenerateLCPProposal(const Vehicle& ego,
+                     const TrackedVehicleMap& trackedVehicleMap,
+                     const BehaviorPlanner::Options& options,
+                     int laneOffset = -1)
+{
+  return Vehicle();
+}
+
+Vehicle
+_GenerateLLCPProposal(const Vehicle& ego,
+                      const TrackedVehicleMap& trackedVehicleMap,
+                      const BehaviorPlanner::Options& options)
+{
+  return _GenerateLCPProposal(ego, trackedVehicleMap, options, -1);
+}
+
+Vehicle
+_GenerateRLCPProposal(const Vehicle& ego,
+                      const TrackedVehicleMap& trackedVehicleMap,
+                      const BehaviorPlanner::Options& options)
+{
+  return _GenerateLCPProposal(ego, trackedVehicleMap, options, -1);
 }
 
 Vehicle
@@ -98,37 +130,31 @@ _GenerateLCProposal(const Vehicle& ego,
 {
   const auto& egoConf = ego.GetConfiguration();
   int currentLaneId = Map::GetLaneId(egoConf.dPos);
-
-  if (currentLaneId + laneOffset < 0) {
-    return ego;
-  }
-
   int targetLaneId = currentLaneId + laneOffset;
   auto frontBackVehicles =
     _GetFrontBackVehicles(ego, trackedVehicleMap, targetLaneId);
 
   if (frontBackVehicles.count("front")) {
-    auto vehicleConf = frontBackVehicles["front"].GetConfiguration();
-    // TODO: Properly set s offset w.r.t. leading car
+    auto vehicleConf =
+      frontBackVehicles["front"].GetConfiguration(options.timeHorizon);
+    SPDLOG_INFO("Chang lane to {} to follow {}", targetLaneId, vehicleConf);
     return Vehicle(ego.GetId(),
-                   VehicleConfiguration(vehicleConf.sPos + 30.0,
-                                        5.0,
+                   VehicleConfiguration(vehicleConf.sPos - 10.0,
+                                        vehicleConf.sVel,
                                         0.0,
                                         Map::GetLaneCenterD(targetLaneId),
                                         0.0,
-                                        0.0),
-                   options.numMeasurementsToTrack,
-                   options.timeStep);
+                                        0.0));
   }
+
+  SPDLOG_INFO("Chang lane to {}", targetLaneId);
   return Vehicle(ego.GetId(),
-                 VehicleConfiguration(egoConf.sPos + 30.0,
-                                      5.0,
+                 VehicleConfiguration(egoConf.sPos + 10.0,
+                                      Mph2Mps(49.5),
                                       0.0,
                                       Map::GetLaneCenterD(targetLaneId),
                                       0.0,
-                                      0.0),
-                 options.numMeasurementsToTrack,
-                 options.timeStep);
+                                      0.0));
 }
 
 Vehicle
@@ -163,19 +189,18 @@ std::vector<BehaviorState>
 BehaviorPlanner::GetSuccessorStates() const
 {
   std::vector<BehaviorState> states = { BehaviorState::kLaneKeeping };
-  // FIXME: Add LCP
-  if (_currState == BehaviorState::kLaneKeeping) {
-    // states.push_back(BehaviorState::kLeftLaneChangePreparation);
-    // states.push_back(BehaviorState::kRightLaneChangePreparation);
-    states.push_back(BehaviorState::kLeftLaneChange);
-    states.push_back(BehaviorState::kRightLaneChange);
-  } else if (_currState == BehaviorState::kLeftLaneChangePreparation) {
-    // states.push_back(BehaviorState::kLeftLaneChangePreparation);
-    states.push_back(BehaviorState::kLeftLaneChange);
-  } else if (_currState == BehaviorState::kRightLaneChangePreparation) {
-    // states.push_back(BehaviorState::kRightLaneChangePreparation);
-    states.push_back(BehaviorState::kRightLaneChange);
-  }
+  // if (_currState == BehaviorState::kLaneKeeping) {
+  //   // states.push_back(BehaviorState::kLeftLaneChangePreparation);
+  //   // states.push_back(BehaviorState::kRightLaneChangePreparation);
+  //   states.push_back(BehaviorState::kLeftLaneChange);
+  //   states.push_back(BehaviorState::kRightLaneChange);
+  // } else if (_currState == BehaviorState::kLeftLaneChangePreparation) {
+  //   // states.push_back(BehaviorState::kLeftLaneChangePreparation);
+  //   states.push_back(BehaviorState::kLeftLaneChange);
+  // } else if (_currState == BehaviorState::kRightLaneChangePreparation) {
+  //   // states.push_back(BehaviorState::kRightLaneChangePreparation);
+  //   states.push_back(BehaviorState::kRightLaneChange);
+  // }
   return states;
 }
 
@@ -185,7 +210,7 @@ BehaviorPlanner::GenerateProposal(
   const Waypoints& prevPath,
   const Waypoint& endPrevPathSD,
   const std::vector<BehaviorState> successorStates,
-  const TrackedVehicleMap& trackedVehicleMap) const
+  const TrackedVehicleMap& trackedVehicleMap)
 {
   const auto& egoConf = ego.GetConfiguration();
   VehicleConfiguration bestProposal;
@@ -193,14 +218,16 @@ BehaviorPlanner::GenerateProposal(
   BehaviorState bestState;
 
   for (const auto& state : successorStates) {
+    SPDLOG_DEBUG("Checking {}", state);
     Vehicle goalState;
-    double time = 2.0;
     if (state == BehaviorState::kLaneKeeping) {
       goalState = _GenerateLKProposal(ego, trackedVehicleMap, _options);
     } else if (state == BehaviorState::kLeftLaneChange) {
       goalState = _GenerateLLCProposal(ego, trackedVehicleMap, _options);
     } else if (state == BehaviorState::kRightLaneChange) {
       goalState = _GenerateRLCProposal(ego, trackedVehicleMap, _options);
+    } else if (state == BehaviorState::kLeftLaneChangePreparation) {
+
     } else {
       // fallback case
       goalState = _GenerateLKProposal(ego, trackedVehicleMap, _options);
@@ -208,34 +235,23 @@ BehaviorPlanner::GenerateProposal(
 
     const auto& goalConf = goalState.GetConfiguration();
 
-    // HACK
-    if (goalConf.dPos < 1e-6 or goalConf.dPos > (12.0 - 1e-6)) {
-      continue;
-    }
+    auto traj = JMT::ComputeTrajectory(egoConf, goalConf, _options.timeHorizon);
+    double cost = _pEvaluator->Evaluate(
+      traj, goalConf, _options.timeHorizon, trackedVehicleMap);
 
-    if (goalConf.sPos < egoConf.sPos + 10.0) {
-      continue;
-    }
-
-    auto traj = JMT::ComputeTrajectory(egoConf, goalConf, time);
-    double cost =
-      _pEvaluator->Evaluate(traj, goalConf, time, trackedVehicleMap);
-
-    SPDLOG_ERROR("goalConf={}, Cost {:s}: {:7.3}", goalConf, state, cost);
+    SPDLOG_DEBUG("  Current cost {:s}: {:7.3}", state, cost);
     if (cost < minCost) {
       minCost = cost;
       bestProposal = goalConf;
       bestState = state;
-      SPDLOG_ERROR("Update best {:s}: {:7.3}", bestState, minCost);
+      SPDLOG_INFO("  Update best {:s}: {:7.3}", bestState, minCost);
     }
   }
 
   SPDLOG_INFO("bestProposal={}, bestState={:s}", bestProposal, bestState);
 
-  return Vehicle(ego.GetId(),
-                 bestProposal,
-                 _options.numMeasurementsToTrack,
-                 _options.timeStep);
+  _currState = bestState;
+  return Vehicle(ego.GetId(), bestProposal);
 }
 
 std::ostream&

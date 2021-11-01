@@ -99,16 +99,20 @@ public:
    * state of the vehicle, and can be used to predict future states.
    *
    */
-  std::pair<Waypoints, JMTTrajectory> GeneratePath(
+  std::pair<Waypoints, JMTTrajectory2D> GeneratePath(
     const Vehicle& startState,
     const Vehicle& goalState,
     const TrackedVehicleMap& trackedVehicleMap,
+    const int numPointsToBeGenerated,
     const double targetExecutionTime = 1.0);
 
-  Vehicle ComputeStartState(const Vehicle& ego,
-                            const JMTTrajectory& prevTraj,
-                            const Waypoints& prevPath,
-                            const Waypoint& endPrevPathSD);
+  void ComputeStartState(const Vehicle& ego,
+                         const JMTTrajectory2D& prevTraj,
+                         const Waypoints& prevPath,
+                         const Waypoint& endPrevPathSD,
+                         double& executedTime,
+                         Vehicle& startState,
+                         int& numPoints);
 
 private:
   Map::ConstPtr _pMap;

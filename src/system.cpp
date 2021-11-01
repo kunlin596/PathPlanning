@@ -96,8 +96,7 @@ System::SpinOnce(const std::string& commandString)
       // ["yaw"] The car's yaw angle in the map int degrees
       // ["speed"] The car's speed in MPH
 
-      cout << endl;
-      SPDLOG_INFO("--- telemetry ---");
+      SPDLOG_DEBUG("--- telemetry ---");
       Waypoint endPathSD = { data["end_path_s"], data["end_path_d"] };
 
       _pEgo->Update(data["x"],
@@ -113,9 +112,9 @@ System::SpinOnce(const std::string& commandString)
 
       // Create the latest perceptions from input command
       // Velocity is already meters per seconds no need to convert
-      Perceptions perceptions =
-        Perception::CreatePerceptions(data["sensor_fusion"]);
-      SPDLOG_DEBUG("perceptions={}", perceptions);
+      Perceptions perceptions = Perception::CreatePerceptions(
+        data["sensor_fusion"], _pMap, _pConf->timeStep);
+      // SPDLOG_DEBUG("perceptions={}", perceptions);
 
       _pTracker->Update(*_pEgo, perceptions);
 
@@ -127,8 +126,17 @@ System::SpinOnce(const std::string& commandString)
 
       const auto successorStates = _pBehaviorPlanner->GetSuccessorStates();
 
-      Vehicle startState = _pPathGenerator->ComputeStartState(
-        *_pEgo, _state.cachedTrajectory, prevPath, endPathSD);
+      Vehicle startState;
+      double executedTime;
+      int numPoints;
+      _pPathGenerator->ComputeStartState(*_pEgo,
+                                         _state.cachedTrajectory,
+                                         prevPath,
+                                         endPathSD,
+                                         executedTime,
+                                         startState,
+                                         numPoints);
+
       SPDLOG_DEBUG("Computed startState={}", startState.GetConfiguration());
 
       Vehicle proposal = _pBehaviorPlanner->GenerateProposal(
@@ -143,9 +151,13 @@ System::SpinOnce(const std::string& commandString)
                   proposal.GetConfiguration());
 
       Waypoints path;
-      JMTTrajectory trajectory;
+      JMTTrajectory2D trajectory;
       std::tie(path, trajectory) = _pPathGenerator->GeneratePath(
-        startState, proposal, trackedVehicleMap, 2.0); // Fix time
+        startState,
+        proposal,
+        trackedVehicleMap,
+        numPoints,
+        _pConf->timeHorizon - executedTime); // Fix time
 
       UpdateCachedTrajectory(trajectory);
 

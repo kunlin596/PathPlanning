@@ -5,6 +5,7 @@
 
 #include "Eigen-3.3/Eigen/Dense"
 #include "configuration.h"
+#include "kalman_filter.h"
 #include "log.h"
 #include "map.h"
 #include "math.h"
@@ -86,47 +87,17 @@ VehicleConfiguration
 operator+(VehicleConfiguration lhs, const VehicleConfiguration& rhs);
 
 /**
- * @brief      This class describes a kinematics calculator.
- *
- * It collects position measurements and use it to compute velocity and
- * accelaration .
- */
-class KinematicsTracker
-{
-public:
-  KinematicsTracker() {}
-  KinematicsTracker(int numMeasurementsToTrack, double timeStep)
-    : _numMeasurementsToTrack(numMeasurementsToTrack)
-    , _timeStep(timeStep)
-  {}
-  std::array<double, 3> GetValues() const { return _values; }
-
-  void Update(double pos);
-
-private:
-  int _numMeasurementsToTrack = 30;
-  double _timeStep = 0.02;
-  std::vector<double>
-    _measursments; ///< For calculating speed and accelaration.
-  std::array<double, 3> _values = { 0.0, 0.0, 0.0 };
-};
-
-/**
  * @brief      This class describes a vehicle.
  */
 class Vehicle
 {
 public:
-  Vehicle(){};
-  Vehicle(const int id,
-          const VehicleConfiguration& conf,
-          int numMeasurementsToTrack,
-          double timeStep)
+  Vehicle() {}
+  Vehicle(const int id, const VehicleConfiguration& conf)
     : _id(id)
     , _conf(conf)
-    , _sTracker(KinematicsTracker(numMeasurementsToTrack, timeStep))
-    , _dTracker(KinematicsTracker(numMeasurementsToTrack, timeStep))
   {}
+
   virtual ~Vehicle() {}
 
   inline int GetId() const { return _id; }
@@ -146,17 +117,15 @@ public:
 
   static Vehicle CreateFromPerception(const Map::ConstPtr& pMap,
                                       const Perception& perception,
-                                      int numMeasurementsToTrack,
                                       double timeStep);
 
   friend std::ostream& operator<<(std::ostream& out, const Vehicle& vehicle);
 
+  static constexpr double Size = 4.5; ///< Model the car as as square box
+
 protected:
   int _id = -1;
   VehicleConfiguration _conf;
-
-  KinematicsTracker _sTracker; ///< For estimating s kinematics
-  KinematicsTracker _dTracker; ///< For estimating d kinematics
 };
 
 /**

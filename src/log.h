@@ -1,6 +1,11 @@
 #ifndef PATHPLANNING_LOG_H
 #define PATHPLANNING_LOG_H
 
+// For debug log to appear, See https://github.com/gabime/spdlog/issues/1318
+#ifndef SPDLOG_ACTIVE_LEVEL
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#endif
+
 #include <spdlog/fmt/bundled/ranges.h>
 #include <spdlog/fmt/ostr.h> // must be included
 #include <spdlog/spdlog.h>

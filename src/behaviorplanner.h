@@ -75,17 +75,17 @@ public:
   {
     JMTTrajectoryEvaluator::Options trajEvaluationOptions;
 
-    int numMeasurementsToTrack = 30;
     double nonEgoSearchRadius = 30.0;
     double timeStep = 0.02;
+    double timeHorizon = 1.0;
 
     Options(const Configuration& conf)
       : trajEvaluationOptions(conf)
     {
       timeStep = conf.timeStep;
+      timeHorizon = conf.timeHorizon;
 
       nonEgoSearchRadius = conf.tracker.nonEgoSearchRadius;
-      numMeasurementsToTrack = conf.tracker.numMeasurementsToTrack;
     }
   };
 
@@ -113,7 +113,7 @@ public:
                            const Waypoints& prevPath,
                            const Waypoint& endPrevPathSD,
                            const std::vector<BehaviorState> successorStates,
-                           const TrackedVehicleMap& trackedVehicleMap) const;
+                           const TrackedVehicleMap& trackedVehicleMap);
 
 private:
   const Map::ConstPtr& _pMap;

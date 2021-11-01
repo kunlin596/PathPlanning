@@ -5,22 +5,22 @@
 
 namespace pathplanning {
 
-QuinticFunctor
+JMTTrajectory1D
 JMT::Solve1D(const std::array<double, 3>& start,
              const std::array<double, 3>& end,
              const double t)
 {
   std::array<double, 6> coeffs;
   Eigen::Matrix3d A;
-  const double t2 = t * t;
-  const double t3 = t2 * t;
-  const double t4 = t3 * t;
-  const double t5 = t4 * t;
+  double t2 = t * t;
+  double t3 = t2 * t;
+  double t4 = t3 * t;
+  double t5 = t4 * t;
   // clang-format off
   A <<
     t3     , t4      , t5      ,
-    3 * t2 , 4 * t3  , 5 * t4  ,
-    6 * t  , 12 * t2 , 20 * t3 ;
+    3.0 * t2 , 4.0 * t3  , 5.0 * t4  ,
+    6.0 * t  , 12.0 * t2 , 20.0 * t3 ;
 
   Eigen::Vector3d b = {
       end[0] - (start[0] + start[1] * t + start[2] * t2 / 2.0),
@@ -38,11 +38,11 @@ JMT::Solve1D(const std::array<double, 3>& start,
   coeffs[3] = x[0];
   coeffs[4] = x[1];
   coeffs[5] = x[2];
-  // SPDLOG_INFO(params);
-  return QuinticFunctor(coeffs);
+  SPDLOG_TRACE(coeffs);
+  return JMTTrajectory1D(coeffs, t);
 }
 
-QuinticFunctor
+JMTTrajectory1D
 JMT::Solve1D(const std::array<double, 6>& params, const double t)
 {
   return Solve1D({ params[0], params[1], params[2] },
@@ -50,23 +50,23 @@ JMT::Solve1D(const std::array<double, 6>& params, const double t)
                  t);
 }
 
-SDFunctor
+JMTTrajectory2D
 JMT::Solve2D(const std::array<double, 6>& sParams,
              const std::array<double, 6>& dParams,
              const double t)
 {
-  return SDFunctor(JMT::Solve1D(sParams, t), JMT::Solve1D(dParams, t));
+  return { JMT::Solve1D(sParams, t), JMT::Solve1D(dParams, t) };
 }
 
-JMTTrajectory
+JMTTrajectory2D
 JMT::ComputeTrajectory(const std::array<double, 6>& sParams,
                        const std::array<double, 6>& dParams,
                        const double t)
 {
-  return JMTTrajectory(JMT::Solve2D(sParams, dParams, t), t);
+  return JMT::Solve2D(sParams, dParams, t);
 }
 
-JMTTrajectory
+JMTTrajectory2D
 JMT::ComputeTrajectory(const VehicleConfiguration& start,
                        const VehicleConfiguration& end,
                        const double t)
@@ -89,9 +89,9 @@ JMT::ComputeTrajectory(const VehicleConfiguration& start,
 }
 
 double
-JMTTrajectory::ComputeNearestApproach(const Vehicle& vehicle,
-                                      double maxTimeDuration,
-                                      double timeStep) const
+JMTTrajectory2D::ComputeNearestApproach(const Vehicle& vehicle,
+                                        double maxTimeDuration,
+                                        double timeStep) const
 {
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
@@ -109,9 +109,9 @@ JMTTrajectory::ComputeNearestApproach(const Vehicle& vehicle,
 }
 
 double
-JMTTrajectory::ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
-                                      double maxTimeDuration,
-                                      double timeStep) const
+JMTTrajectory2D::ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
+                                        double maxTimeDuration,
+                                        double timeStep) const
 {
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
@@ -132,7 +132,7 @@ JMTTrajectory::ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
 }
 
 double
-JMTTrajectory::ComputeNearestApproach(
+JMTTrajectory2D::ComputeNearestApproach(
   const std::unordered_map<int, Vehicle>& vehicles,
   double maxTimeDuration,
   double timeStep) const
@@ -157,18 +157,12 @@ JMTTrajectory::ComputeNearestApproach(
 }
 
 std::ostream&
-operator<<(std::ostream& out, const pathplanning::SDFunctor& functor)
+operator<<(std::ostream& out, const pathplanning::JMTTrajectory2D& traj)
 {
-  return out << fmt::format("SDFunctor(QuinticFunctor({}), QuinticFunctor({}))",
-                            functor.GetSFunc(),
-                            functor.GetDFunc());
-}
-
-std::ostream&
-operator<<(std::ostream& out, const pathplanning::JMTTrajectory& traj)
-{
-  return out << fmt::format(
-           "JMTTrajectory({}, {})", traj.elapsedTime, traj._sdFunc);
+  return out << fmt::format("JMTTrajectory2D(time={}, sCoeffs={}, dCoeffs{})",
+                            traj.elapsedTime,
+                            traj.GetSFunc(),
+                            traj.GetDFunc());
 }
 
 } // namespace pathplanning

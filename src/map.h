@@ -75,6 +75,22 @@ public:
     return HALF_LANE_WIDTH + LANE_WIDTH * static_cast<double>(laneId);
   }
 
+  static inline std::array<double, 2> GetRoadBoundary()
+  {
+    return { 0.0, NUM_LANES * LANE_WIDTH };
+  }
+
+  static inline std::array<double, 2> GetLaneBoundary(int laneId)
+  {
+    double centerD = GetLaneCenterD(laneId);
+    return { centerD - HALF_LANE_WIDTH, centerD + HALF_LANE_WIDTH };
+  }
+
+  static inline bool IsInRoad(double d) {
+    static const auto roadBoundary = GetRoadBoundary();
+    return roadBoundary[0] < d and d < roadBoundary[1];
+  }
+
   static inline bool IsInLane(double d, int laneId)
   {
     return (static_cast<double>(laneId) * LANE_WIDTH) < d and
@@ -117,6 +133,19 @@ private:
   struct Impl;
   std::shared_ptr<Impl> _pImpl;
 };
+
+inline std::array<double, 2>
+ComputeSDVelocity(const Map::ConstPtr& pMap,
+                  const std::array<double, 2>& xy,
+                  const std::array<double, 2>& xyVel,
+                  const std::array<double, 2>& sd,
+                  const double time)
+{
+  std::array<double, 2> sd2 = pMap->GetSD(
+    xy[0] + xyVel[0], xy[1] + xyVel[1], std::atan2(xyVel[1], xyVel[0]));
+
+  return { (sd2[0] - sd[0]) /*/ time*/, (sd2[1] - sd[2]) /*/ time*/ };
+}
 
 } // namespace pathplanning
 

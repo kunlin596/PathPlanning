@@ -84,71 +84,31 @@ VehicleConfiguration::operator-=(const VehicleConfiguration& rhs)
 }
 
 void
-KinematicsTracker::Update(double pos)
-{
-  _measursments.push_back(pos);
-
-  if (_measursments.size() > _numMeasurementsToTrack) {
-    _measursments.erase(_measursments.begin());
-  }
-
-  if (_measursments.size() > 2) {
-    size_t index3 = _measursments.size() - 1;
-    size_t index2 = _measursments.size() - 2;
-    size_t index1 = _measursments.size() - 3;
-    double dist1 = _measursments[index2] - _measursments[index1];
-    double dist2 = _measursments[index3] - _measursments[index1];
-    double t1 = _timeStep;
-    double t2 = t1 * t1;
-    Eigen::Matrix2d A;
-
-    // clang-format off
-    A <<
-      t1, 0.5 * t2,
-      t2, 0.5 * t2;
-    // clang-format on
-
-    Eigen::Vector2d b;
-    b << dist1, dist2;
-    Eigen::Vector2d x = A.inverse() * b;
-    _values[0] = pos;
-    _values[1] = x[0];
-    _values[2] = x[1];
-  }
-}
-
-void
 Vehicle::Update(const Perception& perception)
 {
+  assert(_id == perception.id);
   const auto& sd = perception.sd;
-  _sTracker.Update(sd[0]);
-  _dTracker.Update(sd[1]);
-  auto sValues = _sTracker.GetValues();
-  auto dValues = _dTracker.GetValues();
-  _conf = VehicleConfiguration(
-    sValues[0], sValues[1], sValues[2], dValues[0], dValues[1], dValues[2]);
+  _conf = VehicleConfiguration(perception.sd[0],
+                               perception.sdVel[0],
+                               0.0,
+                               perception.sd[1],
+                               perception.sdVel[1],
+                               0.0);
 }
 
 Vehicle
 Vehicle::CreateFromPerception(const Map::ConstPtr& pMap,
                               const Perception& perception,
-                              int numMeasurementsToTrack,
                               double timeStep)
 {
   VehicleConfiguration conf;
-  conf.sPos = perception.sd[0];
-  conf.dPos = perception.sd[1];
+  auto sdVel = ComputeSDVelocity(
+    pMap, perception.xy, perception.xyVel, perception.sd, timeStep);
+  conf.sVel = sdVel[0];
+  conf.dVel = sdVel[1];
+  // Assume constant accelaration, do nothing
 
-  std::array<double, 2> sd2 =
-    pMap->GetSD(perception.xy[0] + perception.vel[0],
-                perception.xy[1] + perception.vel[1],
-                std::atan2(perception.vel[1], perception.vel[0]));
-
-  conf.sVel = (sd2[0] - conf.sPos);
-  conf.dVel = (sd2[1] - conf.dPos);
-  // Assume constant accelaration
-
-  return Vehicle(perception.id, conf, numMeasurementsToTrack, timeStep);
+  return Vehicle(perception.id, conf);
 }
 
 VehicleConfiguration
@@ -189,20 +149,16 @@ Ego::Update(double x, double y, double s, double d, double yaw, double speed)
   _yaw = yaw;
   _speed = speed;
 
-  _sTracker.Update(s);
-  _dTracker.Update(d);
-  auto sValues = _sTracker.GetValues();
-  auto dValues = _dTracker.GetValues();
-  _conf = VehicleConfiguration(
-    sValues[0], sValues[1], sValues[2], dValues[0], dValues[1], dValues[2]);
+  // TODO: Compute sd velocity
+  _conf = VehicleConfiguration(s, speed, 0.0, d, 0.0, 0.0);
 }
 
 std::ostream&
 operator<<(std::ostream& out, const pathplanning::VehicleConfiguration& conf)
 {
-  return out << fmt::format("VehicleConfiguration("
-                            "sPos={:7.3f}, sVel={:7.3f}, sAcc={:7.3f}, "
-                            "dPos={:7.3f}, dVel={:7.3f}, dAcc={:7.3f})",
+  return out << fmt::format("VehicleConf("
+                            "sPos={:5.3f}, sVel={:3.3f}, sAcc={:3.3f}, "
+                            "dPos={:5.3f}, dVel={:3.3f}, dAcc={:3.3f})",
                             conf.sPos,
                             conf.sVel,
                             conf.sAcc,

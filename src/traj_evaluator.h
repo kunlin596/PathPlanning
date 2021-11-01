@@ -6,8 +6,8 @@
 #include "jmt.h"
 
 namespace pathplanning {
-
 namespace costs {
+
 enum class CostType
 {
   kTimeDiff,
@@ -26,7 +26,7 @@ enum class CostType
 
 struct CostFunctorBase;
 
-}
+} // namesapce costs
 
 /**
  * @brief      This class describes a jmt trajectory evaluator.
@@ -94,7 +94,7 @@ public:
    *
    * @return     Total cost
    */
-  double Evaluate(const JMTTrajectory& traj,
+  double Evaluate(const JMTTrajectory2D& traj,
                   const VehicleConfiguration& goalConf,
                   const double requestTime,
                   const TrackedVehicleMap& trackedVehicleMap);
@@ -127,7 +127,7 @@ struct CostFunctorBase
    *
    * @return     Cost value
    */
-  virtual double Compute(const JMTTrajectory& traj,
+  virtual double Compute(const JMTTrajectory2D& traj,
                          const VehicleConfiguration& goalConf,
                          const double requestTime,
                          const TrackedVehicleMap& trackedVehicleMap,
@@ -143,7 +143,7 @@ struct CostFunctorBase
  */
 struct TimeDiffCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -158,7 +158,7 @@ struct TimeDiffCost : public CostFunctorBase
  */
 struct SDiffCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -173,7 +173,7 @@ struct SDiffCost : public CostFunctorBase
  */
 struct DDiffCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -185,7 +185,7 @@ struct DDiffCost : public CostFunctorBase
  */
 struct CollisionCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -199,7 +199,7 @@ struct CollisionCost : public CostFunctorBase
  */
 struct BufferCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -211,7 +211,7 @@ struct BufferCost : public CostFunctorBase
  */
 struct StaysOnRoadCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -223,7 +223,7 @@ struct StaysOnRoadCost : public CostFunctorBase
  */
 struct ExceedsSpeedLimitCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -235,7 +235,7 @@ struct ExceedsSpeedLimitCost : public CostFunctorBase
  */
 struct EfficiencyCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -248,7 +248,7 @@ struct EfficiencyCost : public CostFunctorBase
 struct TotalAccelCost : public CostFunctorBase
 {
 
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -260,7 +260,7 @@ struct TotalAccelCost : public CostFunctorBase
  */
 struct MaxAccelCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -272,7 +272,7 @@ struct MaxAccelCost : public CostFunctorBase
  */
 struct TotalJerkCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
@@ -284,16 +284,15 @@ struct TotalJerkCost : public CostFunctorBase
  */
 struct MaxJerkCost : public CostFunctorBase
 {
-  double Compute(const JMTTrajectory& traj,
+  double Compute(const JMTTrajectory2D& traj,
                  const VehicleConfiguration& goalConf,
                  const double requestTime,
                  const TrackedVehicleMap& trackedVehicleMap,
                  const JMTTrajectoryEvaluator::Options& options) override;
 };
 
-} // namespace costs
-
 std::ostream&
-operator<<(std::ostream& out, const costs::CostType& type);
+operator<<(std::ostream& out, const CostType& type);
 
+} // namespace costs
 } // namespace pathplanning

@@ -9,6 +9,12 @@
 
 namespace pathplanning {
 
+struct Constants
+{
+  static constexpr double MAX_BREAKING_ACCELATATION = -10.0;
+  static constexpr double MAX_ACCELATATION = 10.0;
+};
+
 class Configuration
 {
 public:

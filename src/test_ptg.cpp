@@ -16,15 +16,15 @@ Test(PolynomialTrajectoryGenerator& g,
   TrackedVehicleMap trackedVehicleMap;
   Waypoints prevPath;
 
-  Vehicle startState(0, start, 30, 0.02);
-  Vehicle goalState(0, goal, 30, 0.02);
+  Vehicle startState(0, start);
+  Vehicle goalState(0, goal);
 
   SPDLOG_INFO(start);
   SPDLOG_INFO(goal);
   double targetExecutionTime = 10.0;
 
   Waypoints xywaypoints;
-  JMTTrajectory trajectory;
+  JMTTrajectory2D trajectory;
   std::tie(xywaypoints, trajectory) = g.GeneratePath(
     startState, goalState, trackedVehicleMap, targetExecutionTime);
 

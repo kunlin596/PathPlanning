@@ -109,6 +109,7 @@ struct PolynomialFunctor
   std::array<double, Order + 1> coeffs;
 };
 
+using ConstantFunctor = PolynomialFunctor<0>;
 using LinearFunctor = PolynomialFunctor<1>;
 using QuadraticFunctor = PolynomialFunctor<2>;
 using CubicFunctor = PolynomialFunctor<3>;
