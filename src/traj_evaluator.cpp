@@ -56,14 +56,10 @@ SDiffCost::Compute(const JMTTrajectory2D& traj,
 {
   double cost = 0.0;
   VehicleConfiguration finalConf = traj(traj.GetTime());
-  cost +=
-    Logistic(std::abs(finalConf.sPos - goalConf.sPos) / options.evalSigmas[0]);
-  cost +=
-    Logistic(std::abs(finalConf.sVel - goalConf.sVel) / options.evalSigmas[1]);
-  cost +=
-    Logistic(std::abs(finalConf.sAcc - goalConf.sAcc) / options.evalSigmas[2]);
-
-  return cost;
+  cost += GaussianLoss1D(goalConf.sPos, options.evalSigmas[0], finalConf.sPos);
+  cost += GaussianLoss1D(goalConf.sVel, options.evalSigmas[1], finalConf.sVel);
+  cost += GaussianLoss1D(goalConf.sAcc, options.evalSigmas[2], finalConf.sAcc);
+  return cost / 3.0;
 }
 
 double
@@ -75,13 +71,10 @@ DDiffCost::Compute(const JMTTrajectory2D& traj,
 {
   double cost = 0.0;
   VehicleConfiguration finalConf = traj(traj.GetTime());
-  cost +=
-    Logistic(std::abs(finalConf.dPos - goalConf.dPos) / options.evalSigmas[3]);
-  cost +=
-    Logistic(std::abs(finalConf.dVel - goalConf.dVel) / options.evalSigmas[4]);
-  cost +=
-    Logistic(std::abs(finalConf.dAcc - goalConf.dAcc) / options.evalSigmas[5]);
-  return cost;
+  cost += GaussianLoss1D(goalConf.dPos, options.evalSigmas[3], finalConf.dPos);
+  cost += GaussianLoss1D(goalConf.dVel, options.evalSigmas[4], finalConf.dVel);
+  cost += GaussianLoss1D(goalConf.dAcc, options.evalSigmas[5], finalConf.dAcc);
+  return cost / 3.0;
 }
 
 double
@@ -98,6 +91,7 @@ CollisionCost::Compute(const JMTTrajectory2D& traj,
   }
   return 0.0;
 }
+
 double
 BufferCost::Compute(const JMTTrajectory2D& traj,
                     const VehicleConfiguration& goalConf,
