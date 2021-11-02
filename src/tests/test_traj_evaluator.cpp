@@ -52,13 +52,49 @@ TEST(TrajEvaluator, SDiffTest)
   EXPECT_EQ(cost, 0.0);
 }
 
-TEST(TrajEvaluator, CollisionTest)
+TEST(TrajEvaluator, StaticCollisionTest)
 {
   VehicleConfiguration startConf(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-  VehicleConfiguration goalConf(30.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-  double time = 1.5;
+  VehicleConfiguration goalConf(20.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  double time = 2.0;
+  TrackedVehicleMap vehicles;
+  costs::CollisionCost costFunc;
+  JMTTrajectoryEvaluator::Options options;
+
+  JMTTrajectory2D traj = JMT::ComputeTrajectory(startConf, goalConf, time);
+
+  vehicles[0] = Vehicle(
+    0, VehicleConfiguration(10.0, 0.0, 0.0, Vehicle::Size - 1e-6, 0.0, 0.0));
+
+  double cost = costFunc.Compute(traj, goalConf, time, vehicles, options);
+  EXPECT_EQ(cost, 1.0);
+
+  vehicles[0] = Vehicle(
+    0, VehicleConfiguration(10.0, 0.0, 0.0, Vehicle::Size + 1e-6, 0.0, 0.0));
+  cost = costFunc.Compute(traj, goalConf, time, vehicles, options);
+  EXPECT_EQ(cost, 0.0);
+}
+
+TEST(TrajEvaluator, DynamicCollisionTest)
+{
+  VehicleConfiguration startConf(0.0, 20.0, 0.0, 0.0, 0.0, 0.0);
+  VehicleConfiguration goalConf(20.0, 30.0, 0.0, 0.0, 0.0, 0.0);
+  double time = 2.0;
   JMTTrajectory2D traj = JMT::ComputeTrajectory(startConf, goalConf, time);
 
   TrackedVehicleMap vehicles;
-  vehicles[0] = Vehicle(0, VehicleConfiguration(20.0, 1.0, 0.0, 0.0, 0.0, 0.0));
+  vehicles[0] =
+    Vehicle(0, VehicleConfiguration(10.0, 1.0, 0.0, 0.0, 0.0, 0.0));
+
+  costs::CollisionCost costFunc;
+  JMTTrajectoryEvaluator::Options options;
+
+  double cost = costFunc.Compute(traj, goalConf, time, vehicles, options);
+  EXPECT_EQ(cost, 1.0);
+
+  vehicles[0] =
+    Vehicle(0, VehicleConfiguration(10.0, 5.0, 0.0, 0.0, 0.0, 0.0));
+
+  cost = costFunc.Compute(traj, goalConf, time, vehicles, options);
+  EXPECT_EQ(cost, 1.0);
 }

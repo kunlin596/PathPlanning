@@ -120,6 +120,13 @@ JMTTrajectory1D::Dump() const
   return j;
 }
 
+void
+JMTTrajectory1D::Write(const std::string& filename) const
+{
+  std::ofstream o(filename);
+  o << std::setw(4) << Dump() << std::endl;
+}
+
 double
 JMTTrajectory2D::ComputeNearestApproach(const Vehicle& vehicle,
                                         double maxTimeDuration,
@@ -196,6 +203,13 @@ JMTTrajectory2D::Dump() const
   j.push_back(_traj1.Dump());
   j.push_back(_traj2.Dump());
   return j;
+}
+
+void
+JMTTrajectory2D::Write(const std::string& filename) const
+{
+  std::ofstream o(filename);
+  o << std::setw(4) << Dump() << std::endl;
 }
 
 bool

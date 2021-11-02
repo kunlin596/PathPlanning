@@ -10,7 +10,7 @@
     "maxAcc": 10,
     "expectedAccInOneSec": 2.0,
     "expectedJerkInOneSec": 1.0,
-    "collisionCheckingRadius": 1.5
+    "collisionCheckingRadius": 5.0
   },
   "goalSampler": {
     "use": false,

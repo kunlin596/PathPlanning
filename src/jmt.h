@@ -60,6 +60,7 @@ struct JMTTrajectory1D
   }
 
   nlohmann::json Dump() const;
+  void Write(const std::string& filename) const;
 
   const QuinticFunctor& GetFunc5() const { return _func5; }
   const QuarticFunctor& GetFunc4() const { return _func4; }
@@ -111,6 +112,8 @@ struct JMTTrajectory2D
   bool IsValid(const ValidationParams& params) const;
 
   nlohmann::json Dump() const;
+
+  void Write(const std::string& filename) const;
 
   inline VehicleConfiguration Eval(const double t) const
   {

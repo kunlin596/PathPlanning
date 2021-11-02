@@ -1,4 +1,5 @@
 #include "traj_evaluator.h"
+#include "log.h"
 
 namespace pathplanning {
 namespace costs {
@@ -85,8 +86,12 @@ CollisionCost::Compute(const JMTTrajectory2D& traj,
                        const JMTTrajectoryEvaluator::Options& options)
 {
   double dist = traj.ComputeNearestApproach(
-    trackedVehicleMap, options.timeHorizon, options.timeStep);
-  if (dist < options.collisionCheckingRadius + Vehicle::Size) {
+    trackedVehicleMap, traj.GetTime(), options.collisionCheckingTimeStep);
+  double threshold = std::max(Vehicle::Size, options.collisionCheckingRadius);
+  if (dist < threshold) {
+    SPDLOG_INFO("Collision detected, closest dist={:7.3f}, threshold={:7.3f}",
+                dist,
+                threshold);
     return 1.0;
   }
   return 0.0;
@@ -101,7 +106,8 @@ BufferCost::Compute(const JMTTrajectory2D& traj,
 {
   double dist = traj.ComputeNearestApproach(
     trackedVehicleMap, options.timeHorizon, options.timeStep);
-  return Logistic(options.collisionCheckingRadius / (dist - Vehicle::Size));
+  double threshold = std::max(Vehicle::Size, options.collisionCheckingRadius);
+  return Logistic(threshold / (dist - threshold));
 }
 double
 StaysOnRoadCost::Compute(const JMTTrajectory2D& traj,

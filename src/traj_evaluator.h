@@ -41,7 +41,8 @@ public:
   {
     double timeHorizon = 2.0;
     double timeStep = 0.02;
-    double collisionCheckingRadius = 30.0;
+    double collisionCheckingTimeStep = 0.005; // TODO
+    double collisionCheckingRadius = Vehicle::Size;
     double expectedAccInOneSec = 2.0;
     double expectedJerkInOneSec = 1.0;
     double maxAcc = 10.0;
