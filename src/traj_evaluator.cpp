@@ -107,8 +107,10 @@ BufferCost::Compute(const JMTTrajectory2D& traj,
   double dist = traj.ComputeNearestApproach(
     trackedVehicleMap, options.timeHorizon, options.timeStep);
   double threshold = std::max(Vehicle::Size, options.collisionCheckingRadius);
-  return Logistic(threshold / (dist - threshold));
+  static constexpr double SIGMA = Vehicle::Size; // meter
+  return Gaussian1D(threshold, dist, SIGMA);
 }
+
 double
 StaysOnRoadCost::Compute(const JMTTrajectory2D& traj,
                          const VehicleConfiguration& goalConf,
