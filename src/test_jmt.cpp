@@ -96,41 +96,54 @@ TEST(JMTTest, ValidationTest)
   // o << std::setw(4) << j << std::endl;
 }
 
-TEST(JMTTest, TimeTest)
-{
-  using namespace nlohmann;
-  json j;
+// TEST(JMTTest, Solve2DTest)
+// {
+//   double currTime = 0.5;
+//   while (currTime < 10.0 + 1e-6) {
+//     JMTTrajectory2D traj2d = JMT::Solve2D(
+//       { 0.0, 0.0, 0.0, 30.0, 20.0, 1.0 }, { 0.0, 0.0, 0.0, 0.0, 10, 2.0 }, currTime);
+//     currTime += 0.5;
+//     auto j = traj2d.Dump();
+//     std::ofstream o(fmt::format("traj2d-{:.3f}.json", currTime));
+//     o << std::setw(4) << j << std::endl;
+//   }
+// }
 
-  double time = 1.0;
-  do {
-    JMTTrajectory1D traj1d =
-      JMT::Solve1D({ 0.0, 0.0, 0.0 }, { 30.0, 20.0, 2.0 }, time);
-    j[fmt::format("traj1d_time_exp,{:.3f}", time)] = traj1d.Dump();
-    time += 0.2;
-  } while (time < 10.0);
-  std::ofstream o("traj1d_time_exp.json");
-  o << std::setw(4) << j << std::endl;
-}
+// TEST(JMTTest, TimeTest)
+// {
+//   using namespace nlohmann;
+//   json j;
 
-TEST(JMTTest, MergeTest)
-{
-  std::vector<std::array<double, 3>> points = { { 0.0, 0.0, 0.0 },
-                                                { 30.0, 10.0, 2.0 },
-                                                { 60.0, 20.0, 1.0 },
-                                                { 70.0, 40.0, 2.0 },
-                                                { 100.0, 49.0, 2.0 } };
-  std::vector<double> times = { 2.0, 2.0, 2.0, 1.0 };
-  using namespace nlohmann;
-  json j;
+//   double time = 1.0;
+//   do {
+//     JMTTrajectory1D traj1d =
+//       JMT::Solve1D({ 0.0, 0.0, 0.0 }, { 30.0, 10.0, 1.0 }, time);
+//     j[fmt::format("traj1d_time_exp,{:.3f}", time)] = traj1d.Dump();
+//     time += 0.1;
+//   } while (time < 4.0);
+//   std::ofstream o("traj1d_time_exp.json");
+//   o << std::setw(4) << j << std::endl;
+// }
 
-  std::vector<JMTTrajectory1D> trajs;
-  for (int i = 1; i < points.size(); ++i) {
-    double t = times[i - 1];
-    auto start = points[i - 1];
-    auto end = points[i];
-    JMTTrajectory1D traj1d = JMT::Solve1D(start, end, t);
-    j[fmt::format("traj1d_seg_{:d}", i)] = traj1d.Dump();
-  }
-  std::ofstream o("traj1d_merge_test.json");
-  o << std::setw(4) << j << std::endl;
-}
+// TEST(JMTTest, MergeTest)
+// {
+//   std::vector<std::array<double, 3>> points = { { 0.0, 0.0, 0.0 },
+//                                                 { 30.0, 10.0, 2.0 },
+//                                                 { 60.0, 20.0, 1.0 },
+//                                                 { 70.0, 40.0, 2.0 },
+//                                                 { 100.0, 49.0, 2.0 } };
+//   std::vector<double> times = { 2.0, 2.0, 2.0, 1.0 };
+//   using namespace nlohmann;
+//   json j;
+
+//   std::vector<JMTTrajectory1D> trajs;
+//   for (int i = 1; i < points.size(); ++i) {
+//     double t = times[i - 1];
+//     auto start = points[i - 1];
+//     auto end = points[i];
+//     JMTTrajectory1D traj1d = JMT::Solve1D(start, end, t);
+//     j[fmt::format("traj1d_seg_{:d}", i)] = traj1d.Dump();
+//   }
+//   std::ofstream o("traj1d_merge_test.json");
+//   o << std::setw(4) << j << std::endl;
+// }
