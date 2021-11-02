@@ -64,7 +64,7 @@ target_link_libraries(
 enable_testing()
 find_package(GTest REQUIRED)
 
-add_executable(test_math src/test_math.cpp)
+add_executable(test_math src/tests/test_math.cpp)
 target_link_libraries(
   test_math
   PRIVATE
@@ -73,7 +73,7 @@ target_link_libraries(
   gtest_main
 )
 
-add_executable(test_jmt src/test_jmt.cpp)
+add_executable(test_jmt src/tests/test_jmt.cpp)
 target_link_libraries(
   test_jmt
   PRIVATE
@@ -82,7 +82,7 @@ target_link_libraries(
   gtest_main
 )
 
-add_executable(test_ptg src/test_ptg.cpp)
+add_executable(test_ptg src/tests/test_ptg.cpp)
 target_link_libraries(
   test_ptg
   PRIVATE

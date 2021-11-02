@@ -1,6 +1,6 @@
-#include "jmt.h"
+#include "../jmt.h"
 // #include "json.hpp"
-#include "log.h"
+#include "../log.h"
 
 #include <gtest/gtest.h>
 
