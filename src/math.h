@@ -80,6 +80,12 @@ Gaussian1D(double mu, double sigma, double x)
          std::exp(-0.5 * std::pow((x - mu) / sigma, 2.0));
 }
 
+inline double
+GaussianLoss1D(double mu, double sigma, double x)
+{
+  return Gaussian1D(mu, sigma, mu) - Gaussian1D(mu, sigma, x);
+}
+
 /**
  * @brief      Polynomial equation definition
  */

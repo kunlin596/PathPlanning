@@ -44,9 +44,7 @@ TimeDiffCost::Compute(const JMTTrajectory2D& traj,
 {
   // Flip gaussian distribution upside down
   static constexpr double SIGMA = 1.0; // seconds
-  double peak = Gaussian1D(requestTime, SIGMA, requestTime);
-  double prob = Gaussian1D(requestTime, SIGMA, traj.GetTime());
-  return peak - prob;
+  return GaussianLoss1D(requestTime, SIGMA, traj.GetTime());
 }
 
 double
