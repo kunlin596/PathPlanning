@@ -24,21 +24,18 @@
   "driverProfileName": "default",
   "driverProfiles": {
     "default": {
-      "timeDiff": -1.0,
-      "sDiff": -1.0,
-      "dDiff": -1.0,
-      "collision": -1e6,
-      "buffer": -1.0,
+      "timeDiff": 1.0,
+      "sDiff": 1.0,
+      "dDiff": 1.0,
+      "collision": 1e6,
+      "buffer": 1.0,
       "staysOnRoad": 1e6,
-      "exceedsSpeedLimit": -1.0,
-      "efficiency": -1.0,
-      "totalAccel": -1.0,
-      "maxAccel": -1.0,
-      "totalJerk": -1.0,
-      "maxJerk": -1.0
+      "exceedsSpeedLimit": 1e6,
+      "efficiency": 1.0,
+      "totalAccel": 1.0,
+      "maxAccel": 1e6,
+      "totalJerk": 1.0,
+      "maxJerk": 1e6
     }
-  },
-  "debug": {
-    "onlyLK": true
   }
 }

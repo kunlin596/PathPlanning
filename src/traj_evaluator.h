@@ -45,6 +45,7 @@ public:
     double collisionCheckingRadius = Vehicle::Size;
     double expectedAccInOneSec = 2.0;
     double expectedJerkInOneSec = 1.0;
+    double speedLimit = Mph2Mps(50.0);
     double maxAcc = 10.0;
     double maxJerk = 10.0;
     std::array<double, 6> evalSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
@@ -63,6 +64,7 @@ public:
         conf.trajectoryEvaluation.collisionCheckingRadius;
       timeHorizon = conf.timeHorizon;
       timeStep = conf.timeStep;
+      speedLimit = conf.speedLimit;
 
       driverProfileName = conf.driverProfileName;
       driverProfile[CostType::kTimeDiff] = conf.driverProfile.timeDiff;

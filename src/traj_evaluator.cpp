@@ -118,19 +118,20 @@ StaysOnRoadCost::Compute(const JMTTrajectory2D& traj,
                          const TrackedVehicleMap& trackedVehicleMap,
                          const JMTTrajectoryEvaluator::Options& options)
 {
-  double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
   double timeStep = options.timeStep;
   while (currTime < (traj.GetTime() + 1e-6)) {
-    currTime += timeStep;
-    VehicleConfiguration trajConf = traj.Eval(currTime);
+    VehicleConfiguration trajConf = traj(currTime);
     if (not Map::IsInRoad(trajConf.dPos)) {
-      SPDLOG_DEBUG("{:7.3f}: {}", trajConf.dPos, Map::IsInRoad(trajConf.dPos));
+      // SPDLOG_DEBUG("{:7.3f}: {}", trajConf.dPos,
+      // Map::IsInRoad(trajConf.dPos));
       return 1.0;
     }
+    currTime += timeStep;
   }
   return 0.0;
 }
+
 double
 ExceedsSpeedLimitCost::Compute(const JMTTrajectory2D& traj,
                                const VehicleConfiguration& goalConf,
@@ -138,9 +139,20 @@ ExceedsSpeedLimitCost::Compute(const JMTTrajectory2D& traj,
                                const TrackedVehicleMap& trackedVehicleMap,
                                const JMTTrajectoryEvaluator::Options& options)
 {
-  // TODO
+
+  double currTime = 0.0;
+  double timeStep = options.timeStep;
+  while (currTime < (traj.GetTime() + 1e-6)) {
+    VehicleConfiguration trajConf = traj(currTime);
+    if (std::abs(trajConf.sVel) > options.speedLimit or
+        std::abs(trajConf.dVel) > options.speedLimit) {
+      return 1.0;
+    }
+    currTime += timeStep;
+  }
   return 0.0;
 }
+
 double
 EfficiencyCost::Compute(const JMTTrajectory2D& traj,
                         const VehicleConfiguration& goalConf,
@@ -150,8 +162,11 @@ EfficiencyCost::Compute(const JMTTrajectory2D& traj,
 {
   VehicleConfiguration finalConf = traj(traj.GetTime());
   double avgVel = finalConf.sPos / traj.GetTime();
-  return Logistic(2.0 * std::abs(goalConf.sVel - avgVel) / avgVel);
+  static constexpr double SIGMA = 40.0; // meters / second
+  // NOTE: Should not reward lateral d velocity
+  return GaussianLoss1D(goalConf.sVel, SIGMA, avgVel);
 }
+
 double
 TotalAccelCost::Compute(const JMTTrajectory2D& traj,
                         const VehicleConfiguration& goalConf,
@@ -162,15 +177,22 @@ TotalAccelCost::Compute(const JMTTrajectory2D& traj,
   // TODO: Check D as well
   double currTime = 0.0;
   double totalSAcc = 0.0;
+  double totalDAcc = 0.0;
+
   while (currTime < options.timeHorizon) {
     VehicleConfiguration currConf = traj(currTime);
     totalSAcc += std::abs(currConf.sAcc * options.timeStep);
+    totalDAcc += std::abs(currConf.dAcc * options.timeStep);
     currTime += options.timeStep;
   }
   double sAccPerSec = totalSAcc / options.timeHorizon;
+  double dAccPerSec = totalDAcc / options.timeHorizon;
 
-  return Logistic(sAccPerSec / options.expectedAccInOneSec);
+  return (Logistic(sAccPerSec / options.expectedAccInOneSec) + ;
+          Logistic(dAccPerSec / options.expectedAccInOneSec)) /
+         2.0;
 }
+
 double
 MaxAccelCost::Compute(const JMTTrajectory2D& traj,
                       const VehicleConfiguration& goalConf,
@@ -182,7 +204,8 @@ MaxAccelCost::Compute(const JMTTrajectory2D& traj,
   double currTime = 0.0;
   while (currTime < options.timeHorizon) {
     VehicleConfiguration currConf = traj(currTime);
-    if (currConf.sAcc > options.maxAcc) {
+    if (std::abs(currConf.sAcc) > options.maxAcc or
+        std::abs(currConf.dAcc) > options.maxAcc) {
       return 1.0;
     }
     currTime += options.timeStep;
@@ -197,17 +220,25 @@ TotalJerkCost::Compute(const JMTTrajectory2D& traj,
                        const TrackedVehicleMap& trackedVehicleMap,
                        const JMTTrajectoryEvaluator::Options& options)
 {
-  // TODO: Check D as well
   double currTime = 0.0;
   double totalSJerk = 0.0;
-  auto sJerkFunc = traj.GetSAccFunc().Differentiate();
+  double totalDJerk = 0.0;
+
+  auto sJerkFunc = traj.GetTraj1().GetFunc2();
+  auto dJerkFunc = traj.GetTraj2().GetFunc2();
+
   while (currTime < options.timeHorizon) {
     totalSJerk += std::abs(sJerkFunc(currTime) * options.timeStep);
+    totalDJerk += std::abs(dJerkFunc(currTime) * options.timeStep);
     currTime += options.timeStep;
   }
-  double sJerkPerSec = totalSJerk / options.timeHorizon;
 
-  return Logistic(sJerkPerSec / options.expectedJerkInOneSec);
+  double sJerkPerSec = totalSJerk / options.timeHorizon;
+  double dJerkPerSec = totalDJerk / options.timeHorizon;
+
+  return (Logistic(sJerkPerSec / options.expectedJerkInOneSec)
+            Logistic(dJerkPerSec / options.expectedJerkInOneSec)) /
+         2.0;
 }
 
 double
@@ -218,13 +249,19 @@ MaxJerkCost::Compute(const JMTTrajectory2D& traj,
                      const JMTTrajectoryEvaluator::Options& options)
 {
   // TODO: Check D as well
+  auto sJerkFunc = traj.GetTraj1().GetFunc2();
+  auto dJerkFunc = traj.GetTraj2().GetFunc2();
+
   double currTime = 0.0;
-  auto sJerkFunc = traj.GetSAccFunc().Differentiate();
   while (currTime < options.timeHorizon) {
-    double jerk = sJerkFunc(currTime);
-    if (jerk > options.maxJerk) {
+    double sjerk = sJerkFunc(currTime);
+    double djerk = sJerkFunc(currTime);
+
+    if (std::abs(sjerk) > options.maxJerk or
+        std::abs(djerk) > options.maxJerk) {
       return 1.0;
     }
+
     currTime += options.timeStep;
   }
   return 0.0;
