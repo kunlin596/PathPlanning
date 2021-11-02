@@ -89,6 +89,16 @@ target_link_libraries(
   driving
 )
 
+add_executable(test_traj_evaluator src/tests/test_traj_evaluator.cpp)
+target_link_libraries(
+  test_traj_evaluator
+  PRIVATE
+  driving
+  gtest
+  gtest_main
+)
+
 include(GoogleTest)
 gtest_discover_tests(test_jmt)
 gtest_discover_tests(test_math)
+gtest_discover_tests(test_traj_evaluator)

@@ -73,6 +73,13 @@ Logistic(const double x)
   return 2.0 / (1.0 + std::exp(-x)) - 1.0;
 }
 
+inline double
+Gaussian1D(double mu, double sigma, double x)
+{
+  return 1.0 / (sigma * std::sqrt(2.0 * M_PI)) *
+         std::exp(-0.5 * std::pow((x - mu) / sigma, 2.0));
+}
+
 /**
  * @brief      Polynomial equation definition
  */
