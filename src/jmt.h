@@ -4,11 +4,11 @@
 #include <memory>
 #include <unordered_map>
 
+#include "json.hpp"
 #include "math.h"
 #include "path.h"
 #include "tracker.h"
 #include "vehicle.h"
-#include "json.hpp"
 
 namespace pathplanning {
 
@@ -109,6 +109,8 @@ struct JMTTrajectory2D
   }
 
   bool IsValid(const ValidationParams& params) const;
+
+  nlohmann::json Dump() const;
 
   inline VehicleConfiguration Eval(const double t) const
   {

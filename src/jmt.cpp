@@ -188,6 +188,16 @@ JMTTrajectory2D::ComputeNearestApproach(
   return minDist;
 }
 
+nlohmann::json
+JMTTrajectory2D::Dump() const
+{
+  using namespace nlohmann;
+  auto j = json::array();
+  j.push_back(_traj1.Dump());
+  j.push_back(_traj2.Dump());
+  return j;
+}
+
 bool
 JMTTrajectory2D::IsValid(const ValidationParams& params) const
 {
