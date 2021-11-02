@@ -1,17 +1,23 @@
 #include "jmt.h"
 
 #include "Eigen-3.3/Eigen/Dense"
-#include "traj_evaluator.h"
+#include "utils.h"
+
+namespace {
+using namespace Eigen;
+}
 
 namespace pathplanning {
 
-JMTTrajectory1D
-JMT::Solve1D(const std::array<double, 3>& start,
-             const std::array<double, 3>& end,
-             const double t)
+JMTTrajectory1d
+JMT::Solve1D(const Vector6d& conditions, const double t)
 {
-  std::array<double, 6> coeffs;
-  Eigen::Matrix3d A;
+  const Vector3d& start = conditions.topRows<3>();
+  const Vector3d& end = conditions.bottomRows<3>();
+
+  Vector6d coeffs;
+
+  Matrix3d A;
   double t2 = t * t;
   double t3 = t2 * t;
   double t4 = t3 * t;
@@ -22,7 +28,7 @@ JMT::Solve1D(const std::array<double, 3>& start,
     3.0 * t2 , 4.0 * t3  , 5.0 * t4  ,
     6.0 * t  , 12.0 * t2 , 20.0 * t3 ;
 
-  Eigen::Vector3d b = {
+  Vector3d b = {
       end[0] - (start[0] + start[1] * t + start[2] * t2 / 2.0),
       end[1] - (start[1] + start[2] * t),
       end[2] - start[2]
@@ -31,115 +37,67 @@ JMT::Solve1D(const std::array<double, 3>& start,
 
   // See
   // https://eigen.tuxfamily.org/dox-devel/group__TutorialLinearAlgebra.html
-  Eigen::Vector3d x = A.colPivHouseholderQr().solve(b);
-  coeffs[0] = start[0];
-  coeffs[1] = start[1];
-  coeffs[2] = start[2] / 2.0;
-  coeffs[3] = x[0];
-  coeffs[4] = x[1];
-  coeffs[5] = x[2];
-  SPDLOG_TRACE(coeffs);
-  return JMTTrajectory1D(coeffs, t);
+  Vector3d x = A.colPivHouseholderQr().solve(b);
+  coeffs << start[0], start[1], start[2] / 2.0, x[0], x[1], x[2];
+  return JMTTrajectory1d(coeffs, start, end, t);
 }
 
-JMTTrajectory1D
-JMT::Solve1D(const std::array<double, 6>& params, const double t)
+JMTTrajectory2d
+JMT::Solve2D(const Matrix62d& conditions, const double t)
 {
-  return Solve1D({ params[0], params[1], params[2] },
-                 { params[3], params[4], params[5] },
-                 t);
-}
-
-JMTTrajectory2D
-JMT::Solve2D(const std::array<double, 6>& sParams,
-             const std::array<double, 6>& dParams,
-             const double t)
-{
-  return { JMT::Solve1D(sParams, t), JMT::Solve1D(dParams, t) };
-}
-
-JMTTrajectory2D
-JMT::ComputeTrajectory(const std::array<double, 6>& sParams,
-                       const std::array<double, 6>& dParams,
-                       const double t)
-{
-  return JMT::Solve2D(sParams, dParams, t);
-}
-
-JMTTrajectory2D
-JMT::ComputeTrajectory(const VehicleConfiguration& start,
-                       const VehicleConfiguration& end,
-                       const double t)
-{
-  // clang-format off
-  return JMT::ComputeTrajectory(
-      // sParams
-      std::array<double, 6>{
-        start.At(0), start.At(1), start.At(2),
-        end.At(0)  , end.At(1)  , end.At(2)
-      },
-      // dParams
-      std::array<double, 6>{
-        start.At(3), start.At(4), start.At(5),
-        end.At(3)  , end.At(4)  , end.At(5)
-      },
-      t
-    );
-  // clang-format on
+  return { JMT::Solve1D(conditions.col(0), t), JMT::Solve1D(conditions.col(1), t) };
 }
 
 bool
-JMTTrajectory1D::IsValid(const ValidationParams& params) const
+JMTTrajectory1d::IsValid(const Configuration& conf) const
 {
-  double currtime = 0.0;
-  while (currtime < _time + 1e-6) {
-    auto values = Eval(currtime);
-    if (params.speedRange[0] > values[1] or values[1] > params.speedRange[1]) {
+  double currTime = 0.0;
+  while (currTime < _time + 1e-6) {
+    auto values = Eval(currTime);
+    if (std::abs(values[1]) > conf.speedLimit) {
+      SPDLOG_TRACE("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], conf.speedLimit);
       return false;
     }
-    if (params.accelRange[0] > values[2] or values[2] > params.accelRange[1]) {
+    if (std::abs(values[2]) > conf.trajectory.maxAcc) {
+      SPDLOG_TRACE("accel is out of range, {:7.3f} bigger than {:7.3f}", values[2], conf.trajectory.maxAcc);
       return false;
     }
-    currtime += params.timeResolution;
+    if (std::abs(values[3]) > conf.trajectory.maxJerk) {
+      SPDLOG_TRACE("jerk is out of range, {:7.3f} bigger than {:7.3f}", values[3], conf.trajectory.maxJerk);
+      return false;
+    }
+    currTime += conf.trajectory.timeResolution;
   }
   return true;
 }
 
 nlohmann::json
-JMTTrajectory1D::Dump() const
+JMTTrajectory1d::Dump() const
 {
-  using namespace nlohmann;
-  json j;
-  j["func5"] = GetFunc5().coeffs;
-  j["func4"] = GetFunc4().coeffs;
-  j["func3"] = GetFunc3().coeffs;
-  j["func2"] = GetFunc2().coeffs;
-  j["func1"] = GetFunc1().coeffs;
-  j["func0"] = GetFunc0().coeffs;
-  j["time"] = GetTime();
-  return j;
+  return { { "func5", GetFunc5().Dump() }, { "func4", GetFunc4().Dump() }, { "func3", GetFunc3().Dump() },
+           { "func2", GetFunc2().Dump() }, { "func1", GetFunc1().Dump() }, { "func0", GetFunc0().Dump() },
+           { "time", GetTime() } };
 }
 
 void
-JMTTrajectory1D::Write(const std::string& filename) const
+JMTTrajectory1d::Write(const std::string& filename) const
 {
-  std::ofstream o(filename);
-  o << std::setw(4) << Dump() << std::endl;
+  utils::WriteJson(filename, Dump());
 }
 
 double
-JMTTrajectory2D::ComputeNearestApproach(const Vehicle& vehicle,
-                                        double maxTimeDuration,
-                                        double timeStep) const
+JMTTrajectory2d::GetNearestApproachTo(const Vehicle& vehicle, double maxTimeDuration, double timeStep) const
 {
   double minDist = std::numeric_limits<double>::infinity();
   double currTime = 0.0;
   while (currTime < maxTimeDuration) {
     currTime += timeStep;
-    VehicleConfiguration trajConf = Eval(currTime);
-    VehicleConfiguration vehicleConf = vehicle.GetConfiguration(currTime);
-    double dist = GetDistance({ trajConf.sPos, trajConf.dPos },
-                              { vehicleConf.sPos, vehicleConf.dPos });
+    Matrix62d trajKinematics = Eval(currTime);
+    Matrix32d vehicleKinematics = vehicle.GetKinematics(currTime);
+
+    double dist =
+      GetDistance({ trajKinematics(0, 0), trajKinematics(0, 1) }, { vehicleKinematics(0, 0), vehicleKinematics(0, 1) });
+
     if (dist < minDist) {
       minDist = dist;
     }
@@ -148,86 +106,119 @@ JMTTrajectory2D::ComputeNearestApproach(const Vehicle& vehicle,
 }
 
 double
-JMTTrajectory2D::ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
-                                        double maxTimeDuration,
-                                        double timeStep) const
+JMTTrajectory2d::GetNearestApproachTo(const std::vector<Vehicle>& vehicles,
+                                      double maxTimeDuration,
+                                      double timeStep) const
 {
   double minDist = std::numeric_limits<double>::infinity();
-  double currTime = 0.0;
-
-  while (currTime < maxTimeDuration) {
-    currTime += timeStep;
-    VehicleConfiguration trajConf = Eval(currTime);
-    for (const auto& vehicle : vehicles) {
-      VehicleConfiguration vehicleConf = vehicle.GetConfiguration(currTime);
-      double dist = GetDistance({ trajConf.sPos, trajConf.dPos },
-                                { vehicleConf.sPos, vehicleConf.dPos });
-      if (dist < minDist) {
-        minDist = dist;
-      }
+  for (const auto& v : vehicles) {
+    double dist = GetNearestApproachTo(v, maxTimeDuration, timeStep);
+    if (dist < minDist) {
+      minDist = dist;
     }
   }
   return minDist;
 }
 
 double
-JMTTrajectory2D::ComputeNearestApproach(
-  const std::unordered_map<int, Vehicle>& vehicles,
-  double maxTimeDuration,
-  double timeStep) const
+JMTTrajectory2d::GetNearestApproachTo(const std::unordered_map<int, Vehicle>& vehicles,
+                                      double maxTimeDuration,
+                                      double timeStep) const
 {
   double minDist = std::numeric_limits<double>::infinity();
-  double currTime = 0.0;
-
-  while (currTime < maxTimeDuration) {
-    currTime += timeStep;
-    VehicleConfiguration trajConf = Eval(currTime);
-    for (const auto& vehicle : vehicles) {
-      VehicleConfiguration vehicleConf =
-        vehicle.second.GetConfiguration(currTime);
-      double dist = GetDistance({ trajConf.sPos, trajConf.dPos },
-                                { vehicleConf.sPos, vehicleConf.dPos });
-      if (dist < minDist) {
-        minDist = dist;
-      }
+  for (const auto& [id, v] : vehicles) {
+    double dist = GetNearestApproachTo(v, maxTimeDuration, timeStep);
+    if (dist < minDist) {
+      minDist = dist;
     }
   }
   return minDist;
 }
 
+JMTTrajectory2d::JMTTrajectory2d(const JMTTrajectory1d& traj1, const JMTTrajectory1d& traj2)
+  : _traj1(traj1)
+  , _traj2(traj2)
+{
+  assert(traj1.GetTime() == traj2.GetTime());
+}
+
 nlohmann::json
-JMTTrajectory2D::Dump() const
+JMTTrajectory2d::Dump() const
 {
   using namespace nlohmann;
-  auto j = json::array();
-  j.push_back(_traj1.Dump());
-  j.push_back(_traj2.Dump());
-  return j;
+  return { { "traj1", _traj1.Dump() }, { "traj2", _traj2.Dump() } };
 }
 
 void
-JMTTrajectory2D::Write(const std::string& filename) const
+JMTTrajectory2d::Write(const std::string& filename) const
 {
-  std::ofstream o(filename);
-  o << std::setw(4) << Dump() << std::endl;
+  utils::WriteJson(filename, Dump());
 }
 
 bool
-JMTTrajectory2D::IsValid(const ValidationParams& params) const
+JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf) const
 {
-  if (not _traj1.IsValid(params) or not _traj2.IsValid(params)) {
+  if (not _traj1.IsValid(conf) or not _traj2.IsValid(conf)) {
     return false;
+  }
+
+  double currTime = 0.0;
+  std::vector<Waypoint> sampledWaypoints;
+  while (currTime < GetTime() + 1e-6) {
+    auto kinematics = Eval(currTime);
+    sampledWaypoints.push_back(map.GetXY(kinematics(0, 0), kinematics(0, 1)));
+    currTime += conf.trajectory.timeResolution;
+  }
+
+  for (size_t i = 1; i < sampledWaypoints.size() - 1; ++i) {
+    auto point1 = sampledWaypoints[i - 1];
+    auto point2 = sampledWaypoints[i];
+    auto point3 = sampledWaypoints[i + 1];
+
+    // Compute the curvature between point 2 and 3
+    double heading1 = GetAngle(point1, point2);
+    double heading2 = GetAngle(point2, point3);
+    double dist = GetDistance(point3, point2);
+    double curvature = Rad2Deg(heading2 - heading1) / dist;
+    if (curvature > conf.trajectory.maxCurvature) {
+      SPDLOG_TRACE("curvature is {:7.3f} exceeding threashold {:7.3f}", curvature, conf.trajectory.maxCurvature);
+      return false;
+    }
   }
   return true;
 }
 
-std::ostream&
-operator<<(std::ostream& out, const pathplanning::JMTTrajectory2D& traj)
+Matrix62d
+JMTTrajectory2d::Eval(const double t) const
 {
-  return out << fmt::format("JMTTrajectory2D(time={}, sCoeffs={}, dCoeffs{})",
-                            traj.GetTime(),
-                            traj.GetSFunc(),
-                            traj.GetDFunc());
+  Matrix62d kinematics;
+  kinematics.col(0) = _traj1(t);
+  kinematics.col(1) = _traj2(t);
+  return kinematics;
+}
+
+std::vector<JMTTrajectory2d>
+JMT::SolveMultipleFeasible2D(const Matrix62d& conditions, const Map& map, const Configuration& conf)
+{
+  double minT = (conditions(3, 0) - conditions(0, 0)) / conf.speedLimit;
+  std::vector<JMTTrajectory2d> trajs;
+  double currTime = minT;
+  while (currTime < (minT + conf.trajectory.maxTime + 1e-6)) {
+    auto traj = JMT::Solve2D(conditions, currTime);
+    if (traj.IsValid(map, conf)) {
+      trajs.push_back(traj);
+      SPDLOG_TRACE("currTime={}, traj={}", currTime, traj);
+    }
+    currTime += conf.timeStep;
+  }
+  return trajs;
+}
+
+std::ostream&
+operator<<(std::ostream& out, const pathplanning::JMTTrajectory2d& traj)
+{
+  return out << fmt::format(
+           "JMTTrajectory2d(time={}, sCoeffs={}, dCoeffs{})", traj.GetTime(), traj.GetSFunc(), traj.GetDFunc());
 }
 
 } // namespace pathplanning

@@ -39,52 +39,16 @@ class JMTTrajectoryEvaluator
 public:
   struct Options
   {
-    double timeHorizon = 2.0;
-    double timeStep = 0.02;
-    double collisionCheckingTimeStep = 0.005; // TODO
-    double collisionCheckingRadius = Vehicle::Size;
-    double expectedAccInOneSec = 2.0;
-    double expectedJerkInOneSec = 1.0;
-    double speedLimit = Mph2Mps(50.0);
-    double maxAcc = 10.0;
-    double maxJerk = 10.0;
-    std::array<double, 6> evalSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
-
     std::string driverProfileName;
     std::unordered_map<costs::CostType, double> driverProfile;
 
     Options() {}
-    Options(const Configuration& conf)
-    {
-      using namespace ::pathplanning::costs;
-      evalSigmas = conf.trajectoryEvaluation.evalSigmas;
-      expectedAccInOneSec = conf.trajectoryEvaluation.expectedAccInOneSec;
-      expectedJerkInOneSec = conf.trajectoryEvaluation.expectedJerkInOneSec;
-      collisionCheckingRadius =
-        conf.trajectoryEvaluation.collisionCheckingRadius;
-      timeHorizon = conf.timeHorizon;
-      timeStep = conf.timeStep;
-      speedLimit = conf.speedLimit;
-
-      driverProfileName = conf.driverProfileName;
-      driverProfile[CostType::kTimeDiff] = conf.driverProfile.timeDiff;
-      driverProfile[CostType::kSDiff] = conf.driverProfile.sDiff;
-      driverProfile[CostType::kDDiff] = conf.driverProfile.dDiff;
-      driverProfile[CostType::kCollision] = conf.driverProfile.collision;
-      driverProfile[CostType::kBuffer] = conf.driverProfile.buffer;
-      driverProfile[CostType::kStaysOnRoad] = conf.driverProfile.staysOnRoad;
-      driverProfile[CostType::kExceedsSpeedLimit] =
-        conf.driverProfile.exceedsSpeedLimit;
-      driverProfile[CostType::kEfficiency] = conf.driverProfile.efficiency;
-      driverProfile[CostType::kTotalAccel] = conf.driverProfile.totalAccel;
-      driverProfile[CostType::kMaxAccel] = conf.driverProfile.maxAccel;
-      driverProfile[CostType::kTotalJerk] = conf.driverProfile.totalJerk;
-      driverProfile[CostType::kMaxJerk] = conf.driverProfile.maxJerk;
-    }
+    Options(const Configuration& conf);
   };
 
-  JMTTrajectoryEvaluator(const Options& options)
-    : _options(options)
+  JMTTrajectoryEvaluator(const Configuration& conf)
+    : _conf(conf)
+    , _options(conf)
   {}
 
   /**
@@ -97,14 +61,14 @@ public:
    *
    * @return     Total cost
    */
-  double Evaluate(const JMTTrajectory2D& traj,
-                  const VehicleConfiguration& goalConf,
+  double Evaluate(const JMTTrajectory2d& traj,
+                  const Matrix32d& goalConf,
                   const double requestTime,
                   const TrackedVehicleMap& trackedVehicleMap);
 
 private:
-  std::unordered_map<costs::CostType, std::shared_ptr<costs::CostFunctorBase>>
-    _funcPtrs; ///< Cost funtions
+  std::unordered_map<costs::CostType, std::shared_ptr<costs::CostFunctorBase>> _funcPtrs; ///< Cost funtions
+  Configuration _conf;
   Options _options;
 };
 
@@ -130,13 +94,26 @@ struct CostFunctorBase
    *
    * @return     Cost value
    */
-  virtual double Compute(const JMTTrajectory2D& traj,
-                         const VehicleConfiguration& goalConf,
-                         const double requestTime,
-                         const TrackedVehicleMap& trackedVehicleMap,
-                         const JMTTrajectoryEvaluator::Options& options) = 0;
+  virtual double operator()(const JMTTrajectory2d& traj,
+                            const Matrix32d& goalConf,
+                            const double requestTime,
+                            const TrackedVehicleMap& trackedVehicleMap,
+                            const Configuration& conf) = 0;
+
   virtual ~CostFunctorBase() {}
 };
+
+#ifndef DEFINE_COST_FUNCTOR
+#define DEFINE_COST_FUNCTOR(NAME)                                                                                      \
+  struct NAME : public CostFunctorBase                                                                                 \
+  {                                                                                                                    \
+    virtual double operator()(const JMTTrajectory2d& traj,                                                             \
+                              const Matrix32d& goalConf,                                                               \
+                              const double requestTime,                                                                \
+                              const TrackedVehicleMap& trackedVehicleMap,                                              \
+                              const Configuration& conf) override;                                                     \
+  }
+#endif
 
 /**
  * @brief Cost for time difference
@@ -144,14 +121,7 @@ struct CostFunctorBase
  * Penalizes trajectories that span a duration which is longer or shorter than
  * the duration requested.
  */
-struct TimeDiffCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(TimeDiffCost);
 
 /**
  * @brief      Cost for difference between goal S
@@ -159,14 +129,7 @@ struct TimeDiffCost : public CostFunctorBase
  * Penalizes trajectories whose s coordinate (and derivatives) differ from the
  * goal.
  */
-struct SDiffCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(SDiffCost);
 
 /**
  * @brief      Cost for difference between goal D
@@ -174,125 +137,54 @@ struct SDiffCost : public CostFunctorBase
  * Penalizes trajectories whose d coordinate (and derivatives) differ from the
  * goal.
  */
-struct DDiffCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(DDiffCost);
 
 /**
  * @brief      Binary cost function which penalizes collisions.
  */
-struct CollisionCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(CollisionCost);
 
 /**
  * @brief      Buffer distance cost
  *
  * Penalizes getting close to other vehicles.
  */
-struct BufferCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(BufferCost);
 
 /**
  * @brief      Cost for the distance from the center of the target lane
  */
-struct StaysOnRoadCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(StaysOnRoadCost);
 
 /**
  * @brief      Speed limit cost
  */
-struct ExceedsSpeedLimitCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(ExceedsSpeedLimitCost);
 
 /**
  * @brief      Rewards high average speeds.
  */
-struct EfficiencyCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(EfficiencyCost);
 
 /**
  * @brief      Total accelaration cost
  */
-struct TotalAccelCost : public CostFunctorBase
-{
-
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(TotalAccelCost);
 
 /**
  * @brief      Max accelaration cost
  */
-struct MaxAccelCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(MaxAccelCost);
 
 /**
  * @brief      Total jerk cost
  */
-struct TotalJerkCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(TotalJerkCost);
 
 /**
  * @brief      Max jerk cost
  */
-struct MaxJerkCost : public CostFunctorBase
-{
-  double Compute(const JMTTrajectory2D& traj,
-                 const VehicleConfiguration& goalConf,
-                 const double requestTime,
-                 const TrackedVehicleMap& trackedVehicleMap,
-                 const JMTTrajectoryEvaluator::Options& options) override;
-};
+DEFINE_COST_FUNCTOR(MaxJerkCost);
 
 std::ostream&
 operator<<(std::ostream& out, const CostType& type);

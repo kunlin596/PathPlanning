@@ -12,52 +12,43 @@
 
 namespace pathplanning {
 
+using Eigen::Matrix62d;
+using Eigen::Vector3d;
+using Eigen::Vector6d;
+
 /* -------------------------------------------------------------------------- */
 //
 // JMT Solvers
 //
 /* -------------------------------------------------------------------------- */
 
-struct JMTTrajectory1D
+struct JMTTrajectory1d
 {
-  JMTTrajectory1D() {}
+  JMTTrajectory1d() {}
 
-  struct ValidationParams
-  {
-    std::array<double, 2> speedRange;
-    std::array<double, 2> accelRange;
-    double timeResolution = 0.1;
-    std::array<double, 2> steeringAngleRange;
-
-    ValidationParams(const std::array<double, 2>& speedRange,
-                     const std::array<double, 2>& accelRange,
-                     double timeResolution = 0.1)
-      : speedRange(speedRange)
-      , accelRange(accelRange)
-      , timeResolution(timeResolution)
-    {}
-    virtual ~ValidationParams() {}
-  };
-
-  JMTTrajectory1D(const QuinticFunctor& func, const double time)
+  JMTTrajectory1d(const QuinticFunctor& func, const Vector3d& startCond, const Vector3d& endCond, const double time)
     : _func5(func)
     , _func4(_func5.Differentiate())
     , _func3(_func4.Differentiate())
     , _func2(_func3.Differentiate())
     , _func1(_func2.Differentiate())
     , _func0(_func1.Differentiate())
+    , _startCond(startCond)
+    , _endCond(endCond)
     , _time(time)
   {}
 
-  inline std::array<double, 6> Eval(const double t) const
+  inline Vector6d Eval(const double t) const
   {
-    return { _func5(t), _func4(t), _func3(t), _func2(t), _func1(t), _func0(t) };
+    Vector6d ret;
+    ret << _func5(t), _func4(t), _func3(t), _func2(t), _func1(t), _func0(t);
+    return ret;
   }
 
-  inline std::array<double, 6> operator()(const double t) const
-  {
-    return Eval(t);
-  }
+  inline Vector6d operator()(const double t) const { return Eval(t); }
+
+  const Vector3d& GetStartCond() const { return _startCond; }
+  const Vector3d& GetEndCond() const { return _endCond; }
 
   nlohmann::json Dump() const;
   void Write(const std::string& filename) const;
@@ -70,16 +61,18 @@ struct JMTTrajectory1D
   const ConstantFunctor& GetFunc0() const { return _func0; }
   double GetTime() const { return _time; }
 
-  bool IsValid(const ValidationParams& params) const;
+  bool IsValid(const Configuration& conf) const;
 
 private:
-  QuinticFunctor _func5;
-  QuarticFunctor _func4;
-  CubicFunctor _func3;
-  QuadraticFunctor _func2;
-  LinearFunctor _func1;
-  ConstantFunctor _func0;
-  double _time = 0.0;
+  QuinticFunctor _func5;   ///< position
+  QuarticFunctor _func4;   ///< velocity
+  CubicFunctor _func3;     ///< accelaration
+  QuadraticFunctor _func2; ///< jerk
+  LinearFunctor _func1;    ///< snap
+  ConstantFunctor _func0;  ///< crackle
+  Vector3d _startCond;     ///< start condition
+  Vector3d _endCond;       ///< end condition
+  double _time = 0.0;      ///< trajectory execution time
 };
 
 /**
@@ -94,65 +87,63 @@ private:
  * Note that not all trajectory generators use the same information to produce
  * the same format of output, so trajecotry is per generator type.
  */
-struct JMTTrajectory2D
+struct JMTTrajectory2d
 {
 
-  struct ValidationParams : public JMTTrajectory1D::ValidationParams
-  {};
+  JMTTrajectory2d(){};
 
-  JMTTrajectory2D() {}
+  JMTTrajectory2d(const JMTTrajectory1d& traj1, const JMTTrajectory1d& traj2);
 
-  JMTTrajectory2D(const JMTTrajectory1D& traj1, const JMTTrajectory1D& traj2)
-    : _traj1(traj1)
-    , _traj2(traj2)
+  bool IsValid(const Map& map, const Configuration& conf) const;
+
+  Eigen::Matrix62d Eval(const double t) const;
+  Eigen::Matrix62d operator()(const double t) const { return Eval(t); }
+
+  /**
+   * @brief      Calculates the nearest approach to given vehicles.
+   *
+   * @param[in]  vehicle          The target vehicle
+   * @param[in]  maxTimeDuration  The maximum time duration for trajectory
+   *                              evaluation
+   * @param[in]  timeStep         The time step
+   *
+   * @return     The nearest approach distance.
+   */
+  double GetNearestApproachTo(const Vehicle& vehicle, double maxTimeDuration, double timeStep) const;
+
+  double GetNearestApproachTo(const std::vector<Vehicle>& vehicles, double maxTimeDuration, double timeStep) const;
+
+  double GetNearestApproachTo(const std::unordered_map<int, Vehicle>& vehicles,
+                              double maxTimeDuration,
+                              double timeStep) const;
+
+  inline Matrix32d GetStartCond() const
   {
-    assert(traj1.GetTime() == traj2.GetTime());
+    Matrix32d cond;
+    cond.col(0) = _traj1.GetStartCond();
+    cond.col(1) = _traj2.GetStartCond();
+    return cond;
   }
 
-  bool IsValid(const ValidationParams& params) const;
+  inline Matrix32d GetEndCond() const
+  {
+    Matrix32d cond;
+    cond.col(0) = _traj1.GetEndCond();
+    cond.col(1) = _traj2.GetEndCond();
+    return cond;
+  }
 
   nlohmann::json Dump() const;
 
   void Write(const std::string& filename) const;
 
-  inline VehicleConfiguration Eval(const double t) const
-  {
-    return VehicleConfiguration(_traj1.GetFunc5()(t),
-                                _traj1.GetFunc4()(t),
-                                _traj1.GetFunc3()(t),
-                                _traj2.GetFunc5()(t),
-                                _traj2.GetFunc4()(t),
-                                _traj2.GetFunc3()(t));
-  }
+  //
+  // Getters
+  //
 
-  VehicleConfiguration operator()(const double t) const { return Eval(t); }
-
-  const JMTTrajectory1D& GetTraj1() const { return _traj1; }
-  const JMTTrajectory1D& GetTraj2() const { return _traj2; }
+  const JMTTrajectory1d& GetTraj1() const { return _traj1; }
+  const JMTTrajectory1d& GetTraj2() const { return _traj2; }
   double GetTime() const { return _traj1.GetTime(); }
-
-  /**
-   * @brief      Get nearest approach from trajectory to predicted vehicle
-   * position
-   *
-   * @param[in]  v                Vehicle
-   * @param[in]  maxTimeDuration  The maximum time duration
-   * @param[in]  timeStep         The time step for checking
-   *
-   * @return     distance in meter
-   */
-  double ComputeNearestApproach(const Vehicle& vehicle,
-                                double maxTimeDuration,
-                                double timeStep) const;
-
-  double ComputeNearestApproach(const std::vector<Vehicle>& vehicles,
-                                double maxTimeDuration,
-                                double timeStep) const;
-
-  double ComputeNearestApproach(
-    const std::unordered_map<int, Vehicle>& vehicles,
-    double maxTimeDuration,
-    double timeStep) const;
 
   const QuinticFunctor& GetSFunc() const { return _traj1.GetFunc5(); }
   const QuinticFunctor& GetDFunc() const { return _traj2.GetFunc5(); }
@@ -163,12 +154,11 @@ struct JMTTrajectory2D
   const CubicFunctor& GetSAccFunc() const { return _traj1.GetFunc3(); }
   const CubicFunctor& GetDAccFunc() const { return _traj2.GetFunc3(); }
 
-  friend std::ostream& operator<<(std::ostream& out,
-                                  const JMTTrajectory2D& traj);
+  friend std::ostream& operator<<(std::ostream& out, const JMTTrajectory2d& traj);
 
 private:
-  JMTTrajectory1D _traj1;
-  JMTTrajectory1D _traj2;
+  JMTTrajectory1d _traj1;
+  JMTTrajectory1d _traj2;
 };
 
 /**
@@ -213,9 +203,9 @@ private:
  *
  * where,
  * A = [
- *  [t_f^3,     t_f^4,      t_f^5     ],
- *  [3 * t_f^2, 4 * t_f^3,  5 * t_f^4 ],
- *  [6 * t_f,   12 * t_f^2, 20 * t_f^3],
+ *  [    t_f^3 ,      t_f^4,       t_f^5],
+ *  [3 * t_f^2 ,  4 * t_f^3,   5 * t_f^4],
+ *  [6 * t_f   , 12 * t_f^2,  20 * t_f^3],
  * ]
  *
  * x = [a3, a4, a5]
@@ -229,15 +219,11 @@ private:
  */
 struct JMT
 {
-  static JMTTrajectory1D Solve1D(const std::array<double, 3>& start,
-                                 const std::array<double, 3>& end,
-                                 const double t);
-
-  static JMTTrajectory1D Solve1D(const std::array<double, 6>& params,
-                                 const double t);
+  static JMTTrajectory1d Solve1D(const Vector6d& conditions, const double t);
 
   /**
-   * @brief      Compute a SDFunctor
+   * @brief      Compute a JMTTrajectory2d
+   *
    *
    * S paramerers, [s(i), s'(i), s"(i), s(f), s'(f), * s"(f)]
    * D parameters, [d(i), d'(i), d"(i), d(f), d'(f), * d"(f)]
@@ -248,21 +234,24 @@ struct JMT
    *
    * @return     The sd waypoint function.
    */
-  static JMTTrajectory2D Solve2D(const std::array<double, 6>& sParams,
-                                 const std::array<double, 6>& dParams,
-                                 const double t);
+  static JMTTrajectory2d Solve2D(const Matrix62d& conditions, const double t);
 
-  static JMTTrajectory2D ComputeTrajectory(const std::array<double, 6>& sParams,
-                                           const std::array<double, 6>& dParams,
-                                           const double t);
-
-  static JMTTrajectory2D ComputeTrajectory(const VehicleConfiguration& start,
-                                           const VehicleConfiguration& end,
-                                           const double t);
+  /**
+   * @brief      Compute set of feasible trajectory
+   *
+   * @param[in]  sParams  The s parameters
+   * @param[in]  dParams  The d parameters
+   * @param[in]  conf     The configuration
+   *
+   * @return     set of feasible trajectories
+   */
+  static std::vector<JMTTrajectory2d> SolveMultipleFeasible2D(const Matrix62d& conditions,
+                                                              const Map& map,
+                                                              const Configuration& conf);
 };
 
 std::ostream&
-operator<<(std::ostream& out, const pathplanning::JMTTrajectory2D& traj);
+operator<<(std::ostream& out, const pathplanning::JMTTrajectory2d& traj);
 
 } // namespace pathplanning
 

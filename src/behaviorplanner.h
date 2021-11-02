@@ -27,8 +27,7 @@ namespace pathplanning {
  */
 enum class BehaviorState
 {
-  kStart = 0,
-  kStop,
+  kReady,
   kConstSpeed,
   kLaneKeeping,
   kLeftLaneChangePreparation,
@@ -71,55 +70,19 @@ enum class BehaviorState
 class BehaviorPlanner
 {
 public:
-  struct Options
-  {
-    JMTTrajectoryEvaluator::Options trajEvaluationOptions;
-
-    double nonEgoSearchRadius = 30.0;
-    double timeStep = 0.02;
-    double timeHorizon = 1.0;
-
-    Options(const Configuration& conf)
-      : trajEvaluationOptions(conf)
-    {
-      timeStep = conf.timeStep;
-      timeHorizon = conf.timeHorizon;
-
-      nonEgoSearchRadius = conf.tracker.nonEgoSearchRadius;
-    }
-  };
-
-  BehaviorPlanner(const Map::ConstPtr& pMap, const Options& options);
+  BehaviorPlanner(const Map& map, const Configuration& conf);
   virtual ~BehaviorPlanner() {}
 
   /**
-   * @brief      Gets the successor states.
-   *
-   * @param[in]  state  The behavior state
-   *
-   * @return     The successor states.
+   * @brief      Generate maneuver proposal trajectory
    */
-  std::vector<BehaviorState> GetSuccessorStates() const;
-
-  /**
-   * @brief      Generate maneuver proposal
-   *
-   * @param[in]  successorStates  The successor states
-   * @param[in]  predictions      The predictions
-   *
-   * @return     Target vehicle state
-   */
-  Vehicle GenerateProposal(const Vehicle& ego,
-                           const Waypoints& prevPath,
-                           const Waypoint& endPrevPathSD,
-                           const std::vector<BehaviorState> successorStates,
-                           const TrackedVehicleMap& trackedVehicleMap);
+  JMTTrajectory2d GenerateProposal(const Vehicle& ego, const TrackedVehicleMap& trackedVehicleMap);
 
 private:
-  const Map::ConstPtr& _pMap;
-  Options _options;
+  const Map& _map;
+  const Configuration& _conf;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
-  BehaviorState _currState = BehaviorState::kLaneKeeping;
+  BehaviorState _currState = pathplanning::BehaviorState::kReady;
 };
 
 std::ostream&

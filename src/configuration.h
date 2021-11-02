@@ -9,45 +9,91 @@
 
 namespace pathplanning {
 
-struct Constants
-{
-  static constexpr double MAX_BREAKING_ACCELATATION = -10.0;
-  static constexpr double MAX_ACCELATATION = 10.0;
-};
-
+/**
+ * @brief      This class describes a configuration for path planner.
+ */
 class Configuration
 {
 public:
-  explicit Configuration(const std::string& filename) { Parse(filename); }
+  Configuration(){};
+  Configuration(const std::string& filename) { Parse(filename); }
 
   int serverPort = 4567;
 
   double speedLimit = Mph2Mps(50.0);
-  double timeStep = 0.02;   ///< Seconds
+
+  double timeStep = 0.02; ///< Seconds
+
   double timeHorizon = 2.0; ///< Time horizon for prediction
+
   int numPoints = static_cast<int>(timeHorizon / timeStep);
-  std::array<double, 2> sdHorizon = { 30, 10 };
 
   struct
   {
+    // Tracking radius
     double nonEgoSearchRadius = 30.0;
+
+    // Deprecated
     int numMeasurementsToTrack = 30;
   } tracker;
 
   struct
   {
-    double maxJerk = 10.0;                ///< m/s^3
-    double maxAcc = 10.0;                 ///< m/s^2
-    double expectedAccInOneSec = 2.0;     ///< m/s^2
-    double expectedJerkInOneSec = 1.0;    ///< m/s^3
-    double collisionCheckingRadius = 1.5; ///< meter
-    std::array<double, 6> evalSigmas = {
-      10.0, 1.0, 2.0, 1.0, 1.0, 1.0
-    }; ///< Sigmas for [s pos, s vel, s acc, d pos, d vel, d acc] sampling
+    // Use goal sampler or not
+    bool use = true;
 
-  } trajectoryEvaluation;
+    // Number of samples to be generated
+    int numSamplesPerTimeStep = 20;
 
+    // Sample time step w.r.t. sample time
+    double sampleTimeStep = 0.2;
+
+    int numTimeSteps = 3;
+
+    // Sigmas for [s pos, s vel, s acc, d pos, d vel, d acc] sampling
+    std::array<double, 6> sampleSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
+  } goalSampler;
+
+  struct
+  {
+    // For evaluation
+    double maxJerk = 10.0;
+
+    // For evaluation
+    double maxAcc = 10.0;
+
+    // For evaluation
+    double expectedAccInOneSec = 2.0;
+
+    // For evaluation
+    double expectedJerkInOneSec = 1.0;
+
+    // Collision checking radius in addition to vehicle bounding box
+    double collisionCheckingRadius = 1.5;
+
+    // Collision checking time step
+    double collisionCheckingTimeStep = 0.01;
+
+    // Max tim for generating feasible trajectory
+    double maxTime = 5.0;
+
+    // Time step for generating feasible trajectory
+    double timeResolution = 0.02;
+
+    // Sigmas for [s pos, s vel, s acc, d pos, d vel, d acc] trajectory
+    // evaluation
+    std::array<double, 6> evalSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
+
+    // Max curvature of the trajectory, for evaluation
+    double maxCurvature = 2.0;
+
+  } trajectory;
+
+  // Current driver profile name to be used
   std::string driverProfileName;
+
+  // Cost function weights to be used for trajectory generation, tweaking the
+  // weight will result in different behaviors
   struct
   {
     double timeDiff = 1.0;
@@ -58,21 +104,11 @@ public:
     double staysOnRoad = 1.0;
     double exceedsSpeedLimit = 1.0;
     double efficiency = 1.0;
-    double totalAccel = 1.0;
-    double maxAccel = 1.0;
+    double totalAcc = 1.0;
+    double maxAcc = 1.0;
     double totalJerk = 1.0;
     double maxJerk = 1.0;
   } driverProfile;
-
-  struct
-  {
-    bool use = true;
-    int numSamples = 20;
-    double sampleTimeStep = 0.5;
-    std::array<double, 6> sampleSigmas = {
-      10.0, 1.0, 2.0, 1.0, 1.0, 1.0
-    }; ///< Sigmas for [s pos, s vel, s acc, d pos, d vel, d acc] sampling
-  } goalSampler;
 
   void Parse(const std::string& filename);
 };

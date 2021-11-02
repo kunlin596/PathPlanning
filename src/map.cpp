@@ -81,8 +81,7 @@ int
 Map::GetNextWaypoint(double x, double y, double theta) const
 {
   int closestWaypointIndex = GetClosestWaypoint(x, y);
-  double heading =
-    std::atan2((_y[closestWaypointIndex] - y), (_x[closestWaypointIndex] - x));
+  double heading = std::atan2((_y[closestWaypointIndex] - y), (_x[closestWaypointIndex] - x));
   double angle = std::fabs(theta - heading);
 
   angle = std::min(2.0 * M_PI - angle, angle);
@@ -168,9 +167,8 @@ Map::GetXY(double s, double d) const
   // double y = segY + d * std::sin(perpHeading);
 
   // return { x, y };
-  s = std::fmod(s, Map::MaxS);
-  return { _pImpl->sXSpline(s) + d * _pImpl->sDxSpline(s),
-           _pImpl->sYSpline(s) + d * _pImpl->sDySpline(s) };
+  s = std::fmod(s, Map::MAX_FRENET_S);
+  return { _pImpl->sXSpline(s) + d * _pImpl->sDxSpline(s), _pImpl->sYSpline(s) + d * _pImpl->sDySpline(s) };
 }
 
 double
@@ -183,6 +181,16 @@ double
 GetMileFromKM(double km)
 {
   return km * 2.24;
+}
+std::array<double, 2>
+ComputeFrenetVelocity(const Map& map,
+                      const std::array<double, 2>& pos,
+                      const std::array<double, 2>& vel,
+                      const std::array<double, 2>& sd,
+                      const double dt)
+{
+  std::array<double, 2> sd2 = map.GetSD(pos[0] + vel[0], pos[1] + vel[1], std::atan2(vel[1], vel[0]));
+  return { (sd2[0] - sd[0]) / dt, (sd2[1] - sd[1]) / dt };
 }
 
 } // namespace pathplanning

@@ -2,26 +2,28 @@
   "serverPort": 4567,
   "speedLimit": 50,
   "timeStep": 0.02,
-  "timeHorizon": 2.0,
+  "timeHorizon": 1.0,
   "nonEgoSearchRadius": 100,
   "numMeasurementsToTrack": 30,
-  "trajectoryEvaluation": {
-    "maxJerk": 10,
-    "maxAcc": 10,
-    "expectedAccInOneSec": 2.0,
-    "expectedJerkInOneSec": 1.0,
+  "trajectory": {
+    "maxTime": 10.0,
+    "maxJerk": 10.0,
+    "maxAcc": 10.0,
+    "expectedAccInOneSec": 3.0,
+    "expectedJerkInOneSec": 2.0,
     "collisionCheckingRadius": 5.0
   },
   "goalSampler": {
     "use": false,
-    "numSamples": 20,
-    "sampleTimeStep": 0.5,
+    "sampleTimeStep": 0.2,
+    "numTimeSteps": 3,
+    "numSamplesPerTimeStep": 10,
     "sampleSigmas": [
-      10.0, 1.0, 2.0,
-      1.0, 1.0, 1.0
+      2.0, 5.0, 2.0,
+      0.5, 2.0, 1.0
     ]
   },
-  "driverProfileName": "default",
+  "driverProfileName" : "default",
   "driverProfiles": {
     "default": {
       "timeDiff": 1.0,
@@ -32,8 +34,8 @@
       "staysOnRoad": 1e6,
       "exceedsSpeedLimit": 1e6,
       "efficiency": 1.0,
-      "totalAccel": 1.0,
-      "maxAccel": 1e6,
+      "totalAcc": 1.0,
+      "maxAcc": 1e6,
       "totalJerk": 1.0,
       "maxJerk": 1e6
     }

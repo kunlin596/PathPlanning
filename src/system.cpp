@@ -2,9 +2,9 @@
 
 #include "json.hpp"
 #include "log.h"
+#include "utils.h"
 
 namespace {
-
 /**
  * @brief      Normalize input JSON string data
  *
@@ -48,15 +48,9 @@ System::Initialize(const std::string& configFileName)
   _pMap = Map::CreateMap();
   _pHub = std::make_unique<uWS::Hub>();
 
-  Tracker::Options trackerOptions(*_pConf);
-  _pTracker = std::make_unique<Tracker>(_pMap, trackerOptions);
-
-  BehaviorPlanner::Options behaviorOptions(*_pConf);
-  _pBehaviorPlanner = std::make_unique<BehaviorPlanner>(_pMap, behaviorOptions);
-
-  PolynomialTrajectoryGenerator::Options ptgOptions(*_pConf);
-  _pPathGenerator =
-    std::make_unique<PolynomialTrajectoryGenerator>(_pMap, ptgOptions);
+  _pTracker = std::make_unique<Tracker>(*_pMap, *_pConf);
+  _pBehaviorPlanner = std::make_unique<BehaviorPlanner>(*_pMap, *_pConf);
+  _pPathGenerator = std::make_unique<PolynomialTrajectoryGenerator>(*_pMap, *_pConf);
   _pEgo = std::make_unique<Ego>();
 }
 
@@ -69,14 +63,6 @@ System::SpinOnce(const std::string& commandString)
 
   std::string msg;
 
-  // static int cnt = 0;
-  // if (cnt < 10) {
-  //   ++cnt;
-  //   return _EmptyControlMessage();
-  // } else {
-  //   cnt = 0;
-  // }
-
   if (!commandString.empty()) {
     json commandJson = json::parse(commandString);
     std::string event = commandJson[0].get<std::string>();
@@ -85,8 +71,7 @@ System::SpinOnce(const std::string& commandString)
     if (event == "telemetry") {
       // Similator might not be able to consume all of the points, so it returns
       // the remaining points back to you.
-      Waypoints prevPath = Path::ConvertXYToWaypoints(data["previous_path_x"],
-                                                      data["previous_path_y"]);
+      Waypoints prevPath = Path::ConvertXYToWaypoints(data["previous_path_x"], data["previous_path_y"]);
 
       // NOTE: Ego's localization data (No Noise)
       // ["x"] The car's x position in map coordinates
@@ -96,15 +81,12 @@ System::SpinOnce(const std::string& commandString)
       // ["yaw"] The car's yaw angle in the map int degrees
       // ["speed"] The car's speed in MPH
 
-      SPDLOG_DEBUG("--- telemetry ---");
+      SPDLOG_INFO("----------------------------------------------------------");
+      SPDLOG_INFO("  telemetry");
+      SPDLOG_INFO("----------------------------------------------------------");
       Waypoint endPathSD = { data["end_path_s"], data["end_path_d"] };
 
-      _pEgo->Update(data["x"],
-                    data["y"],
-                    data["s"],
-                    data["d"],
-                    Deg2Rad(data["yaw"]),
-                    Mph2Mps(data["speed"]));
+      _pEgo->Update(data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]));
 
       //
       // Process perceptions
@@ -112,64 +94,62 @@ System::SpinOnce(const std::string& commandString)
 
       // Create the latest perceptions from input command
       // Velocity is already meters per seconds no need to convert
-      Perceptions perceptions = Perception::CreatePerceptions(
-        data["sensor_fusion"], _pMap, _pConf->timeStep);
+      Perceptions perceptions = Perception::CreatePerceptions(data["sensor_fusion"], *_pMap, _pConf->timeStep);
       // SPDLOG_DEBUG("perceptions={}", perceptions);
 
       _pTracker->Update(*_pEgo, perceptions);
-
-      const TrackedVehicleMap& trackedVehicleMap = _pTracker->GetVehicles();
 
       //
       // Behavior planning
       //
 
-      const auto successorStates = _pBehaviorPlanner->GetSuccessorStates();
+      int numPointsToPreserve;
 
-      Vehicle startState;
-      double executedTime;
-      int numPoints;
-      _pPathGenerator->ComputeStartState(*_pEgo,
-                                         _state.cachedTrajectory,
-                                         prevPath,
-                                         endPathSD,
-                                         executedTime,
-                                         startState,
-                                         numPoints);
+      static constexpr int maxNumPoints = 300;
 
-      SPDLOG_DEBUG("Computed startState={}", startState.GetConfiguration());
-
-      Vehicle proposal = _pBehaviorPlanner->GenerateProposal(
-        startState, prevPath, endPathSD, successorStates, trackedVehicleMap);
-
+      JMTTrajectory2d proposal = _pBehaviorPlanner->GenerateProposal(*_pEgo, _pTracker->GetVehicles());
       //
       // Path generation
       //
 
-      SPDLOG_INFO("Generating path for,\nstartState={}\npropoState={}",
-                  startState.GetConfiguration(),
-                  proposal.GetConfiguration());
+      SPDLOG_INFO(
+        "Generating path for proposal\n  startState - {}\n  proposal={}\n", _pEgo->GetKinematics(0.0), proposal);
+
+      json log;
 
       Waypoints path;
-      JMTTrajectory2D trajectory;
-      std::tie(path, trajectory) = _pPathGenerator->GeneratePath(
-        startState,
-        proposal,
-        trackedVehicleMap,
-        numPoints,
-        _pConf->timeHorizon - executedTime); // Fix time
+      JMTTrajectory2d trajectory;
+      std::tie(path, trajectory) = _pPathGenerator->GeneratePath(proposal, _pTracker->GetVehicles(), log);
 
-      UpdateCachedTrajectory(trajectory);
+      Waypoints newPath;
+      int pathIndex = 0;
+      for (pathIndex = 0; pathIndex < numPointsToPreserve and pathIndex < prevPath.size(); ++pathIndex) {
+        newPath.push_back(prevPath[pathIndex]);
+      }
+      for (; pathIndex < maxNumPoints and pathIndex < path.size(); ++pathIndex) {
+        newPath.push_back(path[pathIndex]);
+      }
 
       //
       // Construct result message
       //
 
       json waypointsJson;
-      std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) =
-        Path::ConvertWaypointsToXY(path);
+      std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(newPath);
+
+      static int i = 0;
+      if (i < 1000) {
+        waypointsJson["numPointsToPreserve"] = numPointsToPreserve;
+        utils::WriteJson(fmt::format("/tmp/waypoints/waypoints-{:d}.json", i), waypointsJson);
+        utils::WriteJson(fmt::format("/tmp/ptg/ptg-{:d}.json", i), log);
+        i++;
+      }
+
+      SPDLOG_TRACE("newPath={}", newPath);
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
+
+      UpdateCachedTrajectory(trajectory);
     }
   } else {
     msg = "42[\"manual\",{}]";
@@ -183,10 +163,7 @@ System::Spin()
 {
   // Main event loop callback when we receive something from the simulator.
   // These parameters are specific to uWS communication.
-  _pHub->onMessage([this](uWS::WebSocket<uWS::SERVER> ws,
-                          char* data,
-                          size_t length,
-                          uWS::OpCode opCode) {
+  _pHub->onMessage([this](uWS::WebSocket<uWS::SERVER> ws, char* data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -197,17 +174,12 @@ System::Spin()
     } // end websocket if
   }); // end _pHub->onMessage
 
-  _pHub->onConnection(
-    [this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-      SPDLOG_INFO("Connected.");
-    });
+  _pHub->onConnection([this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) { SPDLOG_INFO("Connected."); });
 
-  _pHub->onDisconnection(
-    [this](
-      uWS::WebSocket<uWS::SERVER> ws, int code, char* message, size_t length) {
-      ws.close();
-      SPDLOG_INFO("Disconnected.");
-    });
+  _pHub->onDisconnection([this](uWS::WebSocket<uWS::SERVER> ws, int code, char* message, size_t length) {
+    ws.close();
+    SPDLOG_INFO("Disconnected.");
+  });
 
   if (_pHub->listen(_port)) {
     SPDLOG_INFO("Listening to port {}.", _port);

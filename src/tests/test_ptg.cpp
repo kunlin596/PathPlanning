@@ -1,11 +1,13 @@
 #include <cmath>
 
+#include "../configuration.h"
 #include "../json.hpp"
 #include "../log.h"
 #include "../ptg.h"
 
 namespace {
 using namespace pathplanning;
+using namespace nlohmann;
 
 void
 Test(PolynomialTrajectoryGenerator& g,
@@ -13,53 +15,56 @@ Test(PolynomialTrajectoryGenerator& g,
      const VehicleConfiguration& start,
      const VehicleConfiguration& goal)
 {
-  TrackedVehicleMap trackedVehicleMap;
-  Waypoints prevPath;
+  //   TrackedVehicleMap trackedVehicleMap;
+  //   Waypoints prevPath;
 
-  Vehicle startState(0, start);
-  Vehicle goalState(0, goal);
+  //   Vehicle startState(0, start);
+  //   Vehicle goalState(0, goal);
 
-  SPDLOG_INFO(start);
-  SPDLOG_INFO(goal);
-  double targetExecutionTime = 10.0;
+  //   SPDLOG_INFO(start);
+  //   SPDLOG_INFO(goal);
+  //   double targetExecutionTime = 10.0;
 
-  Waypoints xywaypoints;
-  JMTTrajectory2D trajectory;
-  std::tie(xywaypoints, trajectory) = g.GeneratePath(
-    startState, goalState, trackedVehicleMap, targetExecutionTime);
+  //   Waypoints xywaypoints;
+  //   JMTTrajectory2d trajectory;
 
-  auto computed = trajectory(targetExecutionTime);
+  //   json log;
+  //   std::tie(xywaypoints, trajectory) = g.GeneratePath(
+  //     startState, goalState, trackedVehicleMap, log, targetExecutionTime);
 
-  double timestep = 0.02;
-  int count = int(targetExecutionTime / timestep);
+  //   auto computed = trajectory(targetExecutionTime);
 
-  for (int i = 0; i < count + 1; ++i) {
-    auto computed = trajectory(i * timestep);
-    SPDLOG_INFO("computed={}", computed);
-  }
+  //   double timestep = 0.02;
+  //   int count = int(targetExecutionTime / timestep);
 
-  auto startXY = pMap->GetXY(start.sPos, start.dPos);
-  auto goalXY = pMap->GetXY(goal.sPos, goal.dPos);
-  auto computedXY = pMap->GetXY(computed.sPos, computed.dPos);
+  //   for (int i = 0; i < count + 1; ++i) {
+  //     auto computed = trajectory(i * timestep);
+  //     SPDLOG_INFO("computed={}", computed);
+  //   }
 
-  SPDLOG_INFO(
-    "startXY={}, goalXY={}, computedXY={}", startXY, goalXY, computedXY);
+  //   auto startXY = pMap->GetXY(start.kinematics[0], start.kinematics[3]);
+  //   auto goalXY = pMap->GetXY(goal.kinematics[0], goal.kinematics[3]);
+  //   auto computedXY = pMap->GetXY(computed.kinematics[0], computed.kinematics[3]);
 
-  double diffX = goalXY[0] - startXY[0];
-  double diffY = goalXY[1] - startXY[1];
-  SPDLOG_INFO("diffX={}, diffY={}", diffX, diffY);
+  //   SPDLOG_INFO(
+  //     "startXY={}, goalXY={}, computedXY={}", startXY, goalXY, computedXY);
 
-  double xError = std::abs(xywaypoints[0][0] + diffX -
-                           xywaypoints[xywaypoints.size() - 1][0]);
-  double yError = std::abs(xywaypoints[0][1] + diffY -
-                           xywaypoints[xywaypoints.size() - 1][1]);
+  //   double diffX = goalXY[0] - startXY[0];
+  //   double diffY = goalXY[1] - startXY[1];
+  //   SPDLOG_INFO("diffX={}, diffY={}", diffX, diffY);
 
-  SPDLOG_INFO(
-    "start{}, goal={}", xywaypoints[0], xywaypoints[xywaypoints.size() - 1]);
-  SPDLOG_INFO("xError={}, yError={}", xError, yError);
+  //   double xError = std::abs(xywaypoints[0][0] + diffX -
+  //                            xywaypoints[xywaypoints.size() - 1][0]);
+  //   double yError = std::abs(xywaypoints[0][1] + diffY -
+  //                            xywaypoints[xywaypoints.size() - 1][1]);
 
-  assert(xError < 0.8);
-  assert(yError < 0.8);
+  //   SPDLOG_INFO(
+  //     "start{}, goal={}", xywaypoints[0], xywaypoints[xywaypoints.size() -
+  //     1]);
+  //   SPDLOG_INFO("xError={}, yError={}", xError, yError);
+
+  //   assert(xError < 0.8);
+  //   assert(yError < 0.8);
 }
 } // namespace
 
@@ -71,8 +76,8 @@ main(int argc, char** argv)
 
   Map::ConstPtr pMap = Map::CreateMap("../data/highway_map.csv");
 
-  PolynomialTrajectoryGenerator::Options options;
-  PolynomialTrajectoryGenerator g(pMap, options);
+  Configuration conf;
+  PolynomialTrajectoryGenerator g(*pMap, conf);
 
   auto record = pMap->Get(0);
   double offset = 30.0;

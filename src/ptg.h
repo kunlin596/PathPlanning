@@ -1,30 +1,14 @@
 #ifndef PATHPLANNING_PTG_H
 #define PATHPLANNING_PTG_H
-#include <memory>
 
 #include "jmt.h"
+#include "json.hpp"
 #include "tracker.h"
 #include "traj_evaluator.h"
 
 namespace pathplanning {
 
-/**
- * @brief      This class describes a goal sampler.
- *
- * Goal sampler is trying to find the best goal w.r.t. target canonical
- * configuration.
- */
-class GoalSampler
-{
-public:
-  explicit GoalSampler(const VehicleConfiguration& canonicalConf,
-                       const std::array<double, 6>& sigmas);
-
-  VehicleConfiguration Sample() const;
-
-private:
-  std::array<std::unique_ptr<GaussianSampler1D<>>, 6> _samplers;
-};
+using namespace nlohmann;
 
 /**
  * @brief      This class describes a polynomial trajectory generator.
@@ -32,47 +16,8 @@ private:
 class PolynomialTrajectoryGenerator
 {
 public:
-  struct Options
-  {
-    int numPoints = 50;
-    int numSamples = 10;
-    double timeStep = 0.02;
-
-    bool use = false;
-    double sampleTimeStep = 0.5;
-    std::array<double, 6> sampleSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
-
-    int numMeasurementsToTrack = 30;
-    double nonEgoSearchRadius = 30.0;
-
-    JMTTrajectoryEvaluator::Options trajEvaluation;
-
-    Options() {}
-
-    Options(const Configuration& conf)
-      : trajEvaluation(conf)
-    {
-      numMeasurementsToTrack = conf.tracker.numMeasurementsToTrack;
-      nonEgoSearchRadius = conf.tracker.nonEgoSearchRadius;
-
-      numPoints = conf.numPoints;
-      timeStep = conf.timeStep;
-
-      use = conf.goalSampler.use;
-      numSamples = conf.goalSampler.numSamples;
-      sampleTimeStep = conf.goalSampler.sampleTimeStep;
-      sampleSigmas = conf.goalSampler.sampleSigmas;
-    };
-  };
-
-  PolynomialTrajectoryGenerator(const Map::ConstPtr& pMap,
-                                const Options& options)
-    : _pMap(pMap)
-    , _options(options)
-  {
-    _pEvaluator =
-      std::make_unique<JMTTrajectoryEvaluator>(_options.trajEvaluation);
-  }
+  explicit PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf);
+  virtual ~PolynomialTrajectoryGenerator() {}
 
   /**
    * @brief      Generate drivable trajectory (a set of waypoints)
@@ -99,26 +44,21 @@ public:
    * state of the vehicle, and can be used to predict future states.
    *
    */
-  std::pair<Waypoints, JMTTrajectory2D> GeneratePath(
-    const Vehicle& startState,
-    const Vehicle& goalState,
-    const TrackedVehicleMap& trackedVehicleMap,
-    const int numPointsToBeGenerated,
-    const double targetExecutionTime = 1.0);
+  std::pair<Waypoints, JMTTrajectory2d> GeneratePath(const JMTTrajectory2d& proposal,
+                                                     const TrackedVehicleMap& trackedVehicleMap,
+                                                     json& log);
 
   void ComputeStartState(const Vehicle& ego,
-                         const JMTTrajectory2D& prevTraj,
+                         const JMTTrajectory2d& prevTraj,
                          const Waypoints& prevPath,
                          const Waypoint& endPrevPathSD,
                          double& executedTime,
-                         Vehicle& startState,
+                         Matrix32d& startState,
                          int& numPoints);
 
 private:
-  Map::ConstPtr _pMap;
-  Options _options;
-  std::unique_ptr<VehicleConfiguration>
-    _pPrevGoal; ///< Cache the previous goal for continuous planning
+  const Configuration& _conf;
+  const Map& _map;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };
 

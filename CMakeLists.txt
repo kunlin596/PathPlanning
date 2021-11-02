@@ -26,24 +26,70 @@ find_package(spdlog REQUIRED)
 find_package(Boost COMPONENTS program_options REQUIRED)
 
 add_library(
-  driving
+  common
   SHARED
   src/configuration.cpp
-  src/path.cpp
   src/vehicle.cpp
+  src/map.cpp
+)
+
+target_link_libraries(
+  common
+  PUBLIC
+  spdlog::spdlog
+)
+
+add_library(
+  perception
+  SHARED
   src/perception.cpp
+)
+
+target_link_libraries(
+  perception
+  PUBLIC
+  common
+)
+
+add_library(
+  tracker
+  SHARED
+  src/tracker.cpp
+)
+
+target_link_libraries(
+  tracker
+  PUBLIC
+  perception
+)
+
+add_library(
+  trajectory
+  SHARED
+  src/path.cpp
   src/jmt.cpp
   src/traj_evaluator.cpp
+  src/goalsampler.cpp
   src/ptg.cpp
-  src/map.cpp
-  src/tracker.cpp
+)
+
+target_link_libraries(
+  trajectory
+  PUBLIC
+  common
+  tracker
+)
+
+add_library(
+  behavior
+  SHARED
   src/behaviorplanner.cpp
 )
 
 target_link_libraries(
-  driving
+  behavior
   PUBLIC
-  spdlog::spdlog
+  trajectory
 )
 
 add_executable(
@@ -59,7 +105,7 @@ target_link_libraries(
   ssl
   uv
   uWS
-  driving)
+  behavior)
 
 enable_testing()
 find_package(GTest REQUIRED)
@@ -87,6 +133,8 @@ target_link_libraries(
   test_ptg
   PRIVATE
   driving
+  gtest
+  gtest_main
 )
 
 add_executable(test_traj_evaluator src/tests/test_traj_evaluator.cpp)

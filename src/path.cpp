@@ -16,8 +16,7 @@ Path::ConvertWaypointsToXY(const Waypoints& waypoints)
 }
 
 Waypoints
-Path::ConvertXYToWaypoints(const std::vector<double>& x,
-                           const std::vector<double>& y)
+Path::ConvertXYToWaypoints(const std::vector<double>& x, const std::vector<double>& y)
 {
   Waypoints waypoints;
   for (size_t i = 0; i < x.size(); ++i) {

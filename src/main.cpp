@@ -10,6 +10,7 @@ main(int argc, char** argv)
   using namespace pathplanning;
 
   std::string confFileName;
+  std::string mapFileName;
   try {
 
     po::options_description desc("Allowed options");
@@ -19,6 +20,8 @@ main(int argc, char** argv)
       ("help,h", po::value<std::string>(), "Help message")
       ("conf,c", po::value<std::string>(&confFileName)->required(),
         "System configuration file name.")
+      ("map,m", po::value<std::string>(&mapFileName)->required(),
+        "Map file name.")
       ("loglevel,l", po::value<std::string>()->default_value("debug"),
         "System configuration file name.");
     // clang-format on
@@ -29,6 +32,8 @@ main(int argc, char** argv)
 
     std::string loglevel = vm["loglevel"].as<std::string>();
     if (loglevel == "debug") {
+      spdlog::set_level(spdlog::level::debug);
+    } else if (loglevel == "trace") {
       spdlog::set_level(spdlog::level::trace);
     } else if (loglevel == "info") {
       spdlog::set_level(spdlog::level::info);
@@ -49,7 +54,7 @@ main(int argc, char** argv)
 
   System system;
   system.Initialize(confFileName);
-  system.ResetMap("../data/highway_map.csv");
+  system.ResetMap(mapFileName);
   system.Spin();
   return 0;
 }

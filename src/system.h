@@ -20,7 +20,7 @@ public:
 
   struct State
   {
-    JMTTrajectory2D cachedTrajectory;
+    JMTTrajectory2d cachedTrajectory;
   };
 
   /**
@@ -59,10 +59,7 @@ public:
    */
   int Spin();
 
-  void UpdateCachedTrajectory(const JMTTrajectory2D& traj)
-  {
-    _state.cachedTrajectory = traj;
-  }
+  void UpdateCachedTrajectory(const JMTTrajectory2d& traj) { _state.cachedTrajectory = traj; }
 
   State GetState() const { return _state; }
 
@@ -70,7 +67,6 @@ private:
   Map::Ptr _pMap;
   std::unique_ptr<BehaviorPlanner> _pBehaviorPlanner;
   std::unique_ptr<Tracker> _pTracker;
-  std::unordered_map<int, Vehicle> _pPerceptions;
   std::unique_ptr<PolynomialTrajectoryGenerator> _pPathGenerator;
   std::unique_ptr<uWS::Hub> _pHub;
   std::unique_ptr<Ego> _pEgo;

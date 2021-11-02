@@ -1,135 +1,40 @@
 #include "vehicle.h"
-
 #include "configuration.h"
 
 namespace pathplanning {
 
-double
-VehicleConfiguration::operator[](size_t index)
+const Eigen::Matrix3d
+Vehicle::GetMotionModel(double time)
 {
-  return At(index);
+  Eigen::Matrix3d motionModel = Eigen::Matrix3d::Identity();
+  motionModel(0, 1) = time;
+  motionModel(0, 2) = 0.5 * time * time;
+  motionModel(1, 2) = time;
+  return motionModel;
 }
 
-double
-VehicleConfiguration::At(size_t index) const
+Matrix32d
+Vehicle::GetKinematics(double time) const
 {
-  switch (index) {
-    case 0:
-      return sPos;
-    case 1:
-      return sVel;
-    case 2:
-      return sAcc;
-    case 3:
-      return dPos;
-    case 4:
-      return dVel;
-    case 5:
-      return dAcc;
-    default:
-      throw std::runtime_error("Invalid index");
+  if (time < 1e-6) {
+    return GetMotionModel(time) * _kinematics;
   }
+  return _kinematics;
 }
 
-VehicleConfiguration
-operator+(VehicleConfiguration lhs, const VehicleConfiguration& rhs)
+json
+Vehicle::Dump() const
 {
-  // friends defined inside class body are inline and are hidden from non-ADL
-  // lookup
-  lhs.sPos += rhs.sPos;
-  lhs.sVel += rhs.sVel;
-  lhs.sAcc += rhs.sAcc;
-  lhs.dPos += rhs.dPos;
-  lhs.dVel += rhs.dVel;
-  lhs.dAcc += rhs.dAcc;
-  return lhs;
-}
-
-VehicleConfiguration
-operator-(VehicleConfiguration lhs, const VehicleConfiguration& rhs)
-{
-  // friends defined inside class body are inline and are hidden from non-ADL
-  // lookup
-  lhs.sPos -= rhs.sPos;
-  lhs.sVel -= rhs.sVel;
-  lhs.sAcc -= rhs.sAcc;
-  lhs.dPos -= rhs.dPos;
-  lhs.dVel -= rhs.dVel;
-  lhs.dAcc -= rhs.dAcc;
-  return lhs;
-}
-
-VehicleConfiguration&
-VehicleConfiguration::operator+=(const VehicleConfiguration& rhs)
-{
-  sPos += rhs.sPos;
-  sVel += rhs.sVel;
-  sAcc += rhs.sAcc;
-  dPos += rhs.dPos;
-  dVel += rhs.dVel;
-  dAcc += rhs.dAcc;
-  return *this;
-}
-
-VehicleConfiguration&
-VehicleConfiguration::operator-=(const VehicleConfiguration& rhs)
-{
-  sPos -= rhs.sPos;
-  sVel -= rhs.sVel;
-  sAcc -= rhs.sAcc;
-  dPos -= rhs.dPos;
-  dVel -= rhs.dVel;
-  dAcc -= rhs.dAcc;
-  return *this;
-}
-
-void
-Vehicle::Update(const Perception& perception)
-{
-  assert(_id == perception.id);
-  const auto& sd = perception.sd;
-  _conf = VehicleConfiguration(perception.sd[0],
-                               perception.sdVel[0],
-                               0.0,
-                               perception.sd[1],
-                               perception.sdVel[1],
-                               0.0);
-}
-
-Vehicle
-Vehicle::CreateFromPerception(const Map::ConstPtr& pMap,
-                              const Perception& perception,
-                              double timeStep)
-{
-  VehicleConfiguration conf;
-  auto sdVel = ComputeSDVelocity(
-    pMap, perception.xy, perception.xyVel, perception.sd, timeStep);
-  conf.sVel = sdVel[0];
-  conf.dVel = sdVel[1];
-  // Assume constant accelaration, do nothing
-
-  return Vehicle(perception.id, conf);
-}
-
-VehicleConfiguration
-VehicleConfiguration::GetConfiguration(const double time) const
-{
-  // clang-format off
-  return {
-      CalculatePosition(sPos, sVel, sAcc, time),
-      CalculateVelocity(sVel, sAcc, time),
-      sAcc,
-      CalculatePosition(dPos, dVel, dAcc, time),
-      CalculateVelocity(dVel, dAcc, time),
-      dAcc
-  };
-  // clang-format on
-}
-
-VehicleConfiguration
-Vehicle::GetConfiguration(const double time) const
-{
-  return _conf.GetConfiguration(time);
+  json j = json::array();
+  // s
+  j.push_back(_kinematics(0, 0));
+  j.push_back(_kinematics(1, 0));
+  j.push_back(_kinematics(2, 0));
+  // d
+  j.push_back(_kinematics(0, 1));
+  j.push_back(_kinematics(1, 1));
+  j.push_back(_kinematics(2, 1));
+  return { { "id", _id }, { "kinematics", j } };
 }
 
 Ego::Ego(double x, double y, double s, double d, double yaw, double speed)
@@ -150,29 +55,22 @@ Ego::Update(double x, double y, double s, double d, double yaw, double speed)
   _speed = speed;
 
   // TODO: Compute sd velocity
-  _conf = VehicleConfiguration(s, speed, 0.0, d, 0.0, 0.0);
+  _kinematics << s, speed, 0.0, d, 0.0, 0.0;
 }
 
-std::ostream&
-operator<<(std::ostream& out, const pathplanning::VehicleConfiguration& conf)
+json
+Ego::Dump() const
 {
-  return out << fmt::format("VehicleConf("
-                            "sPos={:5.3f}, sVel={:3.3f}, sAcc={:3.3f}, "
-                            "dPos={:5.3f}, dVel={:3.3f}, dAcc={:3.3f})",
-                            conf.sPos,
-                            conf.sVel,
-                            conf.sAcc,
-                            conf.dPos,
-                            conf.dVel,
-                            conf.dAcc);
+  json j = Vehicle::Dump();
+  j["yaw"] = _yaw;
+  j["speed"] = _speed;
+  return j;
 }
 
 std::ostream&
 operator<<(std::ostream& out, const pathplanning::Vehicle& vehicle)
 {
-  return out << fmt::format("Vehicle(id={:2d}, conf={:s}",
-                            vehicle.GetId(),
-                            vehicle.GetConfiguration());
+  return out << fmt::format("id={:2d}, kinematics={:s}", vehicle._id, vehicle._kinematics);
 }
 
 std::ostream&

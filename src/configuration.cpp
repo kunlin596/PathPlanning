@@ -24,9 +24,6 @@ Configuration::Parse(const std::string& filename)
   if (j.count("timeHorizon")) {
     timeHorizon = j["timeHorizon"];
   }
-  if (j.count("sdHorizon")) {
-    sdHorizon = j["sdHorizon"];
-  }
 
   if (j.count("tracker")) {
     const auto& trackerJson = j["tracker"];
@@ -38,28 +35,31 @@ Configuration::Parse(const std::string& filename)
     }
   }
 
-  if (j.count("trajectoryEvaluation")) {
-    const auto& trajectoryEvaluationJson = j["trajectoryEvaluation"];
+  if (j.count("trajectory")) {
+    const auto& trajectoryEvaluationJson = j["trajectory"];
+    if (trajectoryEvaluationJson.count("maxTime")) {
+      trajectory.maxTime = trajectoryEvaluationJson["maxTime"];
+    }
     if (trajectoryEvaluationJson.count("maxJerk")) {
-      trajectoryEvaluation.maxJerk = trajectoryEvaluationJson["maxJerk"];
+      trajectory.maxJerk = trajectoryEvaluationJson["maxJerk"];
     }
     if (trajectoryEvaluationJson.count("maxAcc")) {
-      trajectoryEvaluation.maxAcc = trajectoryEvaluationJson["maxAcc"];
+      trajectory.maxAcc = trajectoryEvaluationJson["maxAcc"];
     }
     if (trajectoryEvaluationJson.count("expectedAccInOneSec")) {
-      trajectoryEvaluation.expectedAccInOneSec =
-        trajectoryEvaluationJson["expectedAccInOneSec"];
+      trajectory.expectedAccInOneSec = trajectoryEvaluationJson["expectedAccInOneSec"];
     }
     if (trajectoryEvaluationJson.count("expectedJerkInOneSec")) {
-      trajectoryEvaluation.expectedJerkInOneSec =
-        trajectoryEvaluationJson["expectedJerkInOneSec"];
+      trajectory.expectedJerkInOneSec = trajectoryEvaluationJson["expectedJerkInOneSec"];
     }
     if (trajectoryEvaluationJson.count("collisionCheckingRadius")) {
-      trajectoryEvaluation.collisionCheckingRadius =
-        trajectoryEvaluationJson["collisionCheckingRadius"];
+      trajectory.collisionCheckingRadius = trajectoryEvaluationJson["collisionCheckingRadius"];
+    }
+    if (trajectoryEvaluationJson.count("collisionCheckingTimeStep")) {
+      trajectory.collisionCheckingTimeStep = trajectoryEvaluationJson["collisionCheckingTimeStep"];
     }
     if (trajectoryEvaluationJson.count("evalSigmas")) {
-      trajectoryEvaluation.evalSigmas = trajectoryEvaluationJson["evalSigmas"];
+      trajectory.evalSigmas = trajectoryEvaluationJson["evalSigmas"];
     }
   }
   if (j.count("goalSampler")) {
@@ -67,11 +67,14 @@ Configuration::Parse(const std::string& filename)
     if (goalSamplerJson.count("use")) {
       goalSampler.use = goalSamplerJson["use"];
     }
-    if (goalSamplerJson.count("numSamples")) {
-      goalSampler.numSamples = goalSamplerJson["numSamples"];
+    if (goalSamplerJson.count("numSamplesPerTimeStep")) {
+      goalSampler.numSamplesPerTimeStep = goalSamplerJson["numSamplesPerTimeStep"];
     }
     if (goalSamplerJson.count("sampleTimeStep")) {
       goalSampler.sampleTimeStep = goalSamplerJson["sampleTimeStep"];
+    }
+    if (goalSamplerJson.count("numTimeSteps")) {
+      goalSampler.numTimeSteps = goalSamplerJson["numTimeSteps"];
     }
     if (goalSamplerJson.count("sampleSigmas")) {
       goalSampler.sampleSigmas = goalSamplerJson["sampleSigmas"];
@@ -105,17 +108,16 @@ Configuration::Parse(const std::string& filename)
           driverProfile.staysOnRoad = driverProfileJson["staysOnRoad"];
         }
         if (driverProfileJson.count("exceedsSpeedLimit")) {
-          driverProfile.exceedsSpeedLimit =
-            driverProfileJson["exceedsSpeedLimit"];
+          driverProfile.exceedsSpeedLimit = driverProfileJson["exceedsSpeedLimit"];
         }
         if (driverProfileJson.count("efficiency")) {
           driverProfile.efficiency = driverProfileJson["efficiency"];
         }
-        if (driverProfileJson.count("totalAccel")) {
-          driverProfile.totalAccel = driverProfileJson["totalAccel"];
+        if (driverProfileJson.count("totalAcc")) {
+          driverProfile.totalAcc = driverProfileJson["totalAcc"];
         }
-        if (driverProfileJson.count("maxAccel")) {
-          driverProfile.maxAccel = driverProfileJson["maxAccel"];
+        if (driverProfileJson.count("maxAcc")) {
+          driverProfile.maxAcc = driverProfileJson["maxAcc"];
         }
         if (driverProfileJson.count("totalJerk")) {
           driverProfile.totalJerk = driverProfileJson["totalJerk"];

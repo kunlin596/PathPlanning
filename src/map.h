@@ -16,7 +16,7 @@ namespace pathplanning {
 class Map
 {
 public:
-  static constexpr double MaxS = 6945.554;
+  static constexpr double MAX_FRENET_S = 6945.554;
   static constexpr double LANE_WIDTH = 4.0;
   static constexpr double HALF_LANE_WIDTH = LANE_WIDTH / 2.0;
   static constexpr int NUM_LANES = 3;
@@ -70,15 +70,9 @@ public:
     return { _x[index], _y[index], _s[index], _dx[index], _dy[index] };
   }
 
-  static inline double GetLaneCenterD(int laneId)
-  {
-    return HALF_LANE_WIDTH + LANE_WIDTH * static_cast<double>(laneId);
-  }
+  static inline double GetLaneCenterD(int laneId) { return HALF_LANE_WIDTH + LANE_WIDTH * static_cast<double>(laneId); }
 
-  static inline std::array<double, 2> GetRoadBoundary()
-  {
-    return { 0.0, NUM_LANES * LANE_WIDTH };
-  }
+  static inline std::array<double, 2> GetRoadBoundary() { return { 0.0, NUM_LANES * LANE_WIDTH }; }
 
   static inline std::array<double, 2> GetLaneBoundary(int laneId)
   {
@@ -86,36 +80,31 @@ public:
     return { centerD - HALF_LANE_WIDTH, centerD + HALF_LANE_WIDTH };
   }
 
-  static inline bool IsInRoad(double d) {
+  static inline bool IsInRoad(double d)
+  {
     static const auto roadBoundary = GetRoadBoundary();
     return roadBoundary[0] < d and d < roadBoundary[1];
   }
 
   static inline bool IsInLane(double d, int laneId)
   {
-    return (static_cast<double>(laneId) * LANE_WIDTH) < d and
-           d < (static_cast<double>(laneId + 1) * LANE_WIDTH);
+    return (static_cast<double>(laneId) * LANE_WIDTH) < d and d < (static_cast<double>(laneId + 1) * LANE_WIDTH);
   }
 
   void Read(const std::string& filename);
 
   static std::shared_ptr<Map> CreateMap() { return std::make_shared<Map>(); }
-  static std::shared_ptr<Map> CreateMap(const std::string filename)
-  {
-    return std::make_shared<Map>(filename);
-  }
+  static std::shared_ptr<Map> CreateMap(const std::string filename) { return std::make_shared<Map>(filename); }
 
   using Ptr = std::shared_ptr<Map>;
   using ConstPtr = std::shared_ptr<const Map>;
 
 private:
-  std::vector<double> _x; ///< All x coords
-  std::vector<double> _y; ///< All y coords
-  std::vector<double> _s; ///< All s coords
-  std::vector<double>
-    _dx; ///< All x components of tangent unit direction vector
-  std::vector<double>
-    _dy; ///< All y components of tangent unit direction vector
+  std::vector<double> _x;  ///< All x coords
+  std::vector<double> _y;  ///< All y coords
+  std::vector<double> _s;  ///< All s coords
+  std::vector<double> _dx; ///< All x components of tangent unit direction vector
+  std::vector<double> _dy; ///< All y components of tangent unit direction vector
 
   /**
    * @brief      For hiding spline implemenetation
@@ -134,18 +123,12 @@ private:
   std::shared_ptr<Impl> _pImpl;
 };
 
-inline std::array<double, 2>
-ComputeSDVelocity(const Map::ConstPtr& pMap,
-                  const std::array<double, 2>& xy,
-                  const std::array<double, 2>& xyVel,
-                  const std::array<double, 2>& sd,
-                  const double time)
-{
-  std::array<double, 2> sd2 = pMap->GetSD(
-    xy[0] + xyVel[0], xy[1] + xyVel[1], std::atan2(xyVel[1], xyVel[0]));
-
-  return { (sd2[0] - sd[0]) /*/ time*/, (sd2[1] - sd[2]) /*/ time*/ };
-}
+std::array<double, 2>
+ComputeFrenetVelocity(const Map& map,
+                      const std::array<double, 2>& pos,
+                      const std::array<double, 2>& vel,
+                      const std::array<double, 2>& sd,
+                      const double dt);
 
 } // namespace pathplanning
 

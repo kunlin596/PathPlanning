@@ -12,6 +12,11 @@ namespace pathplanning {
 
 using TrackedVehicleMap = std::unordered_map<int, Vehicle>;
 
+struct LaneStatistics
+{
+  double roadDensity;
+  double avgSpeed;
+};
 
 /**
  * @brief      This class describes a non-ego vehicle tracker.
@@ -22,24 +27,10 @@ using TrackedVehicleMap = std::unordered_map<int, Vehicle>;
 class Tracker
 {
 public:
-  struct Options
-  {
-    double nonEgoSearchRadius = 30.0;
-    double timeStep = 0.02;
-    int numMeasurementsToTrack = 30;
-    Options(const Configuration& conf)
-    {
-      timeStep = conf.timeStep;
-      nonEgoSearchRadius = conf.tracker.nonEgoSearchRadius;
-      numMeasurementsToTrack = conf.tracker.numMeasurementsToTrack;
-    }
-  };
-
-  Tracker(const Map::ConstPtr& pMap, const Options& options)
-    : _pMap(pMap)
-    , _options(options)
+  Tracker(const Map& map, const Configuration& conf)
+    : _map(map)
+    , _conf(conf)
   {}
-
   virtual ~Tracker() {}
 
   /**
@@ -53,19 +44,13 @@ public:
 
   bool IsEmpty() const { return _trackedVehicleMap.empty(); }
 
-  bool HasVehicle(const int id) const
-  {
-    return _trackedVehicleMap.count(id) != 0;
-  }
+  bool HasVehicle(const int id) const { return _trackedVehicleMap.count(id) != 0; }
 
-  const Vehicle& GetVehicle(const int id) const
-  {
-    return _trackedVehicleMap.at(id);
-  }
+  const Vehicle& GetVehicle(const int id) const { return _trackedVehicleMap.at(id); }
 
 private:
-  Options _options;
-  Map::ConstPtr _pMap;
+  const Configuration& _conf;
+  const Map& _map;
   TrackedVehicleMap _trackedVehicleMap;
 };
 
