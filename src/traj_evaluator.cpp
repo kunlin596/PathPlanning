@@ -188,7 +188,7 @@ TotalAccelCost::Compute(const JMTTrajectory2D& traj,
   double sAccPerSec = totalSAcc / options.timeHorizon;
   double dAccPerSec = totalDAcc / options.timeHorizon;
 
-  return (Logistic(sAccPerSec / options.expectedAccInOneSec) + ;
+  return (Logistic(sAccPerSec / options.expectedAccInOneSec) +
           Logistic(dAccPerSec / options.expectedAccInOneSec)) /
          2.0;
 }
@@ -236,8 +236,8 @@ TotalJerkCost::Compute(const JMTTrajectory2D& traj,
   double sJerkPerSec = totalSJerk / options.timeHorizon;
   double dJerkPerSec = totalDJerk / options.timeHorizon;
 
-  return (Logistic(sJerkPerSec / options.expectedJerkInOneSec)
-            Logistic(dJerkPerSec / options.expectedJerkInOneSec)) /
+  return (Logistic(sJerkPerSec / options.expectedJerkInOneSec) +
+          Logistic(dJerkPerSec / options.expectedJerkInOneSec)) /
          2.0;
 }
 
