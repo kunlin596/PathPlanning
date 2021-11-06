@@ -219,7 +219,7 @@ private:
  */
 struct JMT
 {
-  static JMTTrajectory1d Solve1D(const Vector6d& conditions, const double t);
+  static JMTTrajectory1d Solve1d(const Vector6d& conditions, const double t);
 
   /**
    * @brief      Compute a JMTTrajectory2d
@@ -234,7 +234,7 @@ struct JMT
    *
    * @return     The sd waypoint function.
    */
-  static JMTTrajectory2d Solve2D(const Matrix62d& conditions, const double t);
+  static JMTTrajectory2d Solve2d(const Matrix62d& conditions, const double t);
 
   /**
    * @brief      Compute set of feasible trajectory
@@ -245,7 +245,7 @@ struct JMT
    *
    * @return     set of feasible trajectories
    */
-  static std::vector<JMTTrajectory2d> SolveMultipleFeasible2D(const Matrix62d& conditions,
+  static std::vector<JMTTrajectory2d> SolveMultipleFeasible2d(const Matrix62d& conditions,
                                                               const Map& map,
                                                               const Configuration& conf);
 };

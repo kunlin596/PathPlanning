@@ -74,7 +74,7 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
       Matrix62d conditions;
       conditions.block<3, 2>(0, 0) = startKinematics;
       conditions.block<3, 2>(3, 0) = goalKinematics[i];
-      JMTTrajectory2d trajectory = JMT::Solve2D(conditions, goalTimes[i]);
+      JMTTrajectory2d trajectory = JMT::Solve2d(conditions, goalTimes[i]);
 
       // log["allTraj"].push_back(trajectory.Dump());
       // log["allGoals"].push_back(goals[i].Dump());

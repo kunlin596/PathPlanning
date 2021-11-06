@@ -10,7 +10,7 @@ using namespace Eigen;
 namespace pathplanning {
 
 JMTTrajectory1d
-JMT::Solve1D(const Vector6d& conditions, const double t)
+JMT::Solve1d(const Vector6d& conditions, const double t)
 {
   const Vector3d& start = conditions.topRows<3>();
   const Vector3d& end = conditions.bottomRows<3>();
@@ -43,9 +43,9 @@ JMT::Solve1D(const Vector6d& conditions, const double t)
 }
 
 JMTTrajectory2d
-JMT::Solve2D(const Matrix62d& conditions, const double t)
+JMT::Solve2d(const Matrix62d& conditions, const double t)
 {
-  return { JMT::Solve1D(conditions.col(0), t), JMT::Solve1D(conditions.col(1), t) };
+  return { JMT::Solve1d(conditions.col(0), t), JMT::Solve1d(conditions.col(1), t) };
 }
 
 bool
@@ -198,13 +198,13 @@ JMTTrajectory2d::Eval(const double t) const
 }
 
 std::vector<JMTTrajectory2d>
-JMT::SolveMultipleFeasible2D(const Matrix62d& conditions, const Map& map, const Configuration& conf)
+JMT::SolveMultipleFeasible2d(const Matrix62d& conditions, const Map& map, const Configuration& conf)
 {
   double minT = (conditions(3, 0) - conditions(0, 0)) / conf.speedLimit;
   std::vector<JMTTrajectory2d> trajs;
   double currTime = minT;
   while (currTime < (minT + conf.trajectory.maxTime + 1e-6)) {
-    auto traj = JMT::Solve2D(conditions, currTime);
+    auto traj = JMT::Solve2d(conditions, currTime);
     if (traj.IsValid(map, conf)) {
       trajs.push_back(traj);
       SPDLOG_TRACE("currTime={}, traj={}", currTime, traj);

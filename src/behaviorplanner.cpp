@@ -190,7 +190,7 @@ BehaviorPlanner::GenerateProposal(const Vehicle& ego, const TrackedVehicleMap& t
     Matrix62d conditions;
     conditions.block<3, 2>(0, 0) = egoKinematics;
     conditions.block<3, 2>(3, 0) = proposalKinematics;
-    std::vector<JMTTrajectory2d> feasibleTrajectories = JMT::SolveMultipleFeasible2D(conditions, _map, _conf);
+    std::vector<JMTTrajectory2d> feasibleTrajectories = JMT::SolveMultipleFeasible2d(conditions, _map, _conf);
 
     for (auto& traj : feasibleTrajectories) {
       SPDLOG_DEBUG(traj);
