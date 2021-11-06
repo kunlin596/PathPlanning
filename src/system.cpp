@@ -81,9 +81,6 @@ System::SpinOnce(const std::string& commandString)
       // ["yaw"] The car's yaw angle in the map int degrees
       // ["speed"] The car's speed in MPH
 
-      SPDLOG_INFO("----------------------------------------------------------");
-      SPDLOG_INFO("  telemetry");
-      SPDLOG_INFO("----------------------------------------------------------");
       Waypoint endPathSD = { data["end_path_s"], data["end_path_d"] };
 
       _pEgo->Update(data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]));
@@ -104,11 +101,10 @@ System::SpinOnce(const std::string& commandString)
       // Behavior planning
       //
 
-      int numPointsToPreserve;
+      int numPointsToPreserve = 10;
+      Matrix32d startState = _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath);
 
-      static constexpr int maxNumPoints = 300;
-
-      JMTTrajectory2d proposal = _pBehaviorPlanner->GenerateProposal(*_pEgo, _pTracker->GetVehicles());
+      JMTTrajectory2d proposal = _pBehaviorPlanner->GenerateProposal(startState, _pTracker->GetVehicles());
       //
       // Path generation
       //
@@ -123,11 +119,16 @@ System::SpinOnce(const std::string& commandString)
       std::tie(path, trajectory) = _pPathGenerator->GeneratePath(proposal, _pTracker->GetVehicles(), log);
 
       Waypoints newPath;
+      SPDLOG_DEBUG("numPointsToPreserve={}, prevPath.size()={}, _pConf->numPoints={}",
+                   numPointsToPreserve,
+                   prevPath.size(),
+                   _pConf->numPoints);
+
       int pathIndex = 0;
-      // for (pathIndex = 0; pathIndex < numPointsToPreserve and pathIndex < prevPath.size(); ++pathIndex) {
-      //   newPath.push_back(prevPath[pathIndex]);
-      // }
-      for (; pathIndex < maxNumPoints and pathIndex < path.size(); ++pathIndex) {
+      for (pathIndex = 0; pathIndex < numPointsToPreserve and pathIndex < prevPath.size(); ++pathIndex) {
+        newPath.push_back(prevPath[pathIndex]);
+      }
+      for (; pathIndex < _pConf->numPoints and pathIndex < path.size(); ++pathIndex) {
         newPath.push_back(path[pathIndex]);
       }
 
@@ -137,14 +138,6 @@ System::SpinOnce(const std::string& commandString)
 
       json waypointsJson;
       std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(newPath);
-
-      static int i = 0;
-      if (i < 1000) {
-        waypointsJson["numPointsToPreserve"] = numPointsToPreserve;
-        utils::WriteJson(fmt::format("/tmp/waypoints/waypoints-{:d}.json", i), waypointsJson);
-        utils::WriteJson(fmt::format("/tmp/ptg/ptg-{:d}.json", i), log);
-        i++;
-      }
 
       SPDLOG_TRACE("newPath={}", newPath);
 

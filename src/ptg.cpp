@@ -96,7 +96,7 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
     bestTrajectory = proposal;
   }
 
-  SPDLOG_INFO("bestTrajectory={}", bestTrajectory);
+  SPDLOG_DEBUG("bestTrajectory={}", bestTrajectory);
 
   //
   // Evaluate trajectory into waypoints
@@ -117,28 +117,18 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
   return std::make_pair(waypoints, bestTrajectory);
 }
 
-void
+Matrix32d
 PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
                                                  const JMTTrajectory2d& prevTraj,
-                                                 const Waypoints& prevPath,
-                                                 const Waypoint& endPrevPathSD,
-                                                 double& executedTime,
-                                                 Matrix32d& startState,
-                                                 int& numPoints)
+                                                 const Waypoints& prevPath)
 {
   if (prevPath.empty()) {
-    startState = ego.GetKinematics(0.0);
-    return;
+    return ego.GetKinematics(0.0);
   }
 
-  if (prevPath.empty()) {
-    executedTime = 0.0;
-  } else {
-    executedTime = prevTraj.GetTime() - (prevPath.size() * _conf.timeStep);
-  }
-
-  BOOST_ASSERT(_conf.numPoints > prevPath.size());
-  numPoints = _conf.numPoints - prevPath.size();
+  double executedTime = (_conf.numPoints - prevPath.size()) * _conf.simulator.timeStep;
+  SPDLOG_DEBUG("executedTime={}", executedTime);
+  return prevTraj(executedTime).topRows<3>();
 }
 
 } // namespace pathplanning

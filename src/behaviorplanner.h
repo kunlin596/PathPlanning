@@ -76,7 +76,7 @@ public:
   /**
    * @brief      Generate maneuver proposal trajectory
    */
-  JMTTrajectory2d GenerateProposal(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
+  JMTTrajectory2d GenerateProposal(const Matrix32d& startKinematics, const TrackedVehicleMap& trackedVehicleMap);
 
 private:
   const Map& _map;

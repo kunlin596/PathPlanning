@@ -48,13 +48,7 @@ public:
                                                      const TrackedVehicleMap& trackedVehicleMap,
                                                      json& log);
 
-  void ComputeStartState(const Vehicle& ego,
-                         const JMTTrajectory2d& prevTraj,
-                         const Waypoints& prevPath,
-                         const Waypoint& endPrevPathSD,
-                         double& executedTime,
-                         Matrix32d& startState,
-                         int& numPoints);
+  Matrix32d ComputeStartState(const Vehicle& ego, const JMTTrajectory2d& prevTraj, const Waypoints& prevPath);
 
 private:
   const Configuration& _conf;

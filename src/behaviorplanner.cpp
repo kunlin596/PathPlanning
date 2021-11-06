@@ -63,7 +63,7 @@ Matrix32d
 _GenerateLKProposal(const Matrix32d& egoConf, const TrackedVehicleMap& trackedVehicleMap, const Configuration& conf)
 {
   Matrix32d proposal;
-  proposal.col(0) << egoConf(0, 0) + 30.0, Mph2Mps(49.5), 0.0;
+  proposal.col(0) << egoConf(0, 0) + 60.0, 0.0, 0.0;
   proposal.col(1) << Map::GetLaneCenterD(Map::GetLaneId(egoConf(0, 1))), 0.0, 0.0;
   return proposal;
 }
@@ -154,54 +154,50 @@ BehaviorPlanner::BehaviorPlanner(const Map& map, const Configuration& conf)
 }
 
 JMTTrajectory2d
-BehaviorPlanner::GenerateProposal(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
+BehaviorPlanner::GenerateProposal(const Matrix32d& startKinematics, const TrackedVehicleMap& trackedVehicleMap)
 {
-  Matrix32d egoKinematics = ego.GetKinematics(0.0);
-
   double minCost = std::numeric_limits<double>::max();
   BehaviorState bestState;
   JMTTrajectory2d bestTraj;
 
-  SPDLOG_DEBUG("egoKinematics={}, {}", egoKinematics.col(0).transpose(), egoKinematics.col(1).transpose());
+  SPDLOG_DEBUG("startKinematics={}, {}", startKinematics.col(0).transpose(), startKinematics.col(1).transpose());
   for (const auto& state : _GetSuccessorStates(_currState)) {
     Matrix32d proposalKinematics;
 
     switch (state) {
       case BehaviorState::kLaneKeeping:
-        proposalKinematics = _GenerateLKProposal(egoKinematics, trackedVehicleMap, _conf);
+        proposalKinematics = _GenerateLKProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       case BehaviorState::kLeftLaneChangePreparation:
-        proposalKinematics = _GenerateLLCPProposal(egoKinematics, trackedVehicleMap, _conf);
+        proposalKinematics = _GenerateLLCPProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       case BehaviorState::kLeftLaneChange:
-        proposalKinematics = _GenerateLLCProposal(egoKinematics, trackedVehicleMap, _conf);
+        proposalKinematics = _GenerateLLCProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       case BehaviorState::kRightLaneChangePreparation:
-        proposalKinematics = _GenerateRLCPProposal(egoKinematics, trackedVehicleMap, _conf);
+        proposalKinematics = _GenerateRLCPProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       case BehaviorState::kRightLaneChange:
-        proposalKinematics = _GenerateRLCProposal(egoKinematics, trackedVehicleMap, _conf);
+        proposalKinematics = _GenerateRLCProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       default:
         break;
     }
 
-    SPDLOG_DEBUG("proposalKinematics={}, {}", proposalKinematics.col(0).transpose(), proposalKinematics.col(1).transpose());
+    SPDLOG_DEBUG(
+      "proposalKinematics={}, {}", proposalKinematics.col(0).transpose(), proposalKinematics.col(1).transpose());
     Matrix62d conditions;
-    conditions.block<3, 2>(0, 0) = egoKinematics;
+    conditions.block<3, 2>(0, 0) = startKinematics;
     conditions.block<3, 2>(3, 0) = proposalKinematics;
     std::vector<JMTTrajectory2d> feasibleTrajectories = JMT::SolveMultipleFeasible2d(conditions, _map, _conf);
 
-    // for (auto& traj : feasibleTrajectories) {
-    //   SPDLOG_DEBUG(traj);
-    // }
     if (!feasibleTrajectories.empty()) {
-      bestTraj = feasibleTrajectories[feasibleTrajectories.size() / 2];
+      bestTraj = feasibleTrajectories[0];
     }
 
     // for (const auto& traj : feasibleTrajectories) {
 
-    //   double cost = _pEvaluator->Evaluate(traj, proposalState, _conf.timeHorizon, trackedVehicleMap);
+    //   // double cost = _pEvaluator->Evaluate(traj, proposalKinematics, _conf.timeHorizon, trackedVehicleMap);
 
     //   SPDLOG_DEBUG("  Current cost {:s}: {:7.3}", state, cost);
     //   if (cost < minCost) {

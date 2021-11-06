@@ -181,7 +181,7 @@ JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf) const
     double dist = GetDistance(point3, point2);
     double curvature = Rad2Deg(heading2 - heading1) / dist;
     if (curvature > conf.trajectory.maxCurvature) {
-      SPDLOG_WARN("curvature is {:7.3f}, threashold {:7.3f}", curvature, conf.trajectory.maxCurvature);
+      SPDLOG_TRACE("curvature is {:7.3f}, threashold {:7.3f}", curvature, conf.trajectory.maxCurvature);
       return false;
     }
   }

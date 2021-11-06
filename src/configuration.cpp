@@ -24,6 +24,9 @@ Configuration::Parse(const std::string& filename)
   if (j.count("timeHorizon")) {
     timeHorizon = j["timeHorizon"];
   }
+  if (j.count("numPoints")) {
+    numPoints = j["numPoints"];
+  }
 
   if (j.count("tracker")) {
     const auto& trackerJson = j["tracker"];

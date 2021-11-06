@@ -123,7 +123,7 @@ add_executable(test_jmt src/tests/test_jmt.cpp)
 target_link_libraries(
   test_jmt
   PRIVATE
-  driving
+  trajectory
   gtest
   gtest_main
 )
@@ -132,7 +132,7 @@ add_executable(test_ptg src/tests/test_ptg.cpp)
 target_link_libraries(
   test_ptg
   PRIVATE
-  driving
+  trajectory
   gtest
   gtest_main
 )
@@ -141,7 +141,7 @@ add_executable(test_traj_evaluator src/tests/test_traj_evaluator.cpp)
 target_link_libraries(
   test_traj_evaluator
   PRIVATE
-  driving
+  trajectory
   gtest
   gtest_main
 )

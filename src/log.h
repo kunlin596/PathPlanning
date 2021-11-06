@@ -14,6 +14,8 @@
 #include <iostream>
 #include <vector>
 
+#include "Eigen-3.3/Eigen/Dense"
+
 // NOTE: Workaround for std array.
 
 namespace pathplanning {
@@ -60,6 +62,9 @@ operator<<(std::ostream& out, const std::array<double, 6>& arr)
 {
   return _Print<double, 6>(out, arr);
 }
+
+static const Eigen::IOFormat HeavyFmt(Eigen::StreamPrecision, 0, ", ", ",\n", "[", "]", "[", "]");
+
 } // namespace pathplanning
 
 #endif

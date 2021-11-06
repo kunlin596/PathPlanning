@@ -1,17 +1,19 @@
 {
   "serverPort": 4567,
-  "speedLimit": 50,
+  "speedLimit": 49.5,
   "timeStep": 0.02,
   "timeHorizon": 1.0,
   "nonEgoSearchRadius": 100,
-  "numMeasurementsToTrack": 30,
+  "numPoints": 100,
   "trajectory": {
-    "maxTime": 10.0,
+    "maxTime": 20.0,
     "maxJerk": 10.0,
     "maxAcc": 10.0,
     "expectedAccInOneSec": 3.0,
     "expectedJerkInOneSec": 2.0,
-    "collisionCheckingRadius": 5.0
+    "collisionCheckingRadius": 5.0,
+    "maxCurvature": 20.0,
+    "timeResolution": 0.5
   },
   "goalSampler": {
     "use": false,

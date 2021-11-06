@@ -71,7 +71,10 @@ Ego::Dump() const
 std::ostream&
 operator<<(std::ostream& out, const pathplanning::Vehicle& vehicle)
 {
-  return out << fmt::format("id={:2d}, kinematics={:s}", vehicle._id, vehicle._kinematics);
+  return out << fmt::format("id={:2d}, kinematics=(s: {}, d: {})",
+                            vehicle._id,
+                            vehicle._kinematics.col(0).transpose().format(HeavyFmt),
+                            vehicle._kinematics.col(1).transpose().format(HeavyFmt));
 }
 
 std::ostream&

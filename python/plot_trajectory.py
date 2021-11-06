@@ -66,14 +66,16 @@ def main(filename):
         plot1d(data)
 
 
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Visualize Trajectory File")
-    parser.add_argument("filename", type=str, nargs='+', help="JMT trajectory file names")
+    parser.add_argument(
+        "filename", type=str, nargs='+', help="JMT trajectory file names"
+    )
     args = parser.parse_args()
 
     for filename in args.filename:
-      main(filename)
+        main(filename)
     from IPython import embed
+
     embed()

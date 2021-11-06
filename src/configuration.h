@@ -26,7 +26,13 @@ public:
 
   double timeHorizon = 2.0; ///< Time horizon for prediction
 
-  int numPoints = static_cast<int>(timeHorizon / timeStep);
+  int numPoints = 50.0;
+
+  struct
+  {
+    double timeStep = 0.02;
+
+  } simulator;
 
   struct
   {

@@ -81,7 +81,7 @@ def plot2d(data):
         points = np.array(points).T
 
         xy = m.get_xy(points[:, 0], points[:, 1])
-        fig0.gca().plot(m.x, m.y, color='g')
+        # fig0.gca().plot(m.x, m.y, color='g')
         fig0.gca().plot(xy[:, 0], xy[:, 1])
         fig0.gca().axis('equal')
 
