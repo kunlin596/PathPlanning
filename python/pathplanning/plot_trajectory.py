@@ -7,6 +7,8 @@ import numpy as np
 import json
 import argparse
 import os
+from map import Map
+
 
 NAMES = ["position", "velocity", "accelaration", "jerk", "snap", "crackle"]
 np.set_printoptions(suppress=True, precision=6)
@@ -25,15 +27,17 @@ def evaluate_polynomial(coeffs, time, time_step=0.01):
 
 
 def plot2d(data):
+    m = Map('../data/highway_map.csv')
 
-    fig = plt.figure(0)
-    gs = fig.add_gridspec(6, 4)
-    axis2d = fig.add_subplot(gs[:, :2])
-    axes1 = [fig.add_subplot(gs[i, 2]) for i in range(6)]
+    fig0 = plt.figure(0)
+    fig1 = plt.figure(1)
+
+    gs = fig1.add_gridspec(6, 2)
+    axes1 = [fig1.add_subplot(gs[i, 0]) for i in range(6)]
     for index, axis in enumerate(axes1):
         axis.set_title(NAMES[index])
 
-    axes2 = [fig.add_subplot(gs[i, 3]) for i in range(6)]
+    axes2 = [fig1.add_subplot(gs[i, 1]) for i in range(6)]
     for index, axis in enumerate(axes2):
         axis.set_title(NAMES[index])
 
@@ -76,12 +80,17 @@ def plot2d(data):
             points.append(values5)
         points = np.array(points).T
 
-        axis2d.plot(points[:, 0], points[:, 1])
-        axis2d.axis('equal')
+        xy = m.get_xy(points[:, 0], points[:, 1])
+        fig0.gca().plot(m.x, m.y, color='g')
+        fig0.gca().plot(xy[:, 0], xy[:, 1])
+        fig0.gca().axis('equal')
 
     plt.ion()
     plt.tight_layout()
     plt.show(block=True)
+    from IPython import embed
+
+    embed()
 
 
 def main(data):

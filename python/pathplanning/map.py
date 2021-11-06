@@ -69,13 +69,15 @@ class Map:
         )
         s += np.linalg.norm(prej)
 
-        return [s, d]
+        return np.array([s, d]).T
 
     def get_xy(self, s, d):
-        return [
-            self.sx_spline(s) + d * self.sdx_spline(s),
-            self.sy_spline(s) + d * self.sdy_spline(s),
-        ]
+        return np.array(
+            [
+                self.sx_spline(s) + d * self.sdx_spline(s),
+                self.sy_spline(s) + d * self.sdy_spline(s),
+            ]
+        ).T
 
 
 if __name__ == '__main__':
