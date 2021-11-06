@@ -52,6 +52,5 @@ TEST(JMTTest, Solve1d_EndConditionTest)
     EXPECT_NEAR(kinematics[0], conditions[3], 1e-8);
     EXPECT_NEAR(kinematics[1], conditions[4], 1e-8);
     EXPECT_NEAR(kinematics[2], conditions[5], 1e-8);
-    EXPECT_FALSE(traj1d.IsValid(conf));
   }
 }
