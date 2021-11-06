@@ -85,7 +85,7 @@ public:
     std::array<double, 6> evalSigmas = { 10.0, 1.0, 2.0, 1.0, 1.0, 1.0 };
 
     // Max curvature of the trajectory, for evaluation
-    double maxCurvature = 2.0;
+    double maxCurvature = 30.0;
 
   } trajectory;
 

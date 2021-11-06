@@ -87,6 +87,7 @@ System::SpinOnce(const std::string& commandString)
       Waypoint endPathSD = { data["end_path_s"], data["end_path_d"] };
 
       _pEgo->Update(data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]));
+      SPDLOG_INFO(*_pEgo);
 
       //
       // Process perceptions
@@ -112,8 +113,8 @@ System::SpinOnce(const std::string& commandString)
       // Path generation
       //
 
-      SPDLOG_INFO(
-        "Generating path for proposal\n  startState - {}\n  proposal={}\n", _pEgo->GetKinematics(0.0), proposal);
+      // SPDLOG_INFO(
+      //   "Generating path for proposal\n  startState - {}\n  proposal={}\n", _pEgo->GetKinematics(0.0), proposal);
 
       json log;
 
@@ -123,9 +124,9 @@ System::SpinOnce(const std::string& commandString)
 
       Waypoints newPath;
       int pathIndex = 0;
-      for (pathIndex = 0; pathIndex < numPointsToPreserve and pathIndex < prevPath.size(); ++pathIndex) {
-        newPath.push_back(prevPath[pathIndex]);
-      }
+      // for (pathIndex = 0; pathIndex < numPointsToPreserve and pathIndex < prevPath.size(); ++pathIndex) {
+      //   newPath.push_back(prevPath[pathIndex]);
+      // }
       for (; pathIndex < maxNumPoints and pathIndex < path.size(); ++pathIndex) {
         newPath.push_back(path[pathIndex]);
       }

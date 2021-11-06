@@ -16,7 +16,7 @@ Vehicle::GetMotionModel(double time)
 Matrix32d
 Vehicle::GetKinematics(double time) const
 {
-  if (time < 1e-6) {
+  if (time > 1e-6) {
     return GetMotionModel(time) * _kinematics;
   }
   return _kinematics;
@@ -55,7 +55,8 @@ Ego::Update(double x, double y, double s, double d, double yaw, double speed)
   _speed = speed;
 
   // TODO: Compute sd velocity
-  _kinematics << s, speed, 0.0, d, 0.0, 0.0;
+  _kinematics.col(0) << s, speed, 0.0;
+  _kinematics.col(1) << d, 0.0, 0.0;
 }
 
 json

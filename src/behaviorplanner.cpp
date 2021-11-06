@@ -154,7 +154,7 @@ BehaviorPlanner::BehaviorPlanner(const Map& map, const Configuration& conf)
 }
 
 JMTTrajectory2d
-BehaviorPlanner::GenerateProposal(const Vehicle& ego, const TrackedVehicleMap& trackedVehicleMap)
+BehaviorPlanner::GenerateProposal(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
 {
   Matrix32d egoKinematics = ego.GetKinematics(0.0);
 
@@ -162,7 +162,7 @@ BehaviorPlanner::GenerateProposal(const Vehicle& ego, const TrackedVehicleMap& t
   BehaviorState bestState;
   JMTTrajectory2d bestTraj;
 
-  SPDLOG_DEBUG("egoKinematics={}", egoKinematics);
+  SPDLOG_DEBUG("egoKinematics={}, {}", egoKinematics.col(0).transpose(), egoKinematics.col(1).transpose());
   for (const auto& state : _GetSuccessorStates(_currState)) {
     Matrix32d proposalKinematics;
 
@@ -186,17 +186,17 @@ BehaviorPlanner::GenerateProposal(const Vehicle& ego, const TrackedVehicleMap& t
         break;
     }
 
-    SPDLOG_DEBUG("proposalKinematics={}", proposalKinematics);
+    SPDLOG_DEBUG("proposalKinematics={}, {}", proposalKinematics.col(0).transpose(), proposalKinematics.col(1).transpose());
     Matrix62d conditions;
     conditions.block<3, 2>(0, 0) = egoKinematics;
     conditions.block<3, 2>(3, 0) = proposalKinematics;
     std::vector<JMTTrajectory2d> feasibleTrajectories = JMT::SolveMultipleFeasible2d(conditions, _map, _conf);
 
-    for (auto& traj : feasibleTrajectories) {
-      SPDLOG_DEBUG(traj);
-    }
+    // for (auto& traj : feasibleTrajectories) {
+    //   SPDLOG_DEBUG(traj);
+    // }
     if (!feasibleTrajectories.empty()) {
-      bestTraj = feasibleTrajectories[feasibleTrajectories.size() - 1];
+      bestTraj = feasibleTrajectories[feasibleTrajectories.size() / 2];
     }
 
     // for (const auto& traj : feasibleTrajectories) {

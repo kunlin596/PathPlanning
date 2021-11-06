@@ -40,6 +40,12 @@ Configuration::Parse(const std::string& filename)
     if (trajectoryEvaluationJson.count("maxTime")) {
       trajectory.maxTime = trajectoryEvaluationJson["maxTime"];
     }
+    if (trajectoryEvaluationJson.count("maxCurvature")) {
+      trajectory.maxCurvature = trajectoryEvaluationJson["maxCurvature"];
+    }
+    if (trajectoryEvaluationJson.count("timeResolution")) {
+      trajectory.timeResolution = trajectoryEvaluationJson["timeResolution"];
+    }
     if (trajectoryEvaluationJson.count("maxJerk")) {
       trajectory.maxJerk = trajectoryEvaluationJson["maxJerk"];
     }

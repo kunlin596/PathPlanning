@@ -85,3 +85,22 @@ TEST(JMTTest, Solve2d_EndConditionTest)
     EXPECT_NEAR(kinematics(2, 1), conditions(5, 1), 1e-8);
   }
 }
+
+TEST(JMTTest, SolveMultipleFeasible2d)
+{
+  double vel = 30.0;
+  double pos = 30.0;
+
+  Configuration conf("../default_conf.json");
+  Map::ConstPtr pMap = Map::CreateMap("../data/highway_map.csv");
+  Matrix62d conditions;
+
+  conditions.col(0) << 0.0, 0.0, 0.0, pos, 0.0, 0.0;
+  conditions.col(1) << 0.0, 0.0, 0.0, 4.0, 0.0, 0.0;
+
+  auto trajs = JMT::SolveMultipleFeasible2d(conditions, *pMap, conf);
+  int i = 0;
+  for (auto& traj: trajs) {
+    traj.Write(fmt::format("/tmp/jmt/{}.json", i++));
+  }
+}

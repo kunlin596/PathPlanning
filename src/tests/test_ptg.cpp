@@ -8,7 +8,7 @@ namespace {
 using namespace pathplanning;
 }
 
-TEST(PTGTest, Solve1d_ConstantSpeedTest)
+TEST(PTGTest, )
 {
   double vel = 30.0;
   double time = 10.0;

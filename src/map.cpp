@@ -1,5 +1,6 @@
 #include "map.h"
 
+#include <boost/assert.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -42,6 +43,8 @@ Map::Read(const std::string& filename)
     _dx.push_back(dx);
     _dy.push_back(dy);
   }
+  BOOST_ASSERT(_x.size() > 0);
+  BOOST_ASSERT(_y.size() > 0);
   // Smoothing the map waypoints
   _pImpl->sXSpline.set_points(_s, _x);
   _pImpl->sYSpline.set_points(_s, _y);

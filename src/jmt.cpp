@@ -181,7 +181,7 @@ JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf) const
     double dist = GetDistance(point3, point2);
     double curvature = Rad2Deg(heading2 - heading1) / dist;
     if (curvature > conf.trajectory.maxCurvature) {
-      SPDLOG_TRACE("curvature is {:7.3f} exceeding threashold {:7.3f}", curvature, conf.trajectory.maxCurvature);
+      SPDLOG_WARN("curvature is {:7.3f}, threashold {:7.3f}", curvature, conf.trajectory.maxCurvature);
       return false;
     }
   }
@@ -200,16 +200,24 @@ JMTTrajectory2d::Eval(const double t) const
 std::vector<JMTTrajectory2d>
 JMT::SolveMultipleFeasible2d(const Matrix62d& conditions, const Map& map, const Configuration& conf)
 {
-  double minT = (conditions(3, 0) - conditions(0, 0)) / conf.speedLimit;
   std::vector<JMTTrajectory2d> trajs;
+  int cnt = 0;
+
+  double minT = (conditions(3, 0) - conditions(0, 0)) / conf.speedLimit;
   double currTime = minT;
   while (currTime < (minT + conf.trajectory.maxTime + 1e-6)) {
     auto traj = JMT::Solve2d(conditions, currTime);
+    traj.Write(fmt::format("/tmp/jmt/{}.json", cnt));
     if (traj.IsValid(map, conf)) {
       trajs.push_back(traj);
-      SPDLOG_TRACE("currTime={}, traj={}", currTime, traj);
     }
-    currTime += conf.timeStep;
+    currTime += conf.trajectory.timeResolution;
+    ++cnt;
+  }
+  if (trajs.empty()) {
+    SPDLOG_WARN("Checked {} time steps, and found {} feasible trajectories", cnt, trajs.size());
+  } else {
+    SPDLOG_DEBUG("Checked {} time steps, and found {} feasible trajectories", cnt, trajs.size());
   }
   return trajs;
 }
@@ -217,8 +225,10 @@ JMT::SolveMultipleFeasible2d(const Matrix62d& conditions, const Map& map, const 
 std::ostream&
 operator<<(std::ostream& out, const pathplanning::JMTTrajectory2d& traj)
 {
-  return out << fmt::format(
-           "JMTTrajectory2d(time={}, sCoeffs={}, dCoeffs{})", traj.GetTime(), traj.GetSFunc(), traj.GetDFunc());
+  return out << fmt::format("JMTTrajectory2d(time={}, sCoeffs={}, dCoeffs={})",
+                            traj.GetTime(),
+                            traj.GetSFunc().coeffs.transpose(),
+                            traj.GetDFunc().coeffs.transpose());
 }
 
 } // namespace pathplanning
