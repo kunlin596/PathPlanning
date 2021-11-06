@@ -54,3 +54,34 @@ TEST(JMTTest, Solve1d_EndConditionTest)
     EXPECT_NEAR(kinematics[2], conditions[5], 1e-8);
   }
 }
+
+TEST(JMTTest, Solve2d_EndConditionTest)
+{
+  double vel = 30.0;
+  double acc = 5.0;
+  double time = 20.0;
+  double pos = vel * time;
+
+  Configuration conf;
+  Matrix62d conditions;
+  JMTTrajectory2d traj2d;
+
+  GaussianSampler1D<> posSampler(pos, 10.0);
+  GaussianSampler1D<> velSampler(vel, 10.0);
+  GaussianSampler1D<> accSampler(acc, 10.0);
+
+  for (int i = 0; i < 50; ++i) {
+    conditions.col(0) << 0.0, vel, 0.0, posSampler.Sample(), velSampler.Sample(), accSampler.Sample();
+    conditions.col(1) << 0.0, vel, acc, posSampler.Sample(), velSampler.Sample(), accSampler.Sample();
+    traj2d = JMT::Solve2d(conditions, time);
+    Matrix62d kinematics = traj2d(time);
+    // s
+    EXPECT_NEAR(kinematics(0, 0), conditions(3, 0), 1e-8);
+    EXPECT_NEAR(kinematics(1, 0), conditions(4, 0), 1e-8);
+    EXPECT_NEAR(kinematics(2, 0), conditions(5, 0), 1e-8);
+    // d
+    EXPECT_NEAR(kinematics(0, 1), conditions(3, 1), 1e-8);
+    EXPECT_NEAR(kinematics(1, 1), conditions(4, 1), 1e-8);
+    EXPECT_NEAR(kinematics(2, 1), conditions(5, 1), 1e-8);
+  }
+}
