@@ -16,7 +16,6 @@ Perception::CreatePerceptions(const std::vector<std::vector<double>>& data, cons
 Vehicle
 Perception::GetVehicle() const
 {
-
   Matrix32d kinematics = Matrix32d::Zero();
   kinematics(0, 0) = sd[0];
   kinematics(0, 1) = sd[1];

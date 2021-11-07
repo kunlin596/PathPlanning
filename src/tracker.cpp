@@ -8,7 +8,7 @@
 namespace pathplanning {
 
 void
-Tracker::Update(const Vehicle& ego, const Perceptions& perceptions)
+Tracker::Update(const Ego& ego, const Perceptions& perceptions)
 {
   // TODO: Implementation can be simplified.
   std::array<double, 2> egoSD = { ego._kinematics(0, 0), ego._kinematics(0, 1) };

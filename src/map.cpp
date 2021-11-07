@@ -192,7 +192,7 @@ ComputeFrenetVelocity(const Map& map,
                       const std::array<double, 2>& sd,
                       const double dt)
 {
-  std::array<double, 2> sd2 = map.GetSD(pos[0] + vel[0], pos[1] + vel[1], std::atan2(vel[1], vel[0]));
+  std::array<double, 2> sd2 = map.GetSD(pos[0] + vel[0] * dt, pos[1] + vel[1] * dt, std::atan2(vel[1], vel[0]));
   return { (sd2[0] - sd[0]) / dt, (sd2[1] - sd[1]) / dt };
 }
 

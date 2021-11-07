@@ -5,11 +5,12 @@ void
 Configuration::Parse(const std::string& filename)
 {
   using namespace nlohmann;
+
   json j;
   if (not filename.empty()) {
     std::ifstream ifs(filename);
     ifs >> j;
-    std::cout << j << std::endl;
+    std::cout << j.dump(2) << std::endl;
   }
 
   if (j.count("serverPort")) {

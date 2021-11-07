@@ -1,5 +1,6 @@
 #include "ptg.h"
 
+#include "collision_checker.h"
 #include "goalsampler.h"
 #include "log.h"
 #include "utils.h"
@@ -44,7 +45,10 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
 
     double timeRangeSingleSide = _conf.goalSampler.numTimeSteps * _conf.goalSampler.sampleTimeStep;
     double minTime = std::max(0.5, proposal.GetTime() - timeRangeSingleSide);
-    double maxTime = std::min(3.0, proposal.GetTime() + timeRangeSingleSide);
+    double maxTime = proposal.GetTime() + timeRangeSingleSide;
+
+    // goalKinematics.push_back(proposal(0.0).block<3, 2>(0, 0));
+    // goalTimes.push_back(proposal.GetTime());
 
     double sampleTime = minTime;
     while (sampleTime < maxTime) {
@@ -70,11 +74,30 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
     using namespace nlohmann;
     json j;
 
+    std::vector<JMTTrajectory2d> trajs;
     for (size_t i = 0; i < goalKinematics.size(); ++i) {
       Matrix62d conditions;
       conditions.block<3, 2>(0, 0) = startKinematics;
       conditions.block<3, 2>(3, 0) = goalKinematics[i];
       JMTTrajectory2d trajectory = JMT::Solve2d(conditions, goalTimes[i]);
+
+      // SPDLOG_DEBUG("conditions=\n{}", conditions.format(HeavyFmt));
+      if (not trajectory.IsValid(_map, _conf)) {
+        SPDLOG_WARN("trajectory invalid {}", i);
+        continue;
+      }
+      const auto& [id, dist] = CollisionChecker::IsInCollision(trajectory, trackedVehicleMap, _conf);
+      if (id != -1) {
+        Eigen::Vector3d sKinematics = trackedVehicleMap.at(id).GetKinematics(0.0).block<3, 1>(0, 0);
+        SPDLOG_WARN(
+          "trajectory, in collision {} with {}, vehicleS={}", i, id, sKinematics.transpose().format(HeavyFmt));
+        continue;
+      }
+
+      trajs.push_back(trajectory);
+      // if (CollisionChecker::IsInCollision(trajectory, trackedVehicleMap, _conf)) {
+      //   continue;
+      // }
 
       // log["allTraj"].push_back(trajectory.Dump());
       // log["allGoals"].push_back(goals[i].Dump());
@@ -92,7 +115,19 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
       //   bestTrajectory = trajectory;
       // }
     }
+    if (trajs.empty()) {
+      SPDLOG_WARN("No valid trajectories found!");
+    } else {
+      bestTrajectory = trajs[trajs.size() / 2];
+    }
   } else {
+    const auto& [id, dist] = (CollisionChecker::IsInCollision(proposal, trackedVehicleMap, _conf));
+    if (id != -1) {
+      SPDLOG_WARN("Collision detected, id={}, closest dist={:7.3f}, kinematics={}",
+                  id,
+                  dist,
+                  trackedVehicleMap.at(id).GetKinematics(0.0).topRows<1>().format(HeavyFmt));
+    }
     bestTrajectory = proposal;
   }
 

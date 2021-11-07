@@ -136,11 +136,6 @@ DEFINE_COST_FUNCTOR(SDiffCost);
 DEFINE_COST_FUNCTOR(DDiffCost);
 
 /**
- * @brief      Binary cost function which penalizes collisions.
- */
-DEFINE_COST_FUNCTOR(CollisionCost);
-
-/**
  * @brief      Buffer distance cost
  *
  * Penalizes getting close to other vehicles.

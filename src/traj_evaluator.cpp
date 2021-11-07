@@ -1,4 +1,5 @@
 #include "traj_evaluator.h"
+#include "collision_checker.h"
 #include "log.h"
 
 namespace pathplanning {
@@ -14,8 +15,6 @@ CreateCostFunctor(const CostType& type)
       return std::make_shared<SDiffCost>();
     case CostType::kDDiff:
       return std::make_shared<DDiffCost>();
-    case CostType::kCollision:
-      return std::make_shared<CollisionCost>();
     case CostType::kBuffer:
       return std::make_shared<BufferCost>();
     case CostType::kEfficiency:
@@ -72,29 +71,13 @@ DDiffCost::operator()(const JMTTrajectory2d& traj,
 }
 
 double
-CollisionCost::operator()(const JMTTrajectory2d& traj,
-                          const Matrix32d& goalConf,
-                          const double requestTime,
-                          const TrackedVehicleMap& trackedVehicleMap,
-                          const Configuration& conf)
-{
-  double dist = traj.GetNearestApproachTo(trackedVehicleMap, traj.GetTime(), conf.trajectory.collisionCheckingTimeStep);
-  double threshold = std::max(Vehicle::Size, conf.trajectory.collisionCheckingRadius);
-  if (dist < threshold) {
-    SPDLOG_TRACE("Collision detected, closest dist={:7.3f}, threshold={:7.3f}", dist, threshold);
-    return 1.0;
-  }
-  return 0.0;
-}
-
-double
 BufferCost::operator()(const JMTTrajectory2d& traj,
                        const Matrix32d& goalConf,
                        const double requestTime,
                        const TrackedVehicleMap& trackedVehicleMap,
                        const Configuration& conf)
 {
-  double dist = traj.GetNearestApproachTo(trackedVehicleMap, conf.timeHorizon, conf.timeStep);
+  const auto& [id, dist] = CollisionChecker::GetMinDistance(traj, trackedVehicleMap, conf.timeHorizon, conf.timeStep);
   double threshold = std::max(Vehicle::Size, conf.trajectory.collisionCheckingRadius);
   static constexpr double SIGMA = Vehicle::Size; // meter
   return Gaussian1D(threshold, dist, SIGMA);
@@ -205,8 +188,6 @@ operator<<(std::ostream& out, const CostType& type)
       return out << "SDiffCost";
     case CostType::kDDiff:
       return out << "DDiffCost";
-    case CostType::kCollision:
-      return out << "CollisionCost";
     case CostType::kBuffer:
       return out << "BufferCost";
     case CostType::kEfficiency:
@@ -229,7 +210,6 @@ JMTTrajectoryEvaluator::Options::Options(const Configuration& conf)
   driverProfile[CostType::kTimeDiff] = conf.driverProfile.timeDiff;
   driverProfile[CostType::kSDiff] = conf.driverProfile.sDiff;
   driverProfile[CostType::kDDiff] = conf.driverProfile.dDiff;
-  driverProfile[CostType::kCollision] = conf.driverProfile.collision;
   driverProfile[CostType::kBuffer] = conf.driverProfile.buffer;
   driverProfile[CostType::kEfficiency] = conf.driverProfile.efficiency;
   driverProfile[CostType::kTotalAccel] = conf.driverProfile.totalAcc;

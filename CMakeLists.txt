@@ -68,6 +68,7 @@ add_library(
   SHARED
   src/path.cpp
   src/jmt.cpp
+  src/collision_checker.cpp
   src/traj_evaluator.cpp
   src/goalsampler.cpp
   src/ptg.cpp

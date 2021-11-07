@@ -4,25 +4,25 @@
   "timeStep": 0.02,
   "timeHorizon": 1.0,
   "nonEgoSearchRadius": 100,
-  "numPoints": 100,
+  "numPoints": 200,
   "trajectory": {
-    "maxTime": 20.0,
+    "maxTime": 10.0,
     "maxJerk": 10.0,
     "maxAcc": 10.0,
     "expectedAccInOneSec": 3.0,
     "expectedJerkInOneSec": 2.0,
-    "collisionCheckingRadius": 5.0,
+    "collisionCheckingRadius": 4.0,
     "maxCurvature": 20.0,
     "timeResolution": 0.5
   },
   "goalSampler": {
-    "use": false,
-    "sampleTimeStep": 0.2,
+    "use": true,
+    "sampleTimeStep": 0.5,
     "numTimeSteps": 3,
     "numSamplesPerTimeStep": 10,
     "sampleSigmas": [
-      2.0, 5.0, 2.0,
-      0.5, 2.0, 1.0
+      2.0, 1.0, 1.0,
+      0.2, 0.1, 0.1
     ]
   },
   "driverProfileName" : "default",
@@ -31,11 +31,10 @@
       "timeDiff": 1.0,
       "sDiff": 1.0,
       "dDiff": 1.0,
-      "collision": 1e6,
       "buffer": 1.0,
       "efficiency": 1.0,
       "totalAcc": 1.0,
-      "totalJerk": 1.0,
+      "totalJerk": 1.0
     }
   }
 }

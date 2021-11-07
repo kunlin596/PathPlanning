@@ -38,7 +38,7 @@ public:
    *
    * @param[in]  perceptions  The new perceptions results
    */
-  void Update(const Vehicle& ego, const Perceptions& perceptions);
+  void Update(const Ego& ego, const Perceptions& perceptions);
 
   const TrackedVehicleMap& GetVehicles() const { return _trackedVehicleMap; }
 

@@ -99,24 +99,6 @@ struct JMTTrajectory2d
   Eigen::Matrix62d Eval(const double t) const;
   Eigen::Matrix62d operator()(const double t) const { return Eval(t); }
 
-  /**
-   * @brief      Calculates the nearest approach to given vehicles.
-   *
-   * @param[in]  vehicle          The target vehicle
-   * @param[in]  maxTimeDuration  The maximum time duration for trajectory
-   *                              evaluation
-   * @param[in]  timeStep         The time step
-   *
-   * @return     The nearest approach distance.
-   */
-  double GetNearestApproachTo(const Vehicle& vehicle, double maxTimeDuration, double timeStep) const;
-
-  double GetNearestApproachTo(const std::vector<Vehicle>& vehicles, double maxTimeDuration, double timeStep) const;
-
-  double GetNearestApproachTo(const std::unordered_map<int, Vehicle>& vehicles,
-                              double maxTimeDuration,
-                              double timeStep) const;
-
   inline Matrix32d GetStartCond() const
   {
     Matrix32d cond;

@@ -85,56 +85,6 @@ JMTTrajectory1d::Write(const std::string& filename) const
   utils::WriteJson(filename, Dump());
 }
 
-double
-JMTTrajectory2d::GetNearestApproachTo(const Vehicle& vehicle, double maxTimeDuration, double timeStep) const
-{
-  double minDist = std::numeric_limits<double>::infinity();
-  double currTime = 0.0;
-  while (currTime < maxTimeDuration) {
-    currTime += timeStep;
-    Matrix62d trajKinematics = Eval(currTime);
-    Matrix32d vehicleKinematics = vehicle.GetKinematics(currTime);
-
-    double dist =
-      GetDistance({ trajKinematics(0, 0), trajKinematics(0, 1) }, { vehicleKinematics(0, 0), vehicleKinematics(0, 1) });
-
-    if (dist < minDist) {
-      minDist = dist;
-    }
-  }
-  return minDist;
-}
-
-double
-JMTTrajectory2d::GetNearestApproachTo(const std::vector<Vehicle>& vehicles,
-                                      double maxTimeDuration,
-                                      double timeStep) const
-{
-  double minDist = std::numeric_limits<double>::infinity();
-  for (const auto& v : vehicles) {
-    double dist = GetNearestApproachTo(v, maxTimeDuration, timeStep);
-    if (dist < minDist) {
-      minDist = dist;
-    }
-  }
-  return minDist;
-}
-
-double
-JMTTrajectory2d::GetNearestApproachTo(const std::unordered_map<int, Vehicle>& vehicles,
-                                      double maxTimeDuration,
-                                      double timeStep) const
-{
-  double minDist = std::numeric_limits<double>::infinity();
-  for (const auto& [id, v] : vehicles) {
-    double dist = GetNearestApproachTo(v, maxTimeDuration, timeStep);
-    if (dist < minDist) {
-      minDist = dist;
-    }
-  }
-  return minDist;
-}
-
 JMTTrajectory2d::JMTTrajectory2d(const JMTTrajectory1d& traj1, const JMTTrajectory1d& traj2)
   : _traj1(traj1)
   , _traj2(traj2)
@@ -173,7 +123,7 @@ JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf) const
     auto kinematics = Eval(currTime);
 
     if (roadBoundaries[0] > kinematics(0, 1) or kinematics(0, 1) > roadBoundaries[1]) {
-      SPDLOG_TRACE("trajectory is off road, d={:7.3f}, roadBoundaries={:7.3f}", kinematics(0, 1), roadBoundaries);
+      SPDLOG_WARN("trajectory is off road, d={:7.3f}, roadBoundaries={}", kinematics(0, 1), roadBoundaries);
       return false;
     }
 
