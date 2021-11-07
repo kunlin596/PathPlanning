@@ -20,18 +20,12 @@ CreateCostFunctor(const CostType& type)
       return std::make_shared<BufferCost>();
     case CostType::kStaysOnRoad:
       return std::make_shared<StaysOnRoadCost>();
-    case CostType::kExceedsSpeedLimit:
-      return std::make_shared<ExceedsSpeedLimitCost>();
     case CostType::kEfficiency:
       return std::make_shared<EfficiencyCost>();
     case CostType::kTotalAccel:
       return std::make_shared<TotalAccelCost>();
-    case CostType::kMaxAccel:
-      return std::make_shared<MaxAccelCost>();
     case CostType::kTotalJerk:
       return std::make_shared<TotalJerkCost>();
-    case CostType::kMaxJerk:
-      return std::make_shared<MaxJerkCost>();
     default:
       throw std::runtime_error("Not supported cost function");
   }
@@ -130,26 +124,6 @@ StaysOnRoadCost::operator()(const JMTTrajectory2d& traj,
 }
 
 double
-ExceedsSpeedLimitCost::operator()(const JMTTrajectory2d& traj,
-                                  const Matrix32d& goalConf,
-                                  const double requestTime,
-                                  const TrackedVehicleMap& trackedVehicleMap,
-                                  const Configuration& conf)
-{
-
-  double currTime = 0.0;
-  double timeStep = conf.timeStep;
-  while (currTime < (traj.GetTime() + 1e-6)) {
-    Matrix62d trajConf = traj(currTime);
-    if (std::abs(trajConf(0, 1)) > conf.speedLimit or std::abs(trajConf(1, 1)) > conf.speedLimit) {
-      return 1.0;
-    }
-    currTime += timeStep;
-  }
-  return 0.0;
-}
-
-double
 EfficiencyCost::operator()(const JMTTrajectory2d& traj,
                            const Matrix32d& goalConf,
                            const double requestTime,
@@ -190,27 +164,6 @@ TotalAccelCost::operator()(const JMTTrajectory2d& traj,
 }
 
 double
-MaxAccelCost::operator()(const JMTTrajectory2d& traj,
-                         const Matrix32d& goalConf,
-                         const double requestTime,
-                         const TrackedVehicleMap& trackedVehicleMap,
-                         const Configuration& conf)
-{
-  // TODO: Check D as well
-  double currTime = 0.0;
-  while (currTime < conf.timeHorizon) {
-    Matrix62d currConf = traj(currTime);
-    if (std::abs(currConf(0, 2)) > conf.trajectory.maxAcc or std::abs(currConf(1, 2)) > conf.trajectory.maxAcc) {
-      SPDLOG_TRACE("sacc={}, dacc={}, threshold={}", currConf(0, 2), currConf(1, 2), conf.trajectory.maxAcc);
-
-      return 1.0;
-    }
-    currTime += conf.timeStep;
-  }
-  return 0.0;
-}
-
-double
 TotalJerkCost::operator()(const JMTTrajectory2d& traj,
                           const Matrix32d& goalConf,
                           const double requestTime,
@@ -238,31 +191,6 @@ TotalJerkCost::operator()(const JMTTrajectory2d& traj,
          2.0;
 }
 
-double
-MaxJerkCost::operator()(const JMTTrajectory2d& traj,
-                        const Matrix32d& goalConf,
-                        const double requestTime,
-                        const TrackedVehicleMap& trackedVehicleMap,
-                        const Configuration& conf)
-{
-  // TODO: Check D as well
-  auto sJerkFunc = traj.GetTraj1().GetFunc2();
-  auto dJerkFunc = traj.GetTraj2().GetFunc2();
-
-  double currTime = 0.0;
-  while (currTime < conf.timeHorizon) {
-    double sjerk = sJerkFunc(currTime);
-    double djerk = dJerkFunc(currTime);
-
-    if (std::abs(sjerk) > conf.trajectory.maxJerk or std::abs(djerk) > conf.trajectory.maxJerk) {
-      SPDLOG_TRACE("sjerk={}, djerk={}, threshold={}", sjerk, djerk, conf.trajectory.maxJerk);
-      return 1.0;
-    }
-
-    currTime += conf.timeStep;
-  }
-  return 0.0;
-}
 } // namespace costs
 
 double
@@ -312,12 +240,8 @@ operator<<(std::ostream& out, const CostType& type)
       return out << "EfficiencyCost";
     case CostType::kTotalAccel:
       return out << "TotalAccelCost";
-    case CostType::kMaxAccel:
-      return out << "MaxAccelCost";
     case CostType::kTotalJerk:
       return out << "TotalJerkCost";
-    case CostType::kMaxJerk:
-      return out << "MaxJerkCost";
     default:
       throw std::runtime_error("Not supported cost function");
   }
@@ -335,12 +259,9 @@ JMTTrajectoryEvaluator::Options::Options(const Configuration& conf)
   driverProfile[CostType::kCollision] = conf.driverProfile.collision;
   driverProfile[CostType::kBuffer] = conf.driverProfile.buffer;
   driverProfile[CostType::kStaysOnRoad] = conf.driverProfile.staysOnRoad;
-  driverProfile[CostType::kExceedsSpeedLimit] = conf.driverProfile.exceedsSpeedLimit;
   driverProfile[CostType::kEfficiency] = conf.driverProfile.efficiency;
   driverProfile[CostType::kTotalAccel] = conf.driverProfile.totalAcc;
-  driverProfile[CostType::kMaxAccel] = conf.driverProfile.maxAcc;
   driverProfile[CostType::kTotalJerk] = conf.driverProfile.totalJerk;
-  driverProfile[CostType::kMaxJerk] = conf.driverProfile.maxJerk;
 }
 
 } // namespace pathplanning

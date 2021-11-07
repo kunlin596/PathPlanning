@@ -157,11 +157,6 @@ DEFINE_COST_FUNCTOR(BufferCost);
 DEFINE_COST_FUNCTOR(StaysOnRoadCost);
 
 /**
- * @brief      Speed limit cost
- */
-DEFINE_COST_FUNCTOR(ExceedsSpeedLimitCost);
-
-/**
  * @brief      Rewards high average speeds.
  */
 DEFINE_COST_FUNCTOR(EfficiencyCost);
@@ -172,19 +167,9 @@ DEFINE_COST_FUNCTOR(EfficiencyCost);
 DEFINE_COST_FUNCTOR(TotalAccelCost);
 
 /**
- * @brief      Max accelaration cost
- */
-DEFINE_COST_FUNCTOR(MaxAccelCost);
-
-/**
  * @brief      Total jerk cost
  */
 DEFINE_COST_FUNCTOR(TotalJerkCost);
-
-/**
- * @brief      Max jerk cost
- */
-DEFINE_COST_FUNCTOR(MaxJerkCost);
 
 std::ostream&
 operator<<(std::ostream& out, const CostType& type);
