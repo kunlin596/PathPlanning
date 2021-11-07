@@ -15,13 +15,9 @@ enum class CostType
   kDDiff,
   kCollision,
   kBuffer,
-  kStaysOnRoad,
-  kExceedsSpeedLimit,
   kEfficiency,
   kTotalAccel,
-  kMaxAccel,
   kTotalJerk,
-  kMaxJerk
 };
 
 struct CostFunctorBase;

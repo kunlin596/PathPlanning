@@ -164,8 +164,19 @@ JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf) const
 
   double currTime = 0.0;
   std::vector<Waypoint> sampledWaypoints;
+
+  auto roadBoundaries = Map::GetRoadBoundary();
+  roadBoundaries[0] -= Vehicle::Size;
+  roadBoundaries[1] += Vehicle::Size;
+
   while (currTime < GetTime() + 1e-6) {
     auto kinematics = Eval(currTime);
+
+    if (roadBoundaries[0] > kinematics(0, 1) or kinematics(0, 1) > roadBoundaries[1]) {
+      SPDLOG_TRACE("trajectory is off road, d={:7.3f}, roadBoundaries={:7.3f}", kinematics(0, 1), roadBoundaries);
+      return false;
+    }
+
     sampledWaypoints.push_back(map.GetXY(kinematics(0, 0), kinematics(0, 1)));
     currTime += conf.trajectory.timeResolution;
   }
@@ -230,5 +241,4 @@ operator<<(std::ostream& out, const pathplanning::JMTTrajectory2d& traj)
                             traj.GetSFunc().coeffs.transpose(),
                             traj.GetDFunc().coeffs.transpose());
 }
-
 } // namespace pathplanning

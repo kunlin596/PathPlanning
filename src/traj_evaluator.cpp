@@ -18,8 +18,6 @@ CreateCostFunctor(const CostType& type)
       return std::make_shared<CollisionCost>();
     case CostType::kBuffer:
       return std::make_shared<BufferCost>();
-    case CostType::kStaysOnRoad:
-      return std::make_shared<StaysOnRoadCost>();
     case CostType::kEfficiency:
       return std::make_shared<EfficiencyCost>();
     case CostType::kTotalAccel:
@@ -100,27 +98,6 @@ BufferCost::operator()(const JMTTrajectory2d& traj,
   double threshold = std::max(Vehicle::Size, conf.trajectory.collisionCheckingRadius);
   static constexpr double SIGMA = Vehicle::Size; // meter
   return Gaussian1D(threshold, dist, SIGMA);
-}
-
-double
-StaysOnRoadCost::operator()(const JMTTrajectory2d& traj,
-                            const Matrix32d& goalConf,
-                            const double requestTime,
-                            const TrackedVehicleMap& trackedVehicleMap,
-                            const Configuration& conf)
-{
-  double currTime = 0.0;
-  double timeStep = conf.timeStep;
-  while (currTime < (traj.GetTime() + 1e-6)) {
-    Matrix62d trajConf = traj(currTime);
-    if (not Map::IsInRoad(trajConf(1, 0))) {
-      // SPDLOG_DEBUG("{:7.3f}: {}", trajConf.kinematics[3],
-      // Map::IsInRoad(trajConf.kinematics[3]));
-      return 1.0;
-    }
-    currTime += timeStep;
-  }
-  return 0.0;
 }
 
 double
@@ -232,10 +209,6 @@ operator<<(std::ostream& out, const CostType& type)
       return out << "CollisionCost";
     case CostType::kBuffer:
       return out << "BufferCost";
-    case CostType::kStaysOnRoad:
-      return out << "StaysOnRoadCost";
-    case CostType::kExceedsSpeedLimit:
-      return out << "SpeedLimitCost";
     case CostType::kEfficiency:
       return out << "EfficiencyCost";
     case CostType::kTotalAccel:
@@ -258,7 +231,6 @@ JMTTrajectoryEvaluator::Options::Options(const Configuration& conf)
   driverProfile[CostType::kDDiff] = conf.driverProfile.dDiff;
   driverProfile[CostType::kCollision] = conf.driverProfile.collision;
   driverProfile[CostType::kBuffer] = conf.driverProfile.buffer;
-  driverProfile[CostType::kStaysOnRoad] = conf.driverProfile.staysOnRoad;
   driverProfile[CostType::kEfficiency] = conf.driverProfile.efficiency;
   driverProfile[CostType::kTotalAccel] = conf.driverProfile.totalAcc;
   driverProfile[CostType::kTotalJerk] = conf.driverProfile.totalJerk;
