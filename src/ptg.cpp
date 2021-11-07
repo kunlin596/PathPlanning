@@ -83,13 +83,13 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
 
       // SPDLOG_DEBUG("conditions=\n{}", conditions.format(HeavyFmt));
       if (not trajectory.IsValid(_map, _conf)) {
-        SPDLOG_WARN("trajectory invalid {}", i);
+        SPDLOG_TRACE("trajectory invalid {}", i);
         continue;
       }
       const auto& [id, dist] = CollisionChecker::IsInCollision(trajectory, trackedVehicleMap, _conf);
       if (id != -1) {
         Eigen::Vector3d sKinematics = trackedVehicleMap.at(id).GetKinematics(0.0).block<3, 1>(0, 0);
-        SPDLOG_WARN(
+        SPDLOG_TRACE(
           "trajectory, in collision {} with {}, vehicleS={}", i, id, sKinematics.transpose().format(HeavyFmt));
         continue;
       }
@@ -137,15 +137,15 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
   // Evaluate trajectory into waypoints
   //
 
-  int numPointsToBeGenerated = static_cast<int>(std::round(bestTrajectory.GetTime() / _conf.timeStep));
+  int numPointsToBeGenerated = static_cast<int>(std::round(bestTrajectory.GetTime() / _conf.simulator.timeStep));
 
   Waypoints waypoints(numPointsToBeGenerated);
   for (size_t i = 0; i < numPointsToBeGenerated; ++i) {
-    Matrix62d trajKinematics = bestTrajectory(_conf.timeStep * i);
+    Matrix62d trajKinematics = bestTrajectory(_conf.simulator.timeStep * i);
     waypoints[i] = _map.GetXY(trajKinematics(0, 0), trajKinematics(0, 1));
   }
 
-  log["bestTrajectory"] = bestTrajectory.Dump();
+  // log["bestTrajectory"] = bestTrajectory.Dump();
 
   std::tie(log["next_x"], log["next_y"]) = Path::ConvertWaypointsToXY(waypoints);
 
@@ -155,13 +155,14 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
 Matrix32d
 PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
                                                  const JMTTrajectory2d& prevTraj,
-                                                 const Waypoints& prevPath)
+                                                 const Waypoints& prevPath,
+                                                 int numPointsToPreserve)
 {
   if (prevPath.empty()) {
     return ego.GetKinematics(0.0);
   }
 
-  double executedTime = (_conf.numPoints - prevPath.size()) * _conf.simulator.timeStep;
+  double executedTime = (_conf.numPoints - prevPath.size() + numPointsToPreserve) * _conf.simulator.timeStep;
   SPDLOG_DEBUG("executedTime={}", executedTime);
   return prevTraj(executedTime).topRows<3>();
 }

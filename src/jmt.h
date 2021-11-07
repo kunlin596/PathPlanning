@@ -61,7 +61,8 @@ struct JMTTrajectory1d
   const ConstantFunctor& GetFunc0() const { return _func0; }
   double GetTime() const { return _time; }
 
-  bool IsValid(const Configuration& conf) const;
+  bool IsValid(const Configuration& conf);
+  bool GetIsValid() const { return _isvalid; }
 
 private:
   QuinticFunctor _func5;   ///< position
@@ -73,6 +74,7 @@ private:
   Vector3d _startCond;     ///< start condition
   Vector3d _endCond;       ///< end condition
   double _time = 0.0;      ///< trajectory execution time
+  bool _isvalid = true;
 };
 
 /**
@@ -94,7 +96,8 @@ struct JMTTrajectory2d
 
   JMTTrajectory2d(const JMTTrajectory1d& traj1, const JMTTrajectory1d& traj2);
 
-  bool IsValid(const Map& map, const Configuration& conf) const;
+  bool IsValid(const Map& map, const Configuration& conf);
+  bool GetIsValid() const { return _isvalid; }
 
   Eigen::Matrix62d Eval(const double t) const;
   Eigen::Matrix62d operator()(const double t) const { return Eval(t); }
@@ -141,6 +144,7 @@ struct JMTTrajectory2d
 private:
   JMTTrajectory1d _traj1;
   JMTTrajectory1d _traj2;
+  bool _isvalid = true;
 };
 
 /**

@@ -101,8 +101,9 @@ System::SpinOnce(const std::string& commandString)
       // Behavior planning
       //
 
-      int numPointsToPreserve = 10;
-      Matrix32d startState = _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath);
+      int numPointsToPreserve = static_cast<int>(prevPath.size() * 0);
+      Matrix32d startState =
+        _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath, numPointsToPreserve);
 
       JMTTrajectory2d proposal = _pBehaviorPlanner->GenerateProposal(startState, _pTracker->GetVehicles());
       //
@@ -119,18 +120,20 @@ System::SpinOnce(const std::string& commandString)
       std::tie(path, trajectory) = _pPathGenerator->GeneratePath(proposal, _pTracker->GetVehicles(), log);
 
       Waypoints newPath;
-      SPDLOG_DEBUG("numPointsToPreserve={}, prevPath.size()={}, _pConf->numPoints={}",
+
+      for (int i = 0; i < numPointsToPreserve; ++i) {
+        newPath.push_back(prevPath[i]);
+      }
+      for (int i = 0; i < (_pConf->numPoints - numPointsToPreserve) and i < path.size(); ++i) {
+        newPath.push_back(path[i]);
+      }
+      UpdateCachedTrajectory(trajectory);
+
+      SPDLOG_DEBUG("numPointsToPreserve={}, prevPath.size()={}, newPath.size()={}, _pConf->numPoints={}",
                    numPointsToPreserve,
                    prevPath.size(),
+                   newPath.size(),
                    _pConf->numPoints);
-
-      int pathIndex = 0;
-      for (pathIndex = 0; pathIndex < numPointsToPreserve and pathIndex < prevPath.size(); ++pathIndex) {
-        newPath.push_back(prevPath[pathIndex]);
-      }
-      for (; pathIndex < _pConf->numPoints and pathIndex < path.size(); ++pathIndex) {
-        newPath.push_back(path[pathIndex]);
-      }
 
       //
       // Construct result message
@@ -142,8 +145,6 @@ System::SpinOnce(const std::string& commandString)
       SPDLOG_TRACE("newPath={}", newPath);
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
-
-      UpdateCachedTrajectory(trajectory);
     }
   } else {
     msg = "42[\"manual\",{}]";

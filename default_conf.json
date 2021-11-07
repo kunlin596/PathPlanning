@@ -16,13 +16,13 @@
     "timeResolution": 0.5
   },
   "goalSampler": {
-    "use": true,
+    "use": false,
     "sampleTimeStep": 0.5,
-    "numTimeSteps": 3,
-    "numSamplesPerTimeStep": 10,
+    "numTimeSteps": 2,
+    "numSamplesPerTimeStep": 5,
     "sampleSigmas": [
       2.0, 1.0, 1.0,
-      0.2, 0.1, 0.1
+      0.1, 0.1, 0.1
     ]
   },
   "driverProfileName" : "default",

@@ -49,26 +49,30 @@ JMT::Solve2d(const Matrix62d& conditions, const double t)
 }
 
 bool
-JMTTrajectory1d::IsValid(const Configuration& conf) const
+JMTTrajectory1d::IsValid(const Configuration& conf)
 {
   double currTime = 0.0;
   while (currTime < _time + 1e-6) {
     auto values = Eval(currTime);
     if (std::abs(values[1]) > conf.speedLimit) {
       SPDLOG_TRACE("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], conf.speedLimit);
-      return false;
+      _isvalid = false;
+      return _isvalid;
     }
     if (std::abs(values[2]) > conf.trajectory.maxAcc) {
       SPDLOG_TRACE("accel is out of range, {:7.3f} bigger than {:7.3f}", values[2], conf.trajectory.maxAcc);
-      return false;
+      _isvalid = false;
+      return _isvalid;
     }
     if (std::abs(values[3]) > conf.trajectory.maxJerk) {
       SPDLOG_TRACE("jerk is out of range, {:7.3f} bigger than {:7.3f}", values[3], conf.trajectory.maxJerk);
-      return false;
+      _isvalid = false;
+      return _isvalid;
     }
     currTime += conf.trajectory.timeResolution;
   }
-  return true;
+  _isvalid = true;
+  return _isvalid;
 }
 
 nlohmann::json
@@ -106,10 +110,11 @@ JMTTrajectory2d::Write(const std::string& filename) const
 }
 
 bool
-JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf) const
+JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf)
 {
   if (not _traj1.IsValid(conf) or not _traj2.IsValid(conf)) {
-    return false;
+    _isvalid = false;
+    return _isvalid;
   }
 
   double currTime = 0.0;
@@ -124,7 +129,8 @@ JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf) const
 
     if (roadBoundaries[0] > kinematics(0, 1) or kinematics(0, 1) > roadBoundaries[1]) {
       SPDLOG_WARN("trajectory is off road, d={:7.3f}, roadBoundaries={}", kinematics(0, 1), roadBoundaries);
-      return false;
+      _isvalid = false;
+      return _isvalid;
     }
 
     sampledWaypoints.push_back(map.GetXY(kinematics(0, 0), kinematics(0, 1)));
@@ -143,10 +149,12 @@ JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf) const
     double curvature = Rad2Deg(heading2 - heading1) / dist;
     if (curvature > conf.trajectory.maxCurvature) {
       SPDLOG_TRACE("curvature is {:7.3f}, threashold {:7.3f}", curvature, conf.trajectory.maxCurvature);
-      return false;
+      _isvalid = false;
+      return _isvalid;
     }
   }
-  return true;
+  _isvalid = true;
+  return _isvalid;
 }
 
 Matrix62d

@@ -74,7 +74,11 @@ _GenerateLCPProposal(const Matrix32d& egoConf,
                      const Configuration& conf,
                      int laneOffset = -1)
 {
-  return Matrix32d();
+  // TODO
+  Matrix32d proposal;
+  proposal.col(0) << egoConf(0, 0) + 60.0, 0.0, 0.0;
+  proposal.col(1) << Map::GetLaneCenterD(Map::GetLaneId(egoConf(0, 1))), 0.0, 0.0;
+  return proposal;
 }
 
 Matrix32d
@@ -86,7 +90,7 @@ _GenerateLLCPProposal(const Matrix32d& egoConf, const TrackedVehicleMap& tracked
 Matrix32d
 _GenerateRLCPProposal(const Matrix32d& egoConf, const TrackedVehicleMap& trackedVehicleMap, const Configuration& conf)
 {
-  return _GenerateLCPProposal(egoConf, trackedVehicleMap, conf, -1);
+  return _GenerateLCPProposal(egoConf, trackedVehicleMap, conf, +1);
 }
 
 Matrix32d
@@ -95,7 +99,10 @@ _GenerateLCProposal(const Matrix32d& egoConf,
                     const Configuration& conf,
                     int laneOffset = -1)
 {
-  return Matrix32d();
+  Matrix32d proposal;
+  proposal.col(0) << egoConf(0, 0) + 60.0, 0.0, 0.0;
+  proposal.col(1) << Map::GetLaneCenterD(Map::GetLaneId(egoConf(0, 1)) + laneOffset), 0.0, 0.0;
+  return proposal;
 }
 
 Matrix32d
@@ -107,37 +114,103 @@ _GenerateLLCProposal(const Matrix32d& egoConf, const TrackedVehicleMap& trackedV
 Matrix32d
 _GenerateRLCProposal(const Matrix32d& egoConf, const TrackedVehicleMap& trackedVehicleMap, const Configuration& conf)
 {
-  return _GenerateLCProposal(egoConf, trackedVehicleMap, conf, -1);
+  return _GenerateLCProposal(egoConf, trackedVehicleMap, conf, +1);
+}
+
+struct LaneStats
+{
+  double speed = 0.0;
+  int numVehicles = 0.0;
+};
+
+std::unordered_map<int, LaneStats>
+_ComputeLaneStats(double egoS, const TrackedVehicleMap& trackedVehicleMap)
+{
+  std::unordered_map<int, LaneStats> statsMap;
+  for (const auto& [id, vehicle] : trackedVehicleMap) {
+    int laneId = Map::GetLaneId(vehicle.GetKinematics(0.0)(0, 1));
+    if (laneId < 0) {
+      continue;
+    }
+    if (statsMap.count(laneId) == 0) {
+      statsMap[laneId] = LaneStats();
+    }
+    statsMap[laneId].numVehicles++;
+    statsMap[laneId].speed += vehicle.GetKinematics(0.0)(1, 0); // only count the s speed
+  }
+
+  for (auto& [laneId, landStats] : statsMap) {
+    landStats.speed /= static_cast<double>(landStats.numVehicles);
+    SPDLOG_INFO("lane id={:2d}, speed={:7.3f}, count={:2d}", laneId, landStats.speed, landStats.numVehicles);
+  }
+  return statsMap;
 }
 
 std::vector<BehaviorState>
-_GetSuccessorStates(const BehaviorState& state)
+_GetSuccessorStates(const Matrix32d& startKinematics,
+                    const BehaviorState& state,
+                    const TrackedVehicleMap& trackedVehicleMap)
 {
-  std::vector<BehaviorState> states = { BehaviorState::kLaneKeeping };
-  // switch (state) {
-  //   case BehaviorState::kReady:
-  //     break;
-  //   case BehaviorState::kLaneKeeping:
-  //     states.push_back(BehaviorState::kLeftLaneChangePreparation);
-  //     states.push_back(BehaviorState::kRightLaneChangePreparation);
-  //     break;
-  //   case BehaviorState::kLeftLaneChangePreparation:
-  //     states.push_back(BehaviorState::kLeftLaneChangePreparation);
-  //     states.push_back(BehaviorState::kLeftLaneChange);
-  //     break;
-  //   case BehaviorState::kRightLaneChangePreparation:
-  //     states.push_back(BehaviorState::kRightLaneChangePreparation);
-  //     states.push_back(BehaviorState::kRightLaneChange);
-  //     break;
-  //   case BehaviorState::kLeftLaneChange:
-  //     states.push_back(BehaviorState::kLeftLaneChange);
-  //     break;
-  //   case BehaviorState::kRightLaneChange:
-  //     states.push_back(BehaviorState::kRightLaneChange);
-  //     break;
-  //   default:
-  //     break;
-  // }
+  std::vector<BehaviorState> states;
+  double s = startKinematics(0, 0);
+  double d = startKinematics(0, 1);
+  int laneId = Map::GetLaneId(d);
+
+  std::unordered_map<int, LaneStats> laneStatsMap = _ComputeLaneStats(s, trackedVehicleMap);
+
+  static int targetLane = laneId;
+  int leftLaneId = laneId - 1;
+  int rightLaneId = laneId + 1;
+
+  switch (state) {
+    case BehaviorState::kReady:
+      states.push_back(BehaviorState::kLaneKeeping);
+      break;
+    case BehaviorState::kLaneKeeping:
+      if (laneStatsMap.count(leftLaneId) and laneStatsMap[leftLaneId].speed > laneStatsMap[laneId].speed) {
+        targetLane = leftLaneId;
+        states.push_back(BehaviorState::kLeftLaneChangePreparation);
+      } else if (laneStatsMap.count(rightLaneId) and laneStatsMap[rightLaneId].speed > laneStatsMap[laneId].speed) {
+        targetLane = rightLaneId;
+        states.push_back(BehaviorState::kRightLaneChangePreparation);
+      } else {
+        targetLane = laneId;
+        states.push_back(BehaviorState::kLaneKeeping);
+      }
+      break;
+    case BehaviorState::kLeftLaneChangePreparation:
+      if (laneStatsMap.count(leftLaneId) and laneStatsMap[leftLaneId].numVehicles < 2) {
+        states.push_back(BehaviorState::kLeftLaneChange);
+      } else {
+        states.push_back(BehaviorState::kLeftLaneChangePreparation);
+      }
+      break;
+    case BehaviorState::kRightLaneChangePreparation:
+      if (laneStatsMap.count(rightLaneId) and laneStatsMap[rightLaneId].numVehicles < 2) {
+        states.push_back(BehaviorState::kRightLaneChange);
+      } else {
+        states.push_back(BehaviorState::kRightLaneChangePreparation);
+      }
+      break;
+    case BehaviorState::kLeftLaneChange:
+      if (targetLane == laneId) {
+        states.push_back(BehaviorState::kLaneKeeping);
+      } else {
+        states.push_back(BehaviorState::kLeftLaneChange);
+      }
+      break;
+    case BehaviorState::kRightLaneChange:
+      if (targetLane == laneId) {
+        states.push_back(BehaviorState::kRightLaneChange);
+      } else {
+        states.push_back(BehaviorState::kLaneKeeping);
+      }
+      break;
+    default:
+      states.push_back(BehaviorState::kLaneKeeping);
+      break;
+  }
+  SPDLOG_INFO("targetLane={:2d}", targetLane);
   return states;
 }
 
@@ -161,52 +234,51 @@ BehaviorPlanner::GenerateProposal(const Matrix32d& startKinematics, const Tracke
   JMTTrajectory2d bestTraj;
 
   SPDLOG_DEBUG("startKinematics={}, {}", startKinematics.col(0).transpose(), startKinematics.col(1).transpose());
-  for (const auto& state : _GetSuccessorStates(_currState)) {
-    Matrix32d proposalKinematics;
 
+  std::unordered_map<BehaviorState, Matrix32d> proposalKinematicsMap;
+
+  for (const auto& state : _GetSuccessorStates(startKinematics, _currState, trackedVehicleMap)) {
     switch (state) {
       case BehaviorState::kLaneKeeping:
-        proposalKinematics = _GenerateLKProposal(startKinematics, trackedVehicleMap, _conf);
+        proposalKinematicsMap[BehaviorState::kLaneKeeping] =
+          _GenerateLKProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       case BehaviorState::kLeftLaneChangePreparation:
-        proposalKinematics = _GenerateLLCPProposal(startKinematics, trackedVehicleMap, _conf);
+        proposalKinematicsMap[BehaviorState::kLeftLaneChangePreparation] =
+          _GenerateLLCPProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       case BehaviorState::kLeftLaneChange:
-        proposalKinematics = _GenerateLLCProposal(startKinematics, trackedVehicleMap, _conf);
+        proposalKinematicsMap[BehaviorState::kLeftLaneChange] =
+          _GenerateLLCProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       case BehaviorState::kRightLaneChangePreparation:
-        proposalKinematics = _GenerateRLCPProposal(startKinematics, trackedVehicleMap, _conf);
+        proposalKinematicsMap[BehaviorState::kRightLaneChangePreparation] =
+          _GenerateRLCPProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       case BehaviorState::kRightLaneChange:
-        proposalKinematics = _GenerateRLCProposal(startKinematics, trackedVehicleMap, _conf);
+        proposalKinematicsMap[BehaviorState::kRightLaneChange] =
+          _GenerateRLCProposal(startKinematics, trackedVehicleMap, _conf);
         break;
       default:
         break;
     }
+  }
 
-    SPDLOG_DEBUG(
-      "proposalKinematics={}, {}", proposalKinematics.col(0).transpose(), proposalKinematics.col(1).transpose());
+  for (const auto& [state, proposalKinematics] : proposalKinematicsMap) {
     Matrix62d conditions;
     conditions.block<3, 2>(0, 0) = startKinematics;
     conditions.block<3, 2>(3, 0) = proposalKinematics;
     std::vector<JMTTrajectory2d> feasibleTrajectories = JMT::SolveMultipleFeasible2d(conditions, _map, _conf);
 
+    SPDLOG_INFO("state={:30s}, proposalKinematics={}, {}",
+                state,
+                proposalKinematics.col(0).transpose(),
+                proposalKinematics.col(1).transpose());
+
     if (!feasibleTrajectories.empty()) {
-      bestTraj = feasibleTrajectories[0];
+      bestTraj = feasibleTrajectories[feasibleTrajectories.size() / 2];
+      bestState = state;
     }
-
-    // for (const auto& traj : feasibleTrajectories) {
-
-    //   // double cost = _pEvaluator->Evaluate(traj, proposalKinematics, _conf.timeHorizon, trackedVehicleMap);
-
-    //   SPDLOG_DEBUG("  Current cost {:s}: {:7.3}", state, cost);
-    //   if (cost < minCost) {
-    //     minCost = cost;
-    //     bestState = state;
-    //     bestTraj = traj;
-    //     SPDLOG_INFO("  Update best {:s}: {:7.3}", bestState, minCost);
-    //   }
-    // }
   }
 
   _currState = bestState;
