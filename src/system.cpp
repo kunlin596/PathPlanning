@@ -47,7 +47,6 @@ System::Initialize(const std::string& configFileName)
   _port = _pConf->serverPort;
   _pMap = Map::CreateMap();
   _pHub = std::make_unique<uWS::Hub>();
-
   _pTracker = std::make_unique<Tracker>(*_pMap, *_pConf);
   _pBehaviorPlanner = std::make_unique<BehaviorPlanner>(*_pMap, *_pConf);
   _pPathGenerator = std::make_unique<PolynomialTrajectoryGenerator>(*_pMap, *_pConf);
@@ -69,7 +68,7 @@ System::SpinOnce(const std::string& commandString)
     const json& data = commandJson[1];
 
     if (event == "telemetry") {
-      // Similator might not be able to consume all of the points, so it returns
+      // Simulator might not be able to consume all of the points, so it returns
       // the remaining points back to you.
       Waypoints prevPath = Path::ConvertXYToWaypoints(data["previous_path_x"], data["previous_path_y"]);
 
@@ -83,17 +82,12 @@ System::SpinOnce(const std::string& commandString)
 
       Waypoint endPathSD = { data["end_path_s"], data["end_path_d"] };
 
-      _pEgo->Update(data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]));
-      SPDLOG_INFO(*_pEgo);
-
-      //
-      // Process perceptions
-      //
+      _pEgo->Update(
+        data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]), *_pMap, *_pConf);
 
       // Create the latest perceptions from input command
       // Velocity is already meters per seconds no need to convert
       Perceptions perceptions = Perception::CreatePerceptions(data["sensor_fusion"], *_pMap, _pConf->timeStep);
-      // SPDLOG_DEBUG("perceptions={}", perceptions);
 
       _pTracker->Update(*_pEgo, perceptions);
 
@@ -101,7 +95,7 @@ System::SpinOnce(const std::string& commandString)
       // Behavior planning
       //
 
-      int numPointsToPreserve = static_cast<int>(prevPath.size() * 0);
+      int numPointsToPreserve = static_cast<int>(prevPath.size() * 0.0);
       Matrix32d startState =
         _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath, numPointsToPreserve);
 

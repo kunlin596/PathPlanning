@@ -67,14 +67,14 @@ struct JMTTrajectory1d
 private:
   QuinticFunctor _func5;   ///< position
   QuarticFunctor _func4;   ///< velocity
-  CubicFunctor _func3;     ///< accelaration
+  CubicFunctor _func3;     ///< acceleration
   QuadraticFunctor _func2; ///< jerk
   LinearFunctor _func1;    ///< snap
   ConstantFunctor _func0;  ///< crackle
   Vector3d _startCond;     ///< start condition
   Vector3d _endCond;       ///< end condition
   double _time = 0.0;      ///< trajectory execution time
-  bool _isvalid = true;
+  bool _isvalid = false;
 };
 
 /**
@@ -87,7 +87,7 @@ private:
  * waypoints.
  *
  * Note that not all trajectory generators use the same information to produce
- * the same format of output, so trajecotry is per generator type.
+ * the same format of output, so trajectory is per generator type.
  */
 struct JMTTrajectory2d
 {
@@ -144,7 +144,7 @@ struct JMTTrajectory2d
 private:
   JMTTrajectory1d _traj1;
   JMTTrajectory1d _traj2;
-  bool _isvalid = true;
+  bool _isvalid = false;
 };
 
 /**
@@ -211,7 +211,7 @@ struct JMT
    * @brief      Compute a JMTTrajectory2d
    *
    *
-   * S paramerers, [s(i), s'(i), s"(i), s(f), s'(f), * s"(f)]
+   * S parameters, [s(i), s'(i), s"(i), s(f), s'(f), * s"(f)]
    * D parameters, [d(i), d'(i), d"(i), d(f), d'(f), * d"(f)]
    *
    * @param[in]  sParams     The s parameters,

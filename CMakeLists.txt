@@ -24,6 +24,12 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 find_package(spdlog REQUIRED)
 find_package(Boost COMPONENTS program_options REQUIRED)
+find_package(OpenMP)
+if (OpenMP_CXX_FOUND)
+    message(STATUS "Found OpenMP")
+    set(OpenMP_LIBS OpenMP::OpenMP_CXX)
+    message(STATUS "OpenMP Libs ${OpenMP_LIBS}")
+endif()
 
 add_library(
   common
@@ -79,6 +85,7 @@ target_link_libraries(
   PUBLIC
   common
   tracker
+  ${OpenMP_LIBS}
 )
 
 add_library(

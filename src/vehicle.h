@@ -81,7 +81,6 @@ struct Vehicle
 struct Ego : public Vehicle
 {
   Ego() {}
-  Ego(double x, double y, double s, double d, double yaw, double speed);
 
   virtual ~Ego() {}
 
@@ -95,7 +94,8 @@ struct Ego : public Vehicle
    * @param[in]  yaw    The yaw angle in degrees
    * @param[in]  speed  The speed in meters/second
    */
-  void Update(double x, double y, double s, double d, double yaw, double speed);
+  void
+  Update(double x, double y, double s, double d, double yaw, double speed, const Map& map, const Configuration& conf);
 
   json Dump() const;
 

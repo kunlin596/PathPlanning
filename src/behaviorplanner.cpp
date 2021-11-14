@@ -63,7 +63,7 @@ Matrix32d
 _GenerateLKProposal(const Matrix32d& egoConf, const TrackedVehicleMap& trackedVehicleMap, const Configuration& conf)
 {
   Matrix32d proposal;
-  proposal.col(0) << egoConf(0, 0) + 60.0, 0.0, 0.0;
+  proposal.col(0) << egoConf(0, 0) + conf.trajectory.planningDistance, 0.0, 0.0;
   proposal.col(1) << Map::GetLaneCenterD(Map::GetLaneId(egoConf(0, 1))), 0.0, 0.0;
   return proposal;
 }
@@ -76,7 +76,7 @@ _GenerateLCPProposal(const Matrix32d& egoConf,
 {
   // TODO
   Matrix32d proposal;
-  proposal.col(0) << egoConf(0, 0) + 60.0, 0.0, 0.0;
+  proposal.col(0) << egoConf(0, 0) + conf.trajectory.planningDistance, 0.0, 0.0;
   proposal.col(1) << Map::GetLaneCenterD(Map::GetLaneId(egoConf(0, 1))), 0.0, 0.0;
   return proposal;
 }
@@ -100,7 +100,7 @@ _GenerateLCProposal(const Matrix32d& egoConf,
                     int laneOffset = -1)
 {
   Matrix32d proposal;
-  proposal.col(0) << egoConf(0, 0) + 60.0, 0.0, 0.0;
+  proposal.col(0) << egoConf(0, 0) + conf.trajectory.planningDistance, 0.0, 0.0;
   proposal.col(1) << Map::GetLaneCenterD(Map::GetLaneId(egoConf(0, 1)) + laneOffset), 0.0, 0.0;
   return proposal;
 }
@@ -193,14 +193,14 @@ _GetSuccessorStates(const Matrix32d& startKinematics,
       }
       break;
     case BehaviorState::kLeftLaneChange:
-      if (targetLane == laneId) {
-        states.push_back(BehaviorState::kLaneKeeping);
-      } else {
+      if (targetLane != laneId or std::abs(d - Map::GetLaneCenterD(targetLane)) > 0.1) {
         states.push_back(BehaviorState::kLeftLaneChange);
+      } else {
+        states.push_back(BehaviorState::kLaneKeeping);
       }
       break;
     case BehaviorState::kRightLaneChange:
-      if (targetLane == laneId) {
+      if (targetLane != laneId or std::abs(d - Map::GetLaneCenterD(targetLane)) > 0.1) {
         states.push_back(BehaviorState::kRightLaneChange);
       } else {
         states.push_back(BehaviorState::kLaneKeeping);

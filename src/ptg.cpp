@@ -6,6 +6,9 @@
 #include "utils.h"
 
 #include <boost/assert.hpp>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 namespace pathplanning {
 
@@ -74,7 +77,11 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
     using namespace nlohmann;
     json j;
 
-    std::vector<JMTTrajectory2d> trajs;
+    std::vector<JMTTrajectory2d> trajs(goalKinematics.size());
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
     for (size_t i = 0; i < goalKinematics.size(); ++i) {
       Matrix62d conditions;
       conditions.block<3, 2>(0, 0) = startKinematics;
@@ -94,7 +101,7 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
         continue;
       }
 
-      trajs.push_back(trajectory);
+      trajs[i] = trajectory;
       // if (CollisionChecker::IsInCollision(trajectory, trackedVehicleMap, _conf)) {
       //   continue;
       // }
@@ -115,6 +122,7 @@ PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
       //   bestTrajectory = trajectory;
       // }
     }
+
     if (trajs.empty()) {
       SPDLOG_WARN("No valid trajectories found!");
     } else {

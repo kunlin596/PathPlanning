@@ -62,6 +62,8 @@ public:
 
   struct
   {
+    double planningDistance = 60.0;
+
     // For evaluation
     double maxJerk = 10.0;
 

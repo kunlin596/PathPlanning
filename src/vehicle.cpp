@@ -37,26 +37,20 @@ Vehicle::Dump() const
   return { { "id", _id }, { "kinematics", j } };
 }
 
-Ego::Ego(double x, double y, double s, double d, double yaw, double speed)
-  : _x(x)
-  , _y(y)
-  , _yaw(yaw)
-  , _speed(speed)
-{
-  Update(x, y, s, d, yaw, speed);
-}
-
 void
-Ego::Update(double x, double y, double s, double d, double yaw, double speed)
+Ego::Update(double x, double y, double s, double d, double yaw, double speed, const Map& map, const Configuration& conf)
 {
   _x = x;
   _y = y;
   _yaw = yaw;
   _speed = speed;
 
-  // TODO: Compute sd velocity
-  _kinematics.col(0) << s, speed, 0.0;
-  _kinematics.col(1) << d, 0.0, 0.0;
+  double velx = std::cos(yaw) * speed;
+  double vely = std::sin(yaw) * speed;
+
+  auto sdvel = ComputeFrenetVelocity(map, { _x, _y }, { velx, vely }, { s, d }, conf.simulator.timeStep);
+  _kinematics.col(0) << s, sdvel[0], 0.0;
+  _kinematics.col(1) << d, sdvel[1], 0.0;
 }
 
 json

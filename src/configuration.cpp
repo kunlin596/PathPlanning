@@ -41,6 +41,9 @@ Configuration::Parse(const std::string& filename)
 
   if (j.count("trajectory")) {
     const auto& trajectoryEvaluationJson = j["trajectory"];
+    if (trajectoryEvaluationJson.count("planningDistance")) {
+      trajectory.planningDistance = trajectoryEvaluationJson["planningDistance"];
+    }
     if (trajectoryEvaluationJson.count("maxTime")) {
       trajectory.maxTime = trajectoryEvaluationJson["maxTime"];
     }
