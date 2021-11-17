@@ -313,6 +313,9 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     auto frontBackVehicles = _GetFrontBackVehiclesPerLane(ego.GetKinematics(0.0), vehicles, 60.0);
     if (frontBackVehicles.count("front")) {
       leadingVehicles[laneId] = frontBackVehicles["front"];
+      lonBehaviors[laneId].push_back(LongitudinalManeuverType::kFollowing);
+    } else {
+      leadingVehicles[laneId] = Vehicle();
     }
   }
 
