@@ -51,28 +51,45 @@ JMT::Solve2d(const Matrix62d& conditions, const double t)
 bool
 JMTTrajectory1d::IsValid(const Configuration& conf)
 {
+  return IsValid(conf.speedLimit, conf.trajectory.maxAcc, conf.trajectory.maxJerk, conf.trajectory.timeResolution);
+}
+
+bool
+JMTTrajectory1d::IsValid(double maxVel, double maxAcc, double maxJerk, double timeResolution)
+{
   double currTime = 0.0;
   while (currTime < _time + 1e-6) {
     auto values = Eval(currTime);
-    if (std::abs(values[1]) > conf.speedLimit) {
-      SPDLOG_TRACE("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], conf.speedLimit);
+    if (std::abs(values[1]) > maxVel) {
+      SPDLOG_TRACE("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], maxVel);
       _isvalid = false;
       return _isvalid;
     }
-    if (std::abs(values[2]) > conf.trajectory.maxAcc) {
-      SPDLOG_TRACE("accel is out of range, {:7.3f} bigger than {:7.3f}", values[2], conf.trajectory.maxAcc);
+    if (std::abs(values[2]) > maxAcc) {
+      SPDLOG_TRACE("accel is out of range, {:7.3f} bigger than {:7.3f}", values[2], maxAcc);
       _isvalid = false;
       return _isvalid;
     }
-    if (std::abs(values[3]) > conf.trajectory.maxJerk) {
-      SPDLOG_TRACE("jerk is out of range, {:7.3f} bigger than {:7.3f}", values[3], conf.trajectory.maxJerk);
+    if (std::abs(values[3]) > maxJerk) {
+      SPDLOG_TRACE("jerk is out of range, {:7.3f} bigger than {:7.3f}", values[3], maxJerk);
       _isvalid = false;
       return _isvalid;
     }
-    currTime += conf.trajectory.timeResolution;
+    currTime += timeResolution;
   }
   _isvalid = true;
   return _isvalid;
+}
+
+
+double
+JMTTrajectory1d::ComputeCost(double kTime, double kPos, double kVel, double kAccel, double kJerk)
+{
+  double timeCost = _time * kTime;
+  double posCost = std::pow(GetPosition(_time) - GetPosition(0.0), 2) * kPos;
+  double velCost = GaussianLoss1D(20.0, 5.0, GetVelocity(_time)) * kVel;
+  double jerkCost = GetJerk(_time) * kJerk;
+  return timeCost + posCost + velCost + jerkCost;
 }
 
 nlohmann::json

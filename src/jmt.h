@@ -41,7 +41,7 @@ struct JMTTrajectory1d
   inline Vector6d Eval(const double t) const
   {
     Vector6d ret;
-    ret << _func5(t), _func4(t), _func3(t), _func2(t), _func1(t), _func0(t);
+    ret << GetPosition(t), GetVelocity(t), GetAcceleration(t), GetJerk(t), GetSnap(t), GetCrackle(t);
     return ret;
   }
 
@@ -62,6 +62,17 @@ struct JMTTrajectory1d
   double GetTime() const { return _time; }
 
   bool IsValid(const Configuration& conf);
+  bool IsValid(double maxVel, double maxAcc, double maxJerk, double timeResolution);
+
+  double ComputeCost(double kTime, double kPos, double kVel, double kAccel, double kJerk);
+
+  double GetPosition(double t) const { return _func5(t); }
+  double GetVelocity(double t) const { return _func4(t); }
+  double GetAcceleration(double t) const { return _func3(t); }
+  double GetJerk(double t) const { return _func2(t); }
+  double GetSnap(double t) const { return _func1(t); }
+  double GetCrackle(double t) const { return _func1(t); }
+
   bool GetIsValid() const { return _isvalid; }
 
 private:
@@ -74,6 +85,7 @@ private:
   Vector3d _startCond;     ///< start condition
   Vector3d _endCond;       ///< end condition
   double _time = 0.0;      ///< trajectory execution time
+  double _cost = 0.0;      ///< kinematic cost for this trajectory
   bool _isvalid = false;
 };
 
@@ -207,6 +219,7 @@ struct JMT
 {
   static JMTTrajectory1d Solve1d(const Vector6d& conditions, const double t);
 
+
   /**
    * @brief      Compute a JMTTrajectory2d
    *
@@ -234,6 +247,7 @@ struct JMT
   static std::vector<JMTTrajectory2d> SolveMultipleFeasible2d(const Matrix62d& conditions,
                                                               const Map& map,
                                                               const Configuration& conf);
+
 };
 
 std::ostream&

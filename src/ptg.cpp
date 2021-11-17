@@ -13,20 +13,13 @@
 namespace {
 using namespace pathplanning;
 
-enum class LongitudinalManeuverType
-{
-  kFollowing,
-  kVelocityKeeping,
-  kStopping,
-};
-
-enum class LateralManeuverType
-{
-  kLaneKeeping,
-  kLeftLaneChanging,
-  kRightLaneChanging
-};
-
+/**
+ * @brief      Group vehicles into lanes
+ *
+ * @param[in]  trackedVehicleMap  The tracked vehicle map
+ *
+ * @return     vehicles per lane map
+ */
 std::unordered_map<int, std::vector<Vehicle>>
 _GroupVehicles(const TrackedVehicleMap& trackedVehicleMap)
 {
@@ -44,6 +37,15 @@ _GroupVehicles(const TrackedVehicleMap& trackedVehicleMap)
   return groupedVehicles;
 }
 
+/**
+ * @brief      Gets the front back vehicles per lane.
+ *
+ * @param[in]  egoKinematics       The ego kinematics
+ * @param[in]  vehicles            The vehicles
+ * @param[in]  nonEgoSearchRadius  The non ego search radius
+ *
+ * @return     The front back vehicles per lane.
+ */
 std::unordered_map<std::string, Vehicle>
 _GetFrontBackVehiclesPerLane(const Matrix32d& egoKinematics,
                              const std::vector<Vehicle>& vehicles,
@@ -89,36 +91,27 @@ _GetFrontBackVehiclesPerLane(const Matrix32d& egoKinematics,
 }
 
 void
-_GenerateVelocityKeepingTrajectory(const Ego& ego,
-                                   std::vector<JMTTrajectory1d>& trajectories,
-                                   std::vector<double>& costs)
+_GetOptimalCombination(const std::vector<double>& lonCosts, const std::vector<double>& latCosts, int& lonId, int& latId)
 {
-  double speed = ego.GetKinematics(0.0)(0, 1);
-
-  if (speed < 10.0) {
-    Vector6d conditions = Vector6d::Zero();
-    conditions.topRows<3>() = ego.GetKinematics(0.0).block<3, 1>(0, 0);
-    for (double i = 1.0; i < 20.0; i += 1.0) {
-      conditions[3] = ego.GetKinematics(0.0)(0, 0) + i;
-      for (double time = 3.0; time < 10.0; time += 0.5) {
-        trajectories.push_back(JMT::Solve1d(conditions, time));
-      }
-    }
-  } else if (speed < 20.0) {
-
-  } else if (speed < 30.0) {
-
-  } else if (speed < 40.0) {
-
-  }
+  lonId = std::distance(lonCosts.begin(), std::min_element(lonCosts.begin(), lonCosts.end()));
+  latId = std::distance(latCosts.begin(), std::min_element(latCosts.begin(), latCosts.end()));
 }
 
+}
+
+namespace pathplanning {
+
+PolynomialTrajectoryGenerator::PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf)
+  : _map(map)
+  , _conf(conf)
+{}
+
 void
-_GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
-                       const Ego& ego,
-                       const Vehicle &vehicle,
-                       std::vector<JMTTrajectory1d>& trajectories,
-                       std::vector<double>& costs)
+PolynomialTrajectoryGenerator::_GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
+                                                      const Ego& ego,
+                                                      const Vehicle& vehicle,
+                                                      std::vector<JMTTrajectory1d>& trajectories,
+                                                      std::vector<double>& costs)
 {
   switch (lonBehavior) {
     case LongitudinalManeuverType::kVelocityKeeping:
@@ -138,35 +131,115 @@ _GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
 }
 
 void
-_GenerateLatTrajectory(const LateralManeuverType& latBehavior,
-                       const Ego& ego,
-                       std::vector<JMTTrajectory1d>& trajectories,
-                       std::vector<double>& costs)
+PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType& latBehavior,
+                                                      const Ego& ego,
+                                                      std::vector<JMTTrajectory1d>& trajectories,
+                                                      std::vector<double>& costs)
 {
-  double egoD = ego.GetKinematics(0.0)(0, 1);
-  double targetD = egoD;
+
+  Vector3d egoKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 1);
+  double targetD = egoKinematics[0];
   switch (latBehavior) {
     case LateralManeuverType::kLeftLaneChanging:
-      targetD = Map::GetLaneCenterD(Map::GetLaneId(egoD) - 1);
+      targetD = Map::GetLaneCenterD(Map::GetLaneId(egoKinematics[0]) - 1);
       break;
     case LateralManeuverType::kRightLaneChanging:
-      targetD = Map::GetLaneCenterD(Map::GetLaneId(egoD) + 1);
+      targetD = Map::GetLaneCenterD(Map::GetLaneId(egoKinematics[0]) + 1);
       break;
+  }
+
+  std::vector<double> TjList = { 3.0, 3.5, 4.0 };
+  _SolveFullConstraints1d(
+    // Constraints
+    egoKinematics[0],
+    egoKinematics[1],
+    egoKinematics[2],
+    0.0,
+    targetD,
+    0.0,
+    // Time
+    TjList,
+    // S deltas
+    { 0.0 },
+    // Weights
+    1.0,
+    1.0,
+    10.0,
+    100.0,
+    1000.0,
+    // Outputs
+    trajectories,
+    costs);
+}
+
+void
+PolynomialTrajectoryGenerator::_SolveFullConstraints1d(double s0,
+                                                       double s0dot,
+                                                       double s0ddot,
+                                                       double s1,
+                                                       double s1dot,
+                                                       double s1ddot,
+                                                       const std::vector<double>& TjList,
+                                                       const std::vector<double>& dsList,
+                                                       double kTime,
+                                                       double kPos,
+                                                       double kVel,
+                                                       double kAcc,
+                                                       double kJerk,
+                                                       std::vector<JMTTrajectory1d>& trajectories,
+                                                       std::vector<double>& costs)
+{
+  Vector6d conditions;
+  conditions << s0, s0dot, s0ddot, s1, s1dot, s1ddot;
+  for (double ds : dsList) {
+    conditions[3] = s1 + ds;
+    for (double Tj : TjList) {
+      auto traj = JMT::Solve1d(conditions, Tj);
+      if (!traj.IsValid(_conf))
+        continue;
+      trajectories.push_back(traj);
+      costs.push_back(traj.ComputeCost(kTime, kPos, kVel, kAcc, kJerk));
+    }
   }
 }
 
 void
-_GetOptimalCombination(const std::vector<double>& lonCosts, const std::vector<double>& latCosts, int& lonId, int& latId)
-{}
+PolynomialTrajectoryGenerator::_GenerateVelocityKeepingTrajectory(const Ego& ego,
+                                                                  std::vector<JMTTrajectory1d>& trajectories,
+                                                                  std::vector<double>& costs)
+{
+  std::vector<double> ds1List = { 10.0, 20.0, 30.0, 40.0, 50.0 };
+  std::vector<double> TjList = { 3.0, 3.5, 4.0 };
 
+  Vector3d egoKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
+
+  double stepSize = 5.0; // m/s
+  for (double i = 1.0; i < 5.01; i += 1.0) {
+    if (egoKinematics[1] < i * stepSize) {
+      _SolveFullConstraints1d(
+        // Constraints
+        egoKinematics[0],
+        egoKinematics[1],
+        egoKinematics[2],
+        0.0,
+        i * stepSize,
+        0.0,
+        // Time
+        TjList,
+        // S deltas
+        ds1List,
+        // Weights
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        // Outputs
+        trajectories,
+        costs);
+    }
+  }
 }
-
-namespace pathplanning {
-
-PolynomialTrajectoryGenerator::PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf)
-  : _map(map)
-  , _conf(conf)
-{}
 
 Matrix32d
 PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
