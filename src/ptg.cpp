@@ -93,6 +93,7 @@ _GetFrontBackVehiclesPerLane(const Matrix32d& egoKinematics,
 void
 _GetOptimalCombination(const std::vector<double>& lonCosts, const std::vector<double>& latCosts, int& lonId, int& latId)
 {
+  // TODO
   lonId = std::distance(lonCosts.begin(), std::min_element(lonCosts.begin(), lonCosts.end()));
   latId = std::distance(latCosts.begin(), std::min_element(latCosts.begin(), latCosts.end()));
 }
@@ -118,14 +119,14 @@ PolynomialTrajectoryGenerator::_GenerateLonTrajectory(const LongitudinalManeuver
       _GenerateVelocityKeepingTrajectory(ego, trajectories, costs);
       return;
     case LongitudinalManeuverType::kStopping:
-      // _GenerateStoppingTrajectory(ego, trajectories, costs);
+      _GenerateStoppingTrajectory(ego, trajectories, costs);
       return;
     case LongitudinalManeuverType::kFollowing:
-      // if (pVehicle != nullptr) {
-      //   _GenerateFollowingTrajectory(ego, *pVehicle);
-      // } else {
-      //   _GenerateVelocityKeepingTrajectory(ego);
-      // }
+      if (vehicle.GetId() != -1) {
+        _GenerateVehicleFollowingTrajectory(ego, vehicle, trajectories, costs);
+      } else {
+        _GenerateVelocityKeepingTrajectory(ego, trajectories, costs);
+      }
       return;
   }
 }
@@ -239,6 +240,23 @@ PolynomialTrajectoryGenerator::_GenerateVelocityKeepingTrajectory(const Ego& ego
         costs);
     }
   }
+}
+
+void
+PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& ego,
+                                                                   const Vehicle& vehicle,
+                                                                   std::vector<JMTTrajectory1d>& trajectories,
+                                                                   std::vector<double>& costs)
+{
+  // TODO
+}
+
+void
+PolynomialTrajectoryGenerator::_GenerateStoppingTrajectory(const Ego& ego,
+                                                           std::vector<JMTTrajectory1d>& trajectories,
+                                                           std::vector<double>& costs)
+{
+  // TODO
 }
 
 Matrix32d

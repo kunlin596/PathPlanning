@@ -88,18 +88,6 @@ target_link_libraries(
   ${OpenMP_LIBS}
 )
 
-add_library(
-  behavior
-  SHARED
-  src/behaviorplanner.cpp
-)
-
-target_link_libraries(
-  behavior
-  PUBLIC
-  trajectory
-)
-
 add_executable(
   pathplanningserver
   src/system.cpp
@@ -113,7 +101,7 @@ target_link_libraries(
   ssl
   uv
   uWS
-  behavior)
+  trajectory)
 
 enable_testing()
 find_package(GTest REQUIRED)

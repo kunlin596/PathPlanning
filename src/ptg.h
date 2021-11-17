@@ -1,6 +1,8 @@
 #ifndef PATHPLANNING_PTG_H
 #define PATHPLANNING_PTG_H
 
+#include <boost/optional.hpp>
+
 #include "jmt.h"
 #include "json.hpp"
 #include "tracker.h"
@@ -76,21 +78,68 @@ private:
                                std::vector<JMTTrajectory1d>& trajectories,
                                std::vector<double>& costs);
 
+  /**
+   * @brief      Generate 1d lateral trajectory for 1 lane
+   *
+   * @param[in]  latBehavior   The lat behavior
+   * @param[in]  ego           The ego
+   * @param      trajectories  The trajectories
+   * @param      costs         The costs
+   */
   void _GenerateLatTrajectory(const LateralManeuverType& latBehavior,
                               const Ego& ego,
                               std::vector<JMTTrajectory1d>& trajectories,
                               std::vector<double>& costs);
 
+  /**
+   * @brief      Generate 1d longitudinal trajectory for 1 lane
+   *
+   * @param[in]  lonBehavior   The lon behavior
+   * @param[in]  ego           The ego
+   * @param[in]  vehicle       The vehicle
+   * @param      trajectories  The trajectories
+   * @param      costs         The costs
+   */
   void _GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
                               const Ego& ego,
                               const Vehicle& vehicle,
                               std::vector<JMTTrajectory1d>& trajectories,
                               std::vector<double>& costs);
 
+  /**
+   * @brief      Generate velocity keeping trajectory
+   *
+   * @param[in]  ego           The ego
+   * @param      trajectories  The trajectories
+   * @param      costs         The costs
+   */
   void _GenerateVelocityKeepingTrajectory(const Ego& ego,
                                           std::vector<JMTTrajectory1d>& trajectories,
                                           std::vector<double>& costs);
 
+  /**
+   * @brief      Generate Vehicle following trajectory
+   *
+   * @param[in]  ego           The ego
+   * @param[in]  vehicle       The vehicle
+   * @param      trajectories  The trajectories
+   * @param      costs         The costs
+   */
+  void _GenerateVehicleFollowingTrajectory(const Ego& ego,
+                                           const Vehicle& vehicle,
+                                           std::vector<JMTTrajectory1d>& trajectories,
+                                           std::vector<double>& costs);
+
+  /**
+   * @brief      Generate stopping trajectory
+   *
+   * @param[in]  ego           The ego
+   * @param      trajectories  The trajectories
+   * @param      costs         The costs
+   */
+  void _GenerateStoppingTrajectory(const Ego& ego,
+                                   std::vector<JMTTrajectory1d>& trajectories,
+                                   std::vector<double>& costs);
 
   const Configuration& _conf;
   const Map& _map;
