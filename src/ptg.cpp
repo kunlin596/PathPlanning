@@ -10,155 +10,163 @@
 #include <omp.h>
 #endif
 
+namespace {
+using namespace pathplanning;
+
+enum class LongitudinalManeuverType
+{
+  kFollowing,
+  kVelocityKeeping,
+  kStopping,
+};
+
+enum class LateralManeuverType
+{
+  kLaneKeeping,
+  kLeftLaneChanging,
+  kRightLaneChanging
+};
+
+std::unordered_map<int, std::vector<Vehicle>>
+_GroupVehicles(const TrackedVehicleMap& trackedVehicleMap)
+{
+  std::unordered_map<int, std::vector<Vehicle>> groupedVehicles;
+  for (const auto& [id, vehicle] : trackedVehicleMap) {
+    int laneId = Map::GetLaneId(vehicle.GetKinematics(0.0)(0, 1));
+    if (laneId < 0) {
+      continue;
+    }
+    if (groupedVehicles.count(laneId) == 0) {
+      groupedVehicles[id] = std::vector<Vehicle>();
+    }
+    groupedVehicles[laneId].push_back(vehicle);
+  }
+  return groupedVehicles;
+}
+
+std::unordered_map<std::string, Vehicle>
+_GetFrontBackVehiclesPerLane(const Matrix32d& egoKinematics,
+                             const std::vector<Vehicle>& vehicles,
+                             double nonEgoSearchRadius)
+{
+  double frontSDiff = std::numeric_limits<double>::max();
+  double backSDiff = std::numeric_limits<double>::max();
+
+  int frontId = -1;
+  int backId = -1;
+
+  double egoS = egoKinematics(0, 0);
+
+  for (size_t i = 0; i < vehicles.size(); ++i) {
+    const Vehicle& vehicle = vehicles[i];
+    double s = vehicle.GetKinematics(0.0)(0, 0);
+    double currFrontSDiff = s - egoS;
+    double currBackSDiff = egoS - s;
+
+    if (0.0 < currFrontSDiff and currFrontSDiff < frontSDiff) {
+      frontSDiff = currFrontSDiff;
+      frontId = i;
+
+    } else if (0.0 < currBackSDiff and currBackSDiff < backSDiff) {
+      backSDiff = currBackSDiff;
+      backId = i;
+    }
+  }
+
+  std::unordered_map<std::string, Vehicle> result;
+
+  if (frontId != -1 and frontSDiff < nonEgoSearchRadius) {
+    result["front"] = vehicles[frontId];
+    SPDLOG_DEBUG("Found front id {:2d}, frontSDiff={:7.3f}", frontId, frontSDiff);
+  }
+
+  if (backId != -1 and backSDiff < nonEgoSearchRadius) {
+    result["back"] = vehicles[backId];
+    SPDLOG_DEBUG("Found back id {:2d}, backSDiff={:7.3f}", backId, backSDiff);
+  }
+
+  return result;
+}
+
+void
+_GenerateVelocityKeepingTrajectory(const Ego& ego,
+                                   std::vector<JMTTrajectory1d>& trajectories,
+                                   std::vector<double>& costs)
+{
+  double speed = ego.GetKinematics(0.0)(0, 1);
+
+  if (speed < 10.0) {
+    Vector6d conditions = Vector6d::Zero();
+    conditions.topRows<3>() = ego.GetKinematics(0.0).block<3, 1>(0, 0);
+    for (double i = 1.0; i < 20.0; i += 1.0) {
+      conditions[3] = ego.GetKinematics(0.0)(0, 0) + i;
+      for (double time = 3.0; time < 10.0; time += 0.5) {
+        trajectories.push_back(JMT::Solve1d(conditions, time));
+      }
+    }
+  } else if (speed < 20.0) {
+
+  } else if (speed < 30.0) {
+
+  } else if (speed < 40.0) {
+
+  }
+}
+
+void
+_GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
+                       const Ego& ego,
+                       const Vehicle &vehicle,
+                       std::vector<JMTTrajectory1d>& trajectories,
+                       std::vector<double>& costs)
+{
+  switch (lonBehavior) {
+    case LongitudinalManeuverType::kVelocityKeeping:
+      _GenerateVelocityKeepingTrajectory(ego, trajectories, costs);
+      return;
+    case LongitudinalManeuverType::kStopping:
+      // _GenerateStoppingTrajectory(ego, trajectories, costs);
+      return;
+    case LongitudinalManeuverType::kFollowing:
+      // if (pVehicle != nullptr) {
+      //   _GenerateFollowingTrajectory(ego, *pVehicle);
+      // } else {
+      //   _GenerateVelocityKeepingTrajectory(ego);
+      // }
+      return;
+  }
+}
+
+void
+_GenerateLatTrajectory(const LateralManeuverType& latBehavior,
+                       const Ego& ego,
+                       std::vector<JMTTrajectory1d>& trajectories,
+                       std::vector<double>& costs)
+{
+  double egoD = ego.GetKinematics(0.0)(0, 1);
+  double targetD = egoD;
+  switch (latBehavior) {
+    case LateralManeuverType::kLeftLaneChanging:
+      targetD = Map::GetLaneCenterD(Map::GetLaneId(egoD) - 1);
+      break;
+    case LateralManeuverType::kRightLaneChanging:
+      targetD = Map::GetLaneCenterD(Map::GetLaneId(egoD) + 1);
+      break;
+  }
+}
+
+void
+_GetOptimalCombination(const std::vector<double>& lonCosts, const std::vector<double>& latCosts, int& lonId, int& latId)
+{}
+
+}
+
 namespace pathplanning {
 
 PolynomialTrajectoryGenerator::PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf)
   : _map(map)
   , _conf(conf)
 {}
-
-std::pair<Waypoints, JMTTrajectory2d>
-PolynomialTrajectoryGenerator::GeneratePath(const JMTTrajectory2d& proposal,
-                                            const TrackedVehicleMap& trackedVehicleMap,
-                                            json& log)
-{
-
-  Matrix32d startKinematics = proposal.GetStartCond();
-
-  // log["proposal"] = proposal.Dump();
-
-  // log["trackedVehicles"] = json::array();
-  // for (const auto v : trackedVehicleMap) {
-  //   log["trackedVehicles"].push_back(v.second.Dump());
-  // }
-
-  // log["allTraj"] = json::array();
-  // log["allGoals"] = json::array();
-  // log["allCosts"] = json::array();
-
-  JMTTrajectory2d bestTrajectory;
-
-  if (_conf.goalSampler.use) {
-    //
-    // Generate perturbed goals
-    //
-
-    std::vector<Matrix32d> goalKinematics;
-    std::vector<double> goalTimes;
-
-    double timeRangeSingleSide = _conf.goalSampler.numTimeSteps * _conf.goalSampler.sampleTimeStep;
-    double minTime = std::max(0.5, proposal.GetTime() - timeRangeSingleSide);
-    double maxTime = proposal.GetTime() + timeRangeSingleSide;
-
-    // goalKinematics.push_back(proposal(0.0).block<3, 2>(0, 0));
-    // goalTimes.push_back(proposal.GetTime());
-
-    double sampleTime = minTime;
-    while (sampleTime < maxTime) {
-      Matrix32d targetKinematics = proposal(sampleTime).block<3, 2>(0, 0);
-
-      goalKinematics.push_back(targetKinematics);
-      goalTimes.push_back(sampleTime);
-
-      GoalSampler sampler(targetKinematics, _conf.goalSampler.sampleSigmas);
-      for (int i = 0; i < _conf.goalSampler.numSamplesPerTimeStep; ++i) {
-        goalKinematics.push_back(sampler.Sample());
-        goalTimes.push_back(sampleTime);
-      }
-
-      sampleTime += _conf.goalSampler.sampleTimeStep;
-    }
-
-    //
-    // Evaluate all goals by generating the trajectory and select best one
-    //
-
-    double minCost = std::numeric_limits<double>::max();
-    using namespace nlohmann;
-    json j;
-
-    std::vector<JMTTrajectory2d> trajs(goalKinematics.size());
-
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < goalKinematics.size(); ++i) {
-      Matrix62d conditions;
-      conditions.block<3, 2>(0, 0) = startKinematics;
-      conditions.block<3, 2>(3, 0) = goalKinematics[i];
-      JMTTrajectory2d trajectory = JMT::Solve2d(conditions, goalTimes[i]);
-
-      // SPDLOG_DEBUG("conditions=\n{}", conditions.format(HeavyFmt));
-      if (not trajectory.IsValid(_map, _conf)) {
-        SPDLOG_TRACE("trajectory invalid {}", i);
-        continue;
-      }
-      const auto& [id, dist] = CollisionChecker::IsInCollision(trajectory, trackedVehicleMap, _conf);
-      if (id != -1) {
-        Eigen::Vector3d sKinematics = trackedVehicleMap.at(id).GetKinematics(0.0).block<3, 1>(0, 0);
-        SPDLOG_TRACE(
-          "trajectory, in collision {} with {}, vehicleS={}", i, id, sKinematics.transpose().format(HeavyFmt));
-        continue;
-      }
-
-      trajs[i] = trajectory;
-      // if (CollisionChecker::IsInCollision(trajectory, trackedVehicleMap, _conf)) {
-      //   continue;
-      // }
-
-      // log["allTraj"].push_back(trajectory.Dump());
-      // log["allGoals"].push_back(goals[i].Dump());
-
-      // double cost = _pEvaluator->Evaluate(trajectory, goals[i], proposal.GetTime(), trackedVehicleMap);
-      // log["allCosts"].push_back(cost);
-
-      // if (cost > 1e3) {
-      //   continue;
-      // }
-
-      // SPDLOG_DEBUG("    - {:3d} cost={:7.3f}", i, cost);
-      // if (cost < minCost) {
-      //   minCost = cost;
-      //   bestTrajectory = trajectory;
-      // }
-    }
-
-    if (trajs.empty()) {
-      SPDLOG_WARN("No valid trajectories found!");
-    } else {
-      bestTrajectory = trajs[trajs.size() / 2];
-    }
-  } else {
-    const auto& [id, dist] = (CollisionChecker::IsInCollision(proposal, trackedVehicleMap, _conf));
-    if (id != -1) {
-      SPDLOG_WARN("Collision detected, id={}, closest dist={:7.3f}, kinematics={}",
-                  id,
-                  dist,
-                  trackedVehicleMap.at(id).GetKinematics(0.0).topRows<1>().format(HeavyFmt));
-    }
-    bestTrajectory = proposal;
-  }
-
-  SPDLOG_DEBUG("bestTrajectory={}", bestTrajectory);
-
-  //
-  // Evaluate trajectory into waypoints
-  //
-
-  int numPointsToBeGenerated = static_cast<int>(std::round(bestTrajectory.GetTime() / _conf.simulator.timeStep));
-
-  Waypoints waypoints(numPointsToBeGenerated);
-  for (size_t i = 0; i < numPointsToBeGenerated; ++i) {
-    Matrix62d trajKinematics = bestTrajectory(_conf.simulator.timeStep * i);
-    waypoints[i] = _map.GetXY(trajKinematics(0, 0), trajKinematics(0, 1));
-  }
-
-  // log["bestTrajectory"] = bestTrajectory.Dump();
-
-  std::tie(log["next_x"], log["next_y"]) = Path::ConvertWaypointsToXY(waypoints);
-
-  return std::make_pair(waypoints, bestTrajectory);
-}
 
 Matrix32d
 PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
@@ -173,6 +181,74 @@ PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
   double executedTime = (_conf.numPoints - prevPath.size() + numPointsToPreserve) * _conf.simulator.timeStep;
   SPDLOG_DEBUG("executedTime={}", executedTime);
   return prevTraj(executedTime).topRows<3>();
+}
+
+JMTTrajectory2d
+PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
+{
+  // For more information on trajectory generation, see
+  // "Optimal Trajectory Generation for Dynamic Street Scenarios in a Frenet Frame",
+  // M. Werling, J. Ziegler, S. Kammel and S. Thrun, ICRA 2010
+
+  auto groupedVehicles = _GroupVehicles(trackedVehicleMap);
+  auto egoLandId = Map::GetLaneId(ego.GetKinematics(0.0)(0, 1));
+
+  // Figure out the lanes for planning
+  int leftLaneId = egoLandId - 1;
+  int rightLaneId = egoLandId + 1;
+  std::vector<int> laneIdsForPlanning = { egoLandId };
+  if (0 <= leftLaneId and leftLaneId < egoLandId) {
+    laneIdsForPlanning.push_back(leftLaneId);
+  }
+  if (egoLandId < rightLaneId and rightLaneId < Map::NUM_LANES) {
+    laneIdsForPlanning.push_back(rightLaneId);
+  }
+
+  // Figure out lat behaviors
+  std::unordered_map<int, LateralManeuverType> latBehaviors;
+  latBehaviors[egoLandId] = LateralManeuverType::kLaneKeeping;
+  if (0 <= leftLaneId and leftLaneId < Map::NUM_LANES) {
+    latBehaviors[leftLaneId] = LateralManeuverType::kLeftLaneChanging;
+  }
+  if (0 <= rightLaneId and rightLaneId < Map::NUM_LANES) {
+    latBehaviors[rightLaneId] = LateralManeuverType::kRightLaneChanging;
+  }
+
+  // Figure out lon behaviors
+  std::unordered_map<int, std::vector<LongitudinalManeuverType>> lonBehaviors;
+  std::unordered_map<int, Vehicle> leadingVehicles;
+  for (const auto& [laneId, vehicles] : groupedVehicles) {
+    lonBehaviors[laneId] = { LongitudinalManeuverType::kVelocityKeeping, LongitudinalManeuverType::kStopping };
+    auto frontBackVehicles = _GetFrontBackVehiclesPerLane(ego.GetKinematics(0.0), vehicles, 60.0);
+    if (frontBackVehicles.count("front")) {
+      leadingVehicles[laneId] = frontBackVehicles["front"];
+    }
+  }
+
+  // Generate trajectories for ego lane and adjacent lanes
+  std::vector<JMTTrajectory1d> lonTrajs;
+  std::vector<double> lonCosts;
+
+  std::vector<JMTTrajectory1d> latTrajs;
+  std::vector<double> latCosts;
+
+  for (const int& laneId : laneIdsForPlanning) {
+
+    // Generate lon trajectories
+    for (const auto& behavior : lonBehaviors[laneId]) {
+      _GenerateLonTrajectory(behavior, ego, leadingVehicles[laneId], lonTrajs, lonCosts);
+    }
+
+    // Generate lat trajectories
+    _GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs, latCosts);
+  }
+
+  int lonId = 0, latId = 0;
+  _GetOptimalCombination(lonCosts, latCosts, lonId, latId);
+  const auto& bestLonTraj = lonTrajs[lonId];
+  const auto& bestLatTraj = latTrajs[latId];
+
+  return JMTTrajectory2d(bestLonTraj, bestLatTraj);
 }
 
 } // namespace pathplanning

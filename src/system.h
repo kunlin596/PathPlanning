@@ -3,7 +3,6 @@
 
 #include <uWS/uWS.h>
 
-#include "behaviorplanner.h"
 #include "ptg.h"
 #include "tracker.h"
 
@@ -65,7 +64,6 @@ public:
 
 private:
   Map::Ptr _pMap;
-  std::unique_ptr<BehaviorPlanner> _pBehaviorPlanner;
   std::unique_ptr<Tracker> _pTracker;
   std::unique_ptr<PolynomialTrajectoryGenerator> _pPathGenerator;
   std::unique_ptr<uWS::Hub> _pHub;

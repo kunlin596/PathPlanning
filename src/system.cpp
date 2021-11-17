@@ -48,7 +48,6 @@ System::Initialize(const std::string& configFileName)
   _pMap = Map::CreateMap();
   _pHub = std::make_unique<uWS::Hub>();
   _pTracker = std::make_unique<Tracker>(*_pMap, *_pConf);
-  _pBehaviorPlanner = std::make_unique<BehaviorPlanner>(*_pMap, *_pConf);
   _pPathGenerator = std::make_unique<PolynomialTrajectoryGenerator>(*_pMap, *_pConf);
   _pEgo = std::make_unique<Ego>();
 }
@@ -91,27 +90,27 @@ System::SpinOnce(const std::string& commandString)
 
       _pTracker->Update(*_pEgo, perceptions);
 
-      //
-      // Behavior planning
-      //
+      std::vector<std::vector<Vehicle>> vehicles(3);
+      for (const auto& [id, vehicle] : _pTracker->GetVehicles()) {
+        int laneId = Map::GetLaneId(vehicle.GetKinematics(0.0)(0, 1));
+        if (laneId > -1) {
+          vehicles[laneId].push_back(vehicle);
+        }
+      }
 
       int numPointsToPreserve = static_cast<int>(prevPath.size() * 0.0);
+
       Matrix32d startState =
         _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath, numPointsToPreserve);
 
-      JMTTrajectory2d proposal = _pBehaviorPlanner->GenerateProposal(startState, _pTracker->GetVehicles());
       //
       // Path generation
       //
-
-      // SPDLOG_INFO(
-      //   "Generating path for proposal\n  startState - {}\n  proposal={}\n", _pEgo->GetKinematics(0.0), proposal);
-
       json log;
 
       Waypoints path;
       JMTTrajectory2d trajectory;
-      std::tie(path, trajectory) = _pPathGenerator->GeneratePath(proposal, _pTracker->GetVehicles(), log);
+      // std::tie(path, trajectory) = _pPathGenerator->GeneratePath(proposal, _pTracker->GetVehicles(), log);
 
       Waypoints newPath;
 
@@ -121,6 +120,7 @@ System::SpinOnce(const std::string& commandString)
       for (int i = 0; i < (_pConf->numPoints - numPointsToPreserve) and i < path.size(); ++i) {
         newPath.push_back(path[i]);
       }
+
       UpdateCachedTrajectory(trajectory);
 
       SPDLOG_DEBUG("numPointsToPreserve={}, prevPath.size()={}, newPath.size()={}, _pConf->numPoints={}",
