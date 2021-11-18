@@ -108,9 +108,16 @@ System::SpinOnce(const std::string& commandString)
       //
       json log;
 
+      JMTTrajectory2d trajectory = _pPathGenerator->GenerataTrajectory(*_pEgo, _pTracker->GetVehicles());
+
+      double currTime = 0.0;
+      int cnt = 0;
       Waypoints path;
-      JMTTrajectory2d trajectory;
-      // std::tie(path, trajectory) = _pPathGenerator->GeneratePath(proposal, _pTracker->GetVehicles(), log);
+      while(currTime < trajectory.GetTime() and cnt < _pConf->numPoints) {
+        Matrix62d p = trajectory(currTime);
+        path.push_back(_pMap->GetXY(p(0, 0), p(0, 1)));
+        currTime += 0.02;
+      }
 
       Waypoints newPath;
 

@@ -27,12 +27,12 @@ struct JMTTrajectory1d
   JMTTrajectory1d() {}
 
   JMTTrajectory1d(const QuinticFunctor& func, const Vector3d& startCond, const Vector3d& endCond, const double time)
-    : _func5(func)
-    , _func4(_func5.Differentiate())
-    , _func3(_func4.Differentiate())
-    , _func2(_func3.Differentiate())
-    , _func1(_func2.Differentiate())
-    , _func0(_func1.Differentiate())
+    : _positionFn(func)
+    , _velocityFn(_positionFn.Differentiate())
+    , _accelerationFn(_velocityFn.Differentiate())
+    , _jerkFn(_accelerationFn.Differentiate())
+    , _snapFn(_jerkFn.Differentiate())
+    , _crackleFn(_snapFn.Differentiate())
     , _startCond(startCond)
     , _endCond(endCond)
     , _time(time)
@@ -53,12 +53,12 @@ struct JMTTrajectory1d
   nlohmann::json Dump() const;
   void Write(const std::string& filename) const;
 
-  const QuinticFunctor& GetFunc5() const { return _func5; }
-  const QuarticFunctor& GetFunc4() const { return _func4; }
-  const CubicFunctor& GetFunc3() const { return _func3; }
-  const QuadraticFunctor& GetFunc2() const { return _func2; }
-  const LinearFunctor& GetFunc1() const { return _func1; }
-  const ConstantFunctor& GetFunc0() const { return _func0; }
+  const QuinticFunctor& GetPositionFn() const { return _positionFn; }
+  const QuarticFunctor& GetVelocityFn() const { return _velocityFn; }
+  const CubicFunctor& GetAcclerationFn() const { return _accelerationFn; }
+  const QuadraticFunctor& GetJerkFn() const { return _jerkFn; }
+  const LinearFunctor& GetSnapFn() const { return _snapFn; }
+  const ConstantFunctor& GetCrackleFn() const { return _crackleFn; }
   double GetTime() const { return _time; }
 
   bool IsValid(const Configuration& conf);
@@ -66,22 +66,22 @@ struct JMTTrajectory1d
 
   double ComputeCost(double kTime, double kPos, double kVel, double kAccel, double kJerk);
 
-  double GetPosition(double t) const { return _func5(t); }
-  double GetVelocity(double t) const { return _func4(t); }
-  double GetAcceleration(double t) const { return _func3(t); }
-  double GetJerk(double t) const { return _func2(t); }
-  double GetSnap(double t) const { return _func1(t); }
-  double GetCrackle(double t) const { return _func1(t); }
+  double GetPosition(double t) const { return _positionFn(t); }
+  double GetVelocity(double t) const { return _velocityFn(t); }
+  double GetAcceleration(double t) const { return _accelerationFn(t); }
+  double GetJerk(double t) const { return _jerkFn(t); }
+  double GetSnap(double t) const { return _snapFn(t); }
+  double GetCrackle(double t) const { return _snapFn(t); }
 
   bool GetIsValid() const { return _isvalid; }
 
 private:
-  QuinticFunctor _func5;   ///< position
-  QuarticFunctor _func4;   ///< velocity
-  CubicFunctor _func3;     ///< acceleration
-  QuadraticFunctor _func2; ///< jerk
-  LinearFunctor _func1;    ///< snap
-  ConstantFunctor _func0;  ///< crackle
+  QuinticFunctor _positionFn;   ///< position
+  QuarticFunctor _velocityFn;   ///< velocity
+  CubicFunctor _accelerationFn;     ///< acceleration
+  QuadraticFunctor _jerkFn; ///< jerk
+  LinearFunctor _snapFn;    ///< snap
+  ConstantFunctor _crackleFn;  ///< crackle
   Vector3d _startCond;     ///< start condition
   Vector3d _endCond;       ///< end condition
   double _time = 0.0;      ///< trajectory execution time
@@ -117,16 +117,16 @@ struct JMTTrajectory2d
   inline Matrix32d GetStartCond() const
   {
     Matrix32d cond;
-    cond.col(0) = _traj1.GetStartCond();
-    cond.col(1) = _traj2.GetStartCond();
+    cond.col(0) = _lonTraj.GetStartCond();
+    cond.col(1) = _latTraj.GetStartCond();
     return cond;
   }
 
   inline Matrix32d GetEndCond() const
   {
     Matrix32d cond;
-    cond.col(0) = _traj1.GetEndCond();
-    cond.col(1) = _traj2.GetEndCond();
+    cond.col(0) = _lonTraj.GetEndCond();
+    cond.col(1) = _latTraj.GetEndCond();
     return cond;
   }
 
@@ -138,24 +138,24 @@ struct JMTTrajectory2d
   // Getters
   //
 
-  const JMTTrajectory1d& GetTraj1() const { return _traj1; }
-  const JMTTrajectory1d& GetTraj2() const { return _traj2; }
-  double GetTime() const { return _traj1.GetTime(); }
+  const JMTTrajectory1d& GetTraj1() const { return _lonTraj; }
+  const JMTTrajectory1d& GetTraj2() const { return _latTraj; }
+  double GetTime() const { return _lonTraj.GetTime(); }
 
-  const QuinticFunctor& GetSFunc() const { return _traj1.GetFunc5(); }
-  const QuinticFunctor& GetDFunc() const { return _traj2.GetFunc5(); }
+  const QuinticFunctor& GetSFunc() const { return _lonTraj.GetPositionFn(); }
+  const QuinticFunctor& GetDFunc() const { return _latTraj.GetPositionFn(); }
 
-  const QuarticFunctor& GetSVelFunc() const { return _traj1.GetFunc4(); }
-  const QuarticFunctor& GetDVelFunc() const { return _traj2.GetFunc4(); }
+  const QuarticFunctor& GetSVelFunc() const { return _lonTraj.GetVelocityFn(); }
+  const QuarticFunctor& GetDVelFunc() const { return _latTraj.GetVelocityFn(); }
 
-  const CubicFunctor& GetSAccFunc() const { return _traj1.GetFunc3(); }
-  const CubicFunctor& GetDAccFunc() const { return _traj2.GetFunc3(); }
+  const CubicFunctor& GetSAccFunc() const { return _lonTraj.GetAcclerationFn(); }
+  const CubicFunctor& GetDAccFunc() const { return _latTraj.GetAcclerationFn(); }
 
   friend std::ostream& operator<<(std::ostream& out, const JMTTrajectory2d& traj);
 
 private:
-  JMTTrajectory1d _traj1;
-  JMTTrajectory1d _traj2;
+  JMTTrajectory1d _lonTraj;
+  JMTTrajectory1d _latTraj;
   bool _isvalid = false;
 };
 

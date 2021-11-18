@@ -95,8 +95,12 @@ JMTTrajectory1d::ComputeCost(double kTime, double kPos, double kVel, double kAcc
 nlohmann::json
 JMTTrajectory1d::Dump() const
 {
-  return { { "func5", GetFunc5().Dump() }, { "func4", GetFunc4().Dump() }, { "func3", GetFunc3().Dump() },
-           { "func2", GetFunc2().Dump() }, { "func1", GetFunc1().Dump() }, { "func0", GetFunc0().Dump() },
+  return { { "position", GetPositionFn().Dump() },
+           { "velocity", GetVelocityFn().Dump() },
+           { "acceleration", GetAcclerationFn().Dump() },
+           { "jerk", GetJerkFn().Dump() },
+           { "snap", GetSnapFn().Dump() },
+           { "crackle", GetCrackleFn().Dump() },
            { "time", GetTime() } };
 }
 
@@ -106,18 +110,18 @@ JMTTrajectory1d::Write(const std::string& filename) const
   utils::WriteJson(filename, Dump());
 }
 
-JMTTrajectory2d::JMTTrajectory2d(const JMTTrajectory1d& traj1, const JMTTrajectory1d& traj2)
-  : _traj1(traj1)
-  , _traj2(traj2)
+JMTTrajectory2d::JMTTrajectory2d(const JMTTrajectory1d& lonTraj, const JMTTrajectory1d& latTraj)
+  : _lonTraj(lonTraj)
+  , _latTraj(latTraj)
 {
-  assert(traj1.GetTime() == traj2.GetTime());
+  // assert(lonTraj.GetTime() == latTraj.GetTime());
 }
 
 nlohmann::json
 JMTTrajectory2d::Dump() const
 {
   using namespace nlohmann;
-  return { { "traj1", _traj1.Dump() }, { "traj2", _traj2.Dump() } };
+  return { { "lonTraj", _lonTraj.Dump() }, { "latTraj", _latTraj.Dump() } };
 }
 
 void
@@ -129,7 +133,7 @@ JMTTrajectory2d::Write(const std::string& filename) const
 bool
 JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf)
 {
-  if (not _traj1.IsValid(conf) or not _traj2.IsValid(conf)) {
+  if (not _lonTraj.IsValid(conf) or not _latTraj.IsValid(conf)) {
     _isvalid = false;
     return _isvalid;
   }
@@ -178,8 +182,8 @@ Matrix62d
 JMTTrajectory2d::Eval(const double t) const
 {
   Matrix62d kinematics;
-  kinematics.col(0) = _traj1(t);
-  kinematics.col(1) = _traj2(t);
+  kinematics.col(0) = _lonTraj(t);
+  kinematics.col(1) = _latTraj(t);
   return kinematics;
 }
 

@@ -91,11 +91,31 @@ _GetFrontBackVehiclesPerLane(const Matrix32d& egoKinematics,
 }
 
 void
-_GetOptimalCombination(const std::vector<double>& lonCosts, const std::vector<double>& latCosts, int& lonId, int& latId)
+_GetOptimalCombination(const std::vector<double>& lonCosts,
+                       const std::vector<double>& latCosts,
+                       int& lonId,
+                       int& latId,
+                       double& minCost)
 {
-  // TODO
-  lonId = std::distance(lonCosts.begin(), std::min_element(lonCosts.begin(), lonCosts.end()));
-  latId = std::distance(latCosts.begin(), std::min_element(latCosts.begin(), latCosts.end()));
+  if ((lonCosts.size() == 0) || (latCosts.size() == 0)) {
+    lonId = -1;
+    latId = -1;
+    return;
+  }
+
+  // cost weight for longitudinal / lateral
+  double kLon = 1.0;
+  double kLat = 2.0;
+
+  // build sum matrix
+  Eigen::MatrixXd sdCostSum(lonCosts.size(), latCosts.size());
+  for (int row = 0; row < lonCosts.size(); ++row) {
+    for (int col = 0; col < latCosts.size(); ++col) {
+      sdCostSum(row, col) = kLon * lonCosts[row] + kLat * latCosts[col];
+    }
+  }
+  // find minimum
+  minCost = sdCostSum.minCoeff(&lonId, &latId);
 }
 
 }
@@ -196,8 +216,8 @@ PolynomialTrajectoryGenerator::_SolveFullConstraints1d(double s0,
     conditions[3] = s1 + ds;
     for (double Tj : TjList) {
       auto traj = JMT::Solve1d(conditions, Tj);
-      if (!traj.IsValid(_conf))
-        continue;
+      // if (!traj.IsValid(_conf))
+      //   continue;
       trajectories.push_back(traj);
       costs.push_back(traj.ComputeCost(kTime, kPos, kVel, kAcc, kJerk));
     }
@@ -308,25 +328,35 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   // Figure out lon behaviors
   std::unordered_map<int, std::vector<LongitudinalManeuverType>> lonBehaviors;
   std::unordered_map<int, Vehicle> leadingVehicles;
-  for (const auto& [laneId, vehicles] : groupedVehicles) {
-    lonBehaviors[laneId] = { LongitudinalManeuverType::kVelocityKeeping, LongitudinalManeuverType::kStopping };
-    auto frontBackVehicles = _GetFrontBackVehiclesPerLane(ego.GetKinematics(0.0), vehicles, 60.0);
-    if (frontBackVehicles.count("front")) {
-      leadingVehicles[laneId] = frontBackVehicles["front"];
-      lonBehaviors[laneId].push_back(LongitudinalManeuverType::kFollowing);
-    } else {
-      leadingVehicles[laneId] = Vehicle();
+
+  for (int laneId = 0; laneId < Map::NUM_LANES; ++laneId) {
+    lonBehaviors[laneId] = {
+      LongitudinalManeuverType::kVelocityKeeping,
+      // LongitudinalManeuverType::kStopping
+    };
+    if (groupedVehicles.count(laneId)) {
+      const auto& vehicles = groupedVehicles[laneId];
+      auto frontBackVehicles = _GetFrontBackVehiclesPerLane(ego.GetKinematics(0.0), vehicles, 60.0);
+      if (frontBackVehicles.count("front")) {
+        leadingVehicles[laneId] = frontBackVehicles["front"];
+        lonBehaviors[laneId].push_back(LongitudinalManeuverType::kFollowing);
+      } else {
+        leadingVehicles[laneId] = Vehicle();
+      }
     }
   }
 
-  // Generate trajectories for ego lane and adjacent lanes
-  std::vector<JMTTrajectory1d> lonTrajs;
-  std::vector<double> lonCosts;
 
-  std::vector<JMTTrajectory1d> latTrajs;
-  std::vector<double> latCosts;
+  JMTTrajectory2d bestTraj;
+  double minCost = std::numeric_limits<double>::min();
 
   for (const int& laneId : laneIdsForPlanning) {
+  // Generate trajectories for ego lane and adjacent lanes
+    std::vector<JMTTrajectory1d> lonTrajs;
+    std::vector<double> lonCosts;
+
+    std::vector<JMTTrajectory1d> latTrajs;
+    std::vector<double> latCosts;
 
     // Generate lon trajectories
     for (const auto& behavior : lonBehaviors[laneId]) {
@@ -335,14 +365,32 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 
     // Generate lat trajectories
     _GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs, latCosts);
+
+    if (lonTrajs.empty() or latTrajs.empty()) {
+      SPDLOG_DEBUG("Planning failed for lane {:d}", laneId);
+      continue;
+    }
+
+    int lonId = -1, latId = -1;
+    double cost;
+    _GetOptimalCombination(lonCosts, latCosts, lonId, latId, cost);
+
+    const auto& bestLonTraj = lonTrajs[lonId];
+    const auto& bestLatTraj = latTrajs[latId];
+    auto traj = JMTTrajectory2d(bestLonTraj, bestLatTraj);
+
+    auto [collidedVehicleId, distance] = CollisionChecker::IsInCollision(traj, trackedVehicleMap, _conf);
+    if (collidedVehicleId != -1) {
+      continue;
+    }
+
+    if (cost < minCost) {
+      minCost = cost;
+      bestTraj = traj;
+    }
   }
 
-  int lonId = 0, latId = 0;
-  _GetOptimalCombination(lonCosts, latCosts, lonId, latId);
-  const auto& bestLonTraj = lonTrajs[lonId];
-  const auto& bestLatTraj = latTrajs[latId];
-
-  return JMTTrajectory2d(bestLonTraj, bestLatTraj);
+  return bestTraj;
 }
 
 } // namespace pathplanning
