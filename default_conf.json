@@ -4,7 +4,7 @@
   "timeStep": 0.02,
   "timeHorizon": 1.0,
   "nonEgoSearchRadius": 100,
-  "numPoints": 300,
+  "numPoints": 100,
   "trajectory": {
     "planningDistance": 30,
     "maxTime": 10.0,

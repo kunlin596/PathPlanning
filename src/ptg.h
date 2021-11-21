@@ -35,12 +35,15 @@ public:
   explicit PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf);
   virtual ~PolynomialTrajectoryGenerator() {}
 
-  JMTTrajectory2d GenerataTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
+  JMTTrajectory2d GenerataTrajectory(const Ego& ego,
+                                     const TrackedVehicleMap& trackedVehicleMap,
+                                     bool usePython = false);
 
   Matrix32d ComputeStartState(const Vehicle& ego,
                               const JMTTrajectory2d& prevTraj,
                               const Waypoints& prevPath,
-                              int numPointsToPreserve);
+                              int numPointsToPreserve,
+                              bool usePython = false);
 
 private:
   /**
@@ -60,7 +63,6 @@ private:
    * @param[in]  kAcc          The weight for acceleration cost
    * @param[in]  kJerk         The weight for jerk cost
    * @param      trajectories  The trajectories
-   * @param      costs         The costs
    */
   void _SolveFullConstraints1d(double s0,
                                double s0dot,
@@ -75,8 +77,7 @@ private:
                                double kVel,
                                double kAcc,
                                double kJerk,
-                               std::vector<JMTTrajectory1d>& trajectories,
-                               std::vector<double>& costs);
+                               std::vector<JMTTrajectory1d>& trajectories);
 
   /**
    * @brief      Generate 1d lateral trajectory for 1 lane
@@ -84,12 +85,10 @@ private:
    * @param[in]  latBehavior   The lat behavior
    * @param[in]  ego           The ego
    * @param      trajectories  The trajectories
-   * @param      costs         The costs
    */
   void _GenerateLatTrajectory(const LateralManeuverType& latBehavior,
                               const Ego& ego,
-                              std::vector<JMTTrajectory1d>& trajectories,
-                              std::vector<double>& costs);
+                              std::vector<JMTTrajectory1d>& trajectories);
 
   /**
    * @brief      Generate 1d longitudinal trajectory for 1 lane
@@ -98,24 +97,19 @@ private:
    * @param[in]  ego           The ego
    * @param[in]  vehicle       The vehicle
    * @param      trajectories  The trajectories
-   * @param      costs         The costs
    */
   void _GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
                               const Ego& ego,
                               const Vehicle& vehicle,
-                              std::vector<JMTTrajectory1d>& trajectories,
-                              std::vector<double>& costs);
+                              std::vector<JMTTrajectory1d>& trajectories);
 
   /**
    * @brief      Generate velocity keeping trajectory
    *
    * @param[in]  ego           The ego
    * @param      trajectories  The trajectories
-   * @param      costs         The costs
    */
-  void _GenerateVelocityKeepingTrajectory(const Ego& ego,
-                                          std::vector<JMTTrajectory1d>& trajectories,
-                                          std::vector<double>& costs);
+  void _GenerateVelocityKeepingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories);
 
   /**
    * @brief      Generate Vehicle following trajectory
@@ -123,12 +117,10 @@ private:
    * @param[in]  ego           The ego
    * @param[in]  vehicle       The vehicle
    * @param      trajectories  The trajectories
-   * @param      costs         The costs
    */
   void _GenerateVehicleFollowingTrajectory(const Ego& ego,
                                            const Vehicle& vehicle,
-                                           std::vector<JMTTrajectory1d>& trajectories,
-                                           std::vector<double>& costs);
+                                           std::vector<JMTTrajectory1d>& trajectories);
 
   /**
    * @brief      Generate stopping trajectory
@@ -137,11 +129,16 @@ private:
    * @param      trajectories  The trajectories
    * @param      costs         The costs
    */
-  void _GenerateStoppingTrajectory(const Ego& ego,
-                                   std::vector<JMTTrajectory1d>& trajectories,
-                                   std::vector<double>& costs);
+  void _GenerateStoppingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories);
 
-  const Configuration& _conf;
+  Matrix32d _ComputeStartStatePy(const Vehicle& ego,
+                                 const JMTTrajectory2d& prevTraj,
+                                 const Waypoints& prevPath,
+                                 int numPointsToPreserve);
+
+  JMTTrajectory2d _GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
+
+    const Configuration& _conf;
   const Map& _map;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };

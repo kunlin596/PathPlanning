@@ -23,13 +23,24 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 find_package(spdlog REQUIRED)
-find_package(Boost COMPONENTS program_options REQUIRED)
+find_package(Boost COMPONENTS program_options filesystem REQUIRED)
 find_package(OpenMP)
 if (OpenMP_CXX_FOUND)
     message(STATUS "Found OpenMP")
     set(OpenMP_LIBS OpenMP::OpenMP_CXX)
     message(STATUS "OpenMP Libs ${OpenMP_LIBS}")
 endif()
+
+find_package(Python3 COMPONENTS Development)
+include_directories(${Python3_INCLUDE_DIRS})
+
+find_package(pybind11 REQUIRED)
+
+OPTION(DEBUG_MODE "Debug mode" OFF)
+OPTION(LANE_CHANGING "Enable lane changing feature." ON)
+
+message(STATUS "DEBUG_MODE: ${DEBUG_MODE}")
+message(STATUS "LANE_CHANGING: ${LANE_CHANGING}")
 
 add_library(
   common
@@ -86,6 +97,8 @@ target_link_libraries(
   common
   tracker
   ${OpenMP_LIBS}
+  PRIVATE
+  ${Boost_FILESYSTEM_LIBRARY}
 )
 
 add_executable(
@@ -96,6 +109,7 @@ add_executable(
 target_link_libraries(
   pathplanningserver
   PRIVATE
+  pybind11::embed
   Boost::program_options
   z
   ssl

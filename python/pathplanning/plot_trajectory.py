@@ -1,33 +1,23 @@
 #!/usr/bin/env python3
 import matplotlib
 
-matplotlib.use('Qt5Agg')
+matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import json
 import argparse
 import os
 from map import Map
+from common import evaluate_polynomial
 
 
-NAMES = ["position", "velocity", "accelaration", "jerk", "snap", "crackle"]
+NAMES = ["position", "velocity", "acceleration", "jerk", "snap", "crackle"]
+
 np.set_printoptions(suppress=True, precision=6)
 
 
-def evaluate_polynomial(coeffs, time, time_step=0.01):
-    poly = np.polynomial.Polynomial(coeffs)
-    curr_time = 0.0
-    times = []
-    values = []
-    while curr_time < time + 1e-6:
-        values.append(poly(curr_time))
-        times.append(curr_time)
-        curr_time += time_step
-    return times, values
-
-
 def plot2d(data):
-    m = Map('../data/highway_map.csv')
+    m = Map("../data/highway_map.csv")
 
     fig0 = plt.figure(0)
     fig1 = plt.figure(1)
@@ -83,7 +73,7 @@ def plot2d(data):
         xy = m.get_xy(points[:, 0], points[:, 1])
         # fig0.gca().plot(m.x, m.y, color='g')
         fig0.gca().plot(xy[:, 0], xy[:, 1])
-        fig0.gca().axis('equal')
+        fig0.gca().axis("equal")
 
     plt.ion()
     plt.tight_layout()
@@ -94,24 +84,69 @@ def plot2d(data):
 
 
 def main(data):
-    plot2d(data)
 
+    plt.figure(0)
+    plt.ioff()
+    i = 1
+    for j in range(6):
+        for stepid, stepdata in data.items():
+            plt.subplot(6, 3, i)
+            if 0 in stepdata:
+                for lanedata in stepdata[0]:
+                    times, values = evaluate_polynomial(
+                        lanedata[NAMES[j]], lanedata["time"]
+                    )
+                    plt.plot(times, values, label=lanedata["cost"])
+                    plt.legend()
+            plt.subplot(6, 3, i + 1)
+            if 1 in stepdata:
+                for lanedata in stepdata[1]:
+                    times, values = evaluate_polynomial(
+                        lanedata[NAMES[j]], lanedata["time"]
+                    )
+                    plt.plot(times, values, label=lanedata["cost"])
+                    plt.legend()
+            plt.subplot(6, 3, i + 2)
+            if 2 in stepdata:
+                for lanedata in stepdata[2]:
+                    times, values = evaluate_polynomial(
+                        lanedata[NAMES[j]], lanedata["time"]
+                    )
+                    plt.plot(times, values, label=lanedata["cost"])
+                    plt.legend()
+            i += 3
+    plt.ion()
+    plt.show(block=True)
+
+
+# from IPython import embed
+
+# embed()
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Visualize Trajectory File")
     parser.add_argument(
-        "filename", type=str, nargs='+', help="JMT trajectory file names"
+        "filename", type=str, nargs="+", help="JMT trajectory file names"
     )
-    data = []
 
+    data = dict()
     args = parser.parse_args()
     for filename in args.filename:
         if os.path.isdir(filename):
             for filename2 in sorted(os.listdir(filename)):
                 abspath = os.path.join(filename, filename2)
-                print(abspath)
+                components = filename2.split("_")
+                step = int(components[0])
+                laneid = int(components[1])
+                sampleid = int(components[2])
                 with open(abspath, "r") as file:
-                    data.append(json.load(file))
+                    if step not in data:
+                        data[step] = dict()
+                    if laneid not in data[step]:
+                        data[step][laneid] = []
+                    data[step][laneid].append(json.load(file))
 
-    main(data)
+    print(f"Found {len(data)}")
+    key = next(iter(data.keys()))
+    main({key: data[key]})

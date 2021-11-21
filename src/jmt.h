@@ -65,6 +65,7 @@ struct JMTTrajectory1d
   bool IsValid(double maxVel, double maxAcc, double maxJerk, double timeResolution);
 
   double ComputeCost(double kTime, double kPos, double kVel, double kAccel, double kJerk);
+  double GetCost() const { return _cost; }
 
   double GetPosition(double t) const { return _positionFn(t); }
   double GetVelocity(double t) const { return _velocityFn(t); }
@@ -78,14 +79,14 @@ struct JMTTrajectory1d
 private:
   QuinticFunctor _positionFn;   ///< position
   QuarticFunctor _velocityFn;   ///< velocity
-  CubicFunctor _accelerationFn;     ///< acceleration
-  QuadraticFunctor _jerkFn; ///< jerk
-  LinearFunctor _snapFn;    ///< snap
-  ConstantFunctor _crackleFn;  ///< crackle
-  Vector3d _startCond;     ///< start condition
-  Vector3d _endCond;       ///< end condition
-  double _time = 0.0;      ///< trajectory execution time
-  double _cost = 0.0;      ///< kinematic cost for this trajectory
+  CubicFunctor _accelerationFn; ///< acceleration
+  QuadraticFunctor _jerkFn;     ///< jerk
+  LinearFunctor _snapFn;        ///< snap
+  ConstantFunctor _crackleFn;   ///< crackle
+  Vector3d _startCond;          ///< start condition
+  Vector3d _endCond;            ///< end condition
+  double _time = 0.0;           ///< trajectory execution time
+  double _cost = 0.0;           ///< kinematic cost for this trajectory
   bool _isvalid = false;
 };
 
@@ -140,7 +141,7 @@ struct JMTTrajectory2d
 
   const JMTTrajectory1d& GetTraj1() const { return _lonTraj; }
   const JMTTrajectory1d& GetTraj2() const { return _latTraj; }
-  double GetTime() const { return _lonTraj.GetTime(); }
+  double GetTime() const { return std::min(_lonTraj.GetTime(), _latTraj.GetTime()); }
 
   const QuinticFunctor& GetSFunc() const { return _lonTraj.GetPositionFn(); }
   const QuinticFunctor& GetDFunc() const { return _latTraj.GetPositionFn(); }
@@ -219,7 +220,6 @@ struct JMT
 {
   static JMTTrajectory1d Solve1d(const Vector6d& conditions, const double t);
 
-
   /**
    * @brief      Compute a JMTTrajectory2d
    *
@@ -247,7 +247,6 @@ struct JMT
   static std::vector<JMTTrajectory2d> SolveMultipleFeasible2d(const Matrix62d& conditions,
                                                               const Map& map,
                                                               const Configuration& conf);
-
 };
 
 std::ostream&

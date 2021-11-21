@@ -101,36 +101,46 @@ System::SpinOnce(const std::string& commandString)
       int numPointsToPreserve = static_cast<int>(prevPath.size() * 0.0);
 
       Matrix32d startState =
-        _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath, numPointsToPreserve);
+        _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath, numPointsToPreserve, true);
 
       //
       // Path generation
       //
       json log;
 
-      JMTTrajectory2d trajectory = _pPathGenerator->GenerataTrajectory(*_pEgo, _pTracker->GetVehicles());
+      // SPDLOG_INFO("startState={}", startState);
 
+      // Find trajectory
+      Ego futureEgo = *_pEgo;
+      futureEgo.SetKinematics(startState);
+      // SPDLOG_INFO("ego={}", *_pEgo);
+      // SPDLOG_INFO("futureEgo={}", futureEgo);
+      JMTTrajectory2d trajectory = _pPathGenerator->GenerataTrajectory(futureEgo, _pTracker->GetVehicles(), true);
+
+      // Find waypoints
       double currTime = 0.0;
       int cnt = 0;
       Waypoints path;
-      while(currTime < trajectory.GetTime() and cnt < _pConf->numPoints) {
+      while (cnt < _pConf->numPoints) {
         Matrix62d p = trajectory(currTime);
         path.push_back(_pMap->GetXY(p(0, 0), p(0, 1)));
-        currTime += 0.02;
+        currTime += _pConf->simulator.timeStep;
+        ++cnt;
       }
 
+      // Combine current waypoints and previous waypoints
+      // TODO: append more constant points to the list when goal is reached
       Waypoints newPath;
-
       for (int i = 0; i < numPointsToPreserve; ++i) {
-        newPath.push_back(prevPath[i]);
+        newPath.push_back(prevPath[i])  ;
       }
-      for (int i = 0; i < (_pConf->numPoints - numPointsToPreserve) and i < path.size(); ++i) {
+      for (int i = 0; i < (_pConf->numPoints - numPointsToPreserve); ++i) {
         newPath.push_back(path[i]);
       }
 
       UpdateCachedTrajectory(trajectory);
 
-      SPDLOG_DEBUG("numPointsToPreserve={}, prevPath.size()={}, newPath.size()={}, _pConf->numPoints={}",
+      SPDLOG_TRACE("numPointsToPreserve={}, prevPath.size()={}, newPath.size()={}, _pConf->numPoints={}",
                    numPointsToPreserve,
                    prevPath.size(),
                    newPath.size(),

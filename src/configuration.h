@@ -37,7 +37,7 @@ public:
   struct
   {
     // Tracking radius
-    double nonEgoSearchRadius = 30.0;
+    double nonEgoSearchRadius = 100.0;
 
     // Deprecated
     int numMeasurementsToTrack = 30;

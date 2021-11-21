@@ -58,8 +58,16 @@ bool
 JMTTrajectory1d::IsValid(double maxVel, double maxAcc, double maxJerk, double timeResolution)
 {
   double currTime = 0.0;
+  double prevPos = std::numeric_limits<double>::min();
   while (currTime < _time + 1e-6) {
     auto values = Eval(currTime);
+    if (values[0] > prevPos) {
+      prevPos = values[0];
+    } else {
+      _isvalid = false;
+      return _isvalid;
+    }
+
     if (std::abs(values[1]) > maxVel) {
       SPDLOG_TRACE("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], maxVel);
       _isvalid = false;
@@ -89,7 +97,8 @@ JMTTrajectory1d::ComputeCost(double kTime, double kPos, double kVel, double kAcc
   double posCost = std::pow(GetPosition(_time) - GetPosition(0.0), 2) * kPos;
   double velCost = GaussianLoss1D(20.0, 5.0, GetVelocity(_time)) * kVel;
   double jerkCost = GetJerk(_time) * kJerk;
-  return timeCost + posCost + velCost + jerkCost;
+  _cost = timeCost + posCost + velCost + jerkCost;
+  return _cost;
 }
 
 nlohmann::json
@@ -101,7 +110,8 @@ JMTTrajectory1d::Dump() const
            { "jerk", GetJerkFn().Dump() },
            { "snap", GetSnapFn().Dump() },
            { "crackle", GetCrackleFn().Dump() },
-           { "time", GetTime() } };
+           { "time", GetTime() },
+           { "cost", GetCost() } };
 }
 
 void

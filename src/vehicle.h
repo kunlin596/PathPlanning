@@ -57,11 +57,12 @@ struct Vehicle
    * @return     The cofiguration.
    */
 
-  int GetId() const { return -1; }
+  int GetId() const { return _id; }
 
   bool IsEgo() const { return _id == std::numeric_limits<int>::max(); }
 
   Matrix32d GetKinematics(double time) const;
+  void SetKinematics(const Matrix32d& kinematics) { _kinematics = kinematics; }
 
   friend std::ostream& operator<<(std::ostream& out, const Vehicle& vehicle);
 

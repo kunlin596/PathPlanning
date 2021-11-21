@@ -15,18 +15,18 @@ Tracker::Update(const Ego& ego, const Perceptions& perceptions)
 
   // Filter out the vehicles that are out of search range
   std::set<int> idToBeIgnored;
-  for (const auto& perception : perceptions) {
-    double dist = GetDistance(perception.second.sd, egoSD);
+  for (const auto& [perceptionId, perception] : perceptions) {
+    double dist = GetDistance(perception.sd, egoSD);
     if (dist > _conf.tracker.nonEgoSearchRadius) {
-      idToBeIgnored.insert(perception.first);
+      idToBeIgnored.insert(perceptionId);
     }
   }
 
-  // Naively remove disappered vehicle from tracked vehicle.
+  // Naively remove disappeared vehicle from tracked vehicle.
   std::vector<int> idToBeRemoved;
-  for (const auto& vehicleData : _trackedVehicleMap) {
-    if (perceptions.count(vehicleData.first) == 0) {
-      idToBeRemoved.push_back(vehicleData.first);
+  for (const auto& [vehicleId, vehicleData] : _trackedVehicleMap) {
+    if (perceptions.count(vehicleId) == 0) {
+      idToBeRemoved.push_back(vehicleId);
     }
   }
 
@@ -36,27 +36,24 @@ Tracker::Update(const Ego& ego, const Perceptions& perceptions)
   }
 
   // Process new vehicles
-  for (const auto& perception : perceptions) {
+  for (const auto& [perceptionId, perception] : perceptions) {
 
-    if (idToBeIgnored.count(perception.first)) {
-      if (_trackedVehicleMap.count(perception.first)) {
-        _trackedVehicleMap.erase(perception.first);
-      }
+    if (idToBeIgnored.count(perceptionId) and _trackedVehicleMap.count(perceptionId)) {
+      _trackedVehicleMap.erase(perceptionId);
       continue;
     }
 
-    const int id = perception.first;
-    int laneId = Map::GetLaneId(perception.second.sd[1]);
-    _trackedVehicleMap[id] = perception.second.GetVehicle();
+    int laneId = Map::GetLaneId(perception.sd[1]);
+    _trackedVehicleMap[perceptionId] = perception.GetVehicle();
   }
-  SPDLOG_DEBUG("Size of tracked vehicles {}", _trackedVehicleMap.size());
+  SPDLOG_TRACE("Size of tracked vehicles {}", _trackedVehicleMap.size());
 }
 
 std::ostream&
 operator<<(std::ostream& out, const TrackedVehicleMap& trackedVehicles)
 {
-  for (const auto& v : trackedVehicles) {
-    out << fmt::format("{:2d}: {:s}\n", v.first, v.second);
+  for (const auto& [id, vehicle] : trackedVehicles) {
+    out << fmt::format("{:2d}: {:s}\n", id, vehicle);
   }
   return out;
 }

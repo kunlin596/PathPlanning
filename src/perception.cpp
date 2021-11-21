@@ -20,7 +20,7 @@ Perception::GetVehicle() const
   kinematics(0, 0) = sd[0];
   kinematics(0, 1) = sd[1];
   kinematics(1, 0) = sdVel[0];
-  kinematics(1, 1) = sdVel[2];
+  kinematics(1, 1) = sdVel[1];
   // Assume other higher order terms are all zeros.
   return Vehicle(id, kinematics);
 }
