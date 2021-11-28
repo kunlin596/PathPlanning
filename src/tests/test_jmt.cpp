@@ -18,7 +18,7 @@ TEST(JMTTest, Solve1d_ConstantSpeedTest)
   Vector6d conditions;
   conditions << 0.0, vel, 0.0, pos, vel, 0.0;
 
-  JMTTrajectory1d traj1d = JMT::Solve1d(conditions, time);
+  JMTTrajectory1d traj1d = JMT::Solve1d_6DoF(conditions, time);
 
   EXPECT_NEAR(traj1d(time)[0], pos, 1e-8);
   double currTime = 0.0;
@@ -47,7 +47,7 @@ TEST(JMTTest, Solve1d_EndConditionTest)
 
   for (int i = 0; i < 50; ++i) {
     conditions << 0.0, vel, 0.0, posSampler.Sample(), velSampler.Sample(), accSampler.Sample();
-    traj1d = JMT::Solve1d(conditions, time);
+    traj1d = JMT::Solve1d_6DoF(conditions, time);
     Vector6d kinematics = traj1d(time);
     EXPECT_NEAR(kinematics[0], conditions[3], 1e-8);
     EXPECT_NEAR(kinematics[1], conditions[4], 1e-8);
@@ -100,7 +100,7 @@ TEST(JMTTest, SolveMultipleFeasible2d)
 
   auto trajs = JMT::SolveMultipleFeasible2d(conditions, *pMap, conf);
   int i = 0;
-  for (auto& traj: trajs) {
+  for (auto& traj : trajs) {
     traj.Write(fmt::format("/tmp/jmt/{}.json", i++));
   }
 }

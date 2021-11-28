@@ -224,7 +224,7 @@ PolynomialTrajectoryGenerator::_SolveFullConstraints1d(double s0,
     conditions[3] = s1 + ds;
     // SPDLOG_DEBUG("Target {}", conditions[3]);
     for (double Tj : targetTimeList) {
-      auto traj = JMT::Solve1d(conditions, Tj);
+      auto traj = JMT::Solve1d_6DoF(conditions, Tj);
       if (!traj.IsValid(_conf))
         continue;
       traj.ComputeCost(kTime, kPos, kVel, kAcc, kJerk);

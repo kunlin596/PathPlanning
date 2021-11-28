@@ -10,10 +10,16 @@
 #include "tracker.h"
 #include "vehicle.h"
 
+namespace Eigen {
+  using Vector5d = Matrix<double, 5, 1>;
+}
+
 namespace pathplanning {
 
 using Eigen::Matrix62d;
+using Eigen::Vector2d;
 using Eigen::Vector3d;
+using Eigen::Vector5d;
 using Eigen::Vector6d;
 
 /* -------------------------------------------------------------------------- */
@@ -37,6 +43,19 @@ struct JMTTrajectory1d
     , _endCond(endCond)
     , _time(time)
   {}
+
+  JMTTrajectory1d(const QuinticFunctor& func, const Vector3d& startCond, const Vector2d& endCond, const double time)
+    : _positionFn(func)
+    , _velocityFn(_positionFn.Differentiate())
+    , _accelerationFn(_velocityFn.Differentiate())
+    , _jerkFn(_accelerationFn.Differentiate())
+    , _snapFn(_jerkFn.Differentiate())
+    , _crackleFn(_snapFn.Differentiate())
+    , _startCond(startCond)
+    , _endCond2d(endCond)
+    , _time(time)
+  {}
+
 
   inline Vector6d Eval(const double t) const
   {
@@ -85,6 +104,7 @@ private:
   ConstantFunctor _crackleFn;   ///< crackle
   Vector3d _startCond;          ///< start condition
   Vector3d _endCond;            ///< end condition
+  Vector2d _endCond2d;          ///< end condition
   double _time = 0.0;           ///< trajectory execution time
   double _cost = 0.0;           ///< kinematic cost for this trajectory
   bool _isvalid = false;
@@ -218,7 +238,9 @@ private:
  */
 struct JMT
 {
-  static JMTTrajectory1d Solve1d(const Vector6d& conditions, const double t);
+  static JMTTrajectory1d Solve1d_6DoF(const Vector6d& conditions, const double t);
+
+  static JMTTrajectory1d Solve1d_5DoF(const Vector5d& conditions, const double t);
 
   /**
    * @brief      Compute a JMTTrajectory2d

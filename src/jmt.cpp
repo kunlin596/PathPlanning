@@ -10,42 +10,69 @@ using namespace Eigen;
 namespace pathplanning {
 
 JMTTrajectory1d
-JMT::Solve1d(const Vector6d& conditions, const double t)
+JMT::Solve1d_6DoF(const Vector6d& conditions, const double t)
 {
   const Vector3d& start = conditions.topRows<3>();
   const Vector3d& end = conditions.bottomRows<3>();
 
-  Vector6d coeffs;
+  double t2 = t * t;
+  double t3 = t2 * t;
+  double t4 = t3 * t;
+  double t5 = t4 * t;
 
+  // clang-format off
   Matrix3d A;
+  A <<
+    t3       , t4        , t5        ,
+    3.0 * t2 , 4.0 * t3  , 5.0 * t4  ,
+    6.0 * t  , 12.0 * t2 , 20.0 * t3 ;
+  // clang-format on
+
+  Matrix3d M = Matrix3d::Identity();
+  M(0, 1) = M(1, 2) = t;
+  M(1, 1) = 0.5 * t2;
+
+  Vector3d c012 = { start[0], start[1], start[2] / 2.0 };
+  Vector3d c345 = A.colPivHouseholderQr().solve(end - M * c012);
+
+  Vector6d coeffs;
+  coeffs << c012[0], c012[1], c012[2], c345[0], c345[1], c345[2];
+
+  return JMTTrajectory1d(coeffs, start, end, t);
+}
+
+JMTTrajectory1d
+JMT::Solve1d_5DoF(const Vector5d& conditions, const double t)
+{
+  const Vector3d& start = conditions.topRows<3>();
+  const Vector2d& end = conditions.bottomRows<2>();
+
   double t2 = t * t;
   double t3 = t2 * t;
   double t4 = t3 * t;
   double t5 = t4 * t;
   // clang-format off
+  Matrix2d A;
   A <<
-    t3       , t4        , t5        ,
-    3.0 * t2 , 4.0 * t3  , 5.0 * t4  ,
-    6.0 * t  , 12.0 * t2 , 20.0 * t3 ;
-
-  Vector3d b = {
-      end[0] - (start[0] + start[1] * t + start[2] * t2 / 2.0),
-      end[1] - (start[1] + start[2] * t),
-      end[2] - start[2]
-  };
+    3.0 * t2 , 4.0 * t3   ,
+    6.0 * t  , 12.0 * t2  ;
   // clang-format on
+  Matrix2d M = Matrix2d::Identity();
+  M(1, 1) = t;
 
-  // See
-  // https://eigen.tuxfamily.org/dox-devel/group__TutorialLinearAlgebra.html
-  Vector3d x = A.colPivHouseholderQr().solve(b);
-  coeffs << start[0], start[1], start[2] / 2.0, x[0], x[1], x[2];
+  Vector3d c012 = { start[0], start[1], start[2] / 2.0 };
+  Vector2d c34 = A.colPivHouseholderQr().solve(end - M * c012.bottomRows<2>());
+
+  Vector6d coeffs;
+  coeffs << c012[0], c012[1], c012[2], c34[0], c34[1], 0.0;
+
   return JMTTrajectory1d(coeffs, start, end, t);
 }
 
 JMTTrajectory2d
 JMT::Solve2d(const Matrix62d& conditions, const double t)
 {
-  return { JMT::Solve1d(conditions.col(0), t), JMT::Solve1d(conditions.col(1), t) };
+  return { JMT::Solve1d_6DoF(conditions.col(0), t), JMT::Solve1d_6DoF(conditions.col(1), t) };
 }
 
 bool
@@ -88,7 +115,6 @@ JMTTrajectory1d::IsValid(double maxVel, double maxAcc, double maxJerk, double ti
   _isvalid = true;
   return _isvalid;
 }
-
 
 double
 JMTTrajectory1d::ComputeCost(double kTime, double kPos, double kVel, double kAccel, double kJerk)
