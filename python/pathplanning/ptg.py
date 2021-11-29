@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 -B
+#!/usr/bin/env python3
 
 
 import csv
@@ -45,11 +45,8 @@ def plot_trajectory(m, traj):
     """Plot trajectory on map"""
     curr_time = 0.0
     points = []
-    while curr_time < traj.time:
-        sd = traj(curr_time)[0]
-        points.append(m.get_xy(sd[0], sd[1]))
-        curr_time += 0.02
-    points = np.asarray(points)
+    times = np.linspace(0.0, traj.time)
+    points = m.get_all_xy(traj(times)[:, 0, :])
     m.plot_points(points, plt)
 
 
@@ -418,6 +415,26 @@ class JMTTrajectory2d:
     @property
     def lat_traj(self):
         return self._lat_traj
+
+    def eval_frenet_points(self, num_points=100):
+        timesteps = np.linspace(0.0, self.time, num_points)
+        return self.eval(timesteps)[:, 0, :]
+
+    def eval_points(self, num_points=100):
+        return m.get_all_xy(self.eval_frenet_points(num_points))
+
+    def validate_heading(self, initial_heading, max_heading=10.0):
+        points = self.eval_points()
+        diff = points[1:, :] - points[:-1, :]
+        diff /= np.linalg.norm(diff, axis=1)[..., -1]
+        headings = np.rad2deg(np.arctan2(diff[:, 1], diff[:, 0]))
+        is_initial_heading_valid = abs(headings[0] - initial_heading) < max_heading
+        is_traj_heading_valid = (
+            np.abs(headings[1:] - headings[:-1]) < max_heading
+        ).all()
+        print(f"is_initial_heading_valid={is_initial_heading_valid}")
+        print(f"is_traj_heading_valid={is_initial_heading_valid}")
+        return is_traj_heading_valid and is_initial_heading_valid
 
     @staticmethod
     def _plot(traj, m, plt, color, pos_only=True):
@@ -808,10 +825,8 @@ class Map:
             points.min(axis=0) - 10, points.max(axis=0) + 10
         ):
             plt.plot(lane[:, 0], lane[:, 1], "r-", alpha=0.5)
-
-            plt.plot(points[:, 0], points[:, 1], "b*", markersize=3)
+            plt.plot(points[:, 0], points[:, 1], markersize=3, marker="x")
         plt.axis("equal")
-        plt.show()
 
 
 m = Map(Path(os.environ.get("MAP_DATA", "")))
@@ -878,7 +893,7 @@ class PTG:
         ego_kin = Kinematics(ego["kinematics"][3:])
         task = PTG.LatTrajTask(ego_kin, lat_behavior)
         with Pool() as pool:
-            result = pool.map(task, np.linspace(3.0, 6.0, 10))
+            result = pool.map(task, np.linspace(5.0, 10.0, 20))
         trajs = []
         for traj in result:
             trajs.extend(traj)
@@ -943,7 +958,7 @@ class PTG:
                 traj.behavior = LonManeuverType.kCrusing
                 is_valid = traj.validate()
                 traj.compute_cost_without_position(
-                    CostWeights(time=2.0, vel=2.0, jek=1.0)
+                    CostWeights(time=5.0, vel=2.0, jek=1.0)
                 )
                 trajs.append(traj)
             return trajs
@@ -975,7 +990,7 @@ class PTG:
 
         def __call__(self, T):
             trajs = []
-            for dsdot in np.linspace(-5.0, -10.0, 5):
+            for dsdot in np.linspace(-1.0, -10.0, 10):
                 s_i = self._ego_kin.coef[:3]
                 s_f = [
                     max(self._ego_kin.coef[1] + dsdot, 0.0),
@@ -985,7 +1000,7 @@ class PTG:
                 traj.behavior = LonManeuverType.kStopping
                 is_valid = traj.validate()
                 traj.compute_cost_without_position(
-                    CostWeights(time=10.0, vel=2.0, jek=1.0)
+                    CostWeights(time=3.0, vel=2.0, jek=1.0)
                 )
                 if is_valid:
                     trajs.append(traj)
@@ -999,7 +1014,7 @@ class PTG:
         task = PTG.StoppingTask(ego_kin)
 
         with Pool() as pool:
-            result = pool.map(task, np.linspace(3.0, 20.0, 10))
+            result = pool.map(task, np.linspace(10.0, 20.0, 10))
 
         trajs = []
         for traj in result:
@@ -1027,7 +1042,7 @@ class PTG:
             traj = JMTSolver.solve_1d(s_i, s_f, T)
             traj.behavior = LonManeuverType.kFollowing
             is_valid = traj.validate()
-            traj.compute_cost(CostWeights(time=3.0, pos=2.0, jek=1.0))
+            traj.compute_cost(CostWeights(time=10.0, pos=2.0, jek=1.0))
             if is_valid:
                 trajs.append(traj)
             return np.asarray(trajs)
@@ -1173,7 +1188,6 @@ def generate_trajectory(ego, tracked_vehicles):
             print(
                 f" - In collision with {vid} on lane {v_lane_id}, distance={distance:6.3f}"
             )
-
         traj = trajs[index]
 
         if best_cost is None or traj.cost < best_cost:
