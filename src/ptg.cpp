@@ -464,7 +464,7 @@ PolynomialTrajectoryGenerator::_ComputeStartStatePy(const Vehicle& ego,
 JMTTrajectory2d
 PolynomialTrajectoryGenerator::_GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
 {
-  py::module pyPTG = py::module::import("build.ptg");
+  py::module pyPTG = py::module::import("pathplanning.ptg");
   py::dict pyTrackedVehicleMap;
   py::module pyJson = py::module::import("json");
   for (const auto& [id, vehicle] : trackedVehicleMap) {
