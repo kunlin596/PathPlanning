@@ -114,16 +114,28 @@ System::SpinOnce(const std::string& commandString)
       // SPDLOG_INFO("futureEgo={}", futureEgo);
       JMTTrajectory2d trajectory = _pPathGenerator->GenerataTrajectory(futureEgo, _pTracker->GetVehicles(), true);
 
-      // Find waypoints
+      Waypoints path;
+
+      Matrix62d p;
       double currTime = 0.0;
       int cnt = 0;
-      Waypoints path;
-      while (cnt < _pConf->numPoints) {
-        Matrix62d p = trajectory(currTime);
+      while (currTime < trajectory.GetTime() and cnt < _pConf->numPoints) {
+        p = trajectory(currTime);
         path.push_back(_pMap->GetXY(p(0, 0), p(0, 1)));
         currTime += _pConf->simulator.timeStep;
         ++cnt;
       }
+
+      // // Pad the trajectory with constant velocity
+      // double endLonPos = p(0, 0);
+      // double endLatPos = p(0, 1);
+      // double endLonVel = p(1, 0);
+      // double endLatVel = p(1, 1);
+      // while (path.size() < _pConf->numPoints) {
+      //   endLonPos += endLonVel * _pConf->simulator.timeStep;
+      //   endLatPos += endLatVel * _pConf->simulator.timeStep;
+      //   path.push_back(_pMap->GetXY(endLonPos, endLatPos));
+      // }
 
       UpdateCachedTrajectory(trajectory);
       SPDLOG_TRACE(

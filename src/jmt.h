@@ -159,8 +159,8 @@ struct JMTTrajectory2d
   // Getters
   //
 
-  const JMTTrajectory1d& GetTraj1() const { return _lonTraj; }
-  const JMTTrajectory1d& GetTraj2() const { return _latTraj; }
+  const JMTTrajectory1d& GetLonTraj() const { return _lonTraj; }
+  const JMTTrajectory1d& GetLatTraj() const { return _latTraj; }
   double GetTime() const { return std::min(_lonTraj.GetTime(), _latTraj.GetTime()); }
 
   const QuinticFunctor& GetSFunc() const { return _lonTraj.GetPositionFn(); }

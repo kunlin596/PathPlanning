@@ -54,7 +54,7 @@ def plot_trajectory(m, traj):
 
 
 def plot_collision(
-    m, traj, traj_point, vid, vehicle_points, dist, vehicle_hull, traj_hull
+    m, traj, traj_points, vid, vehicle_points, vehicle_collision_points, dist
 ):
     vehicle_points = np.asarray(vehicle_points)
 
@@ -62,58 +62,23 @@ def plot_collision(
         vehicle_points[:, 0],
         vehicle_points[:, 1],
         "mx",
-        markersize=3,
+        markersize=4,
         label=f"{vid}: {dist:5.3f}",
         linewidth=2,
     )
-    plt.gca().add_artist(
-        plt.Circle(
-            vehicle_points[-1],
-            radius=COLLISION_RADIUS,
-            alpha=0.3,
-            color="r",
+
+    for p in vehicle_collision_points:
+        plt.gca().add_artist(
+            plt.Circle(p, radius=COLLISION_RADIUS, alpha=0.3, color="r")
         )
-    )
-    plt.gca().add_artist(
-        plt.Circle(
-            vehicle_points[-1],
-            radius=0.05,
-            alpha=0.5,
-            color="r",
+        plt.gca().add_artist(plt.Circle(p, radius=0.05, alpha=0.5, color="r"))
+
+    for p in traj_points:
+        plt.gca().add_artist(
+            plt.Circle(p, radius=COLLISION_RADIUS, alpha=0.3, color="b")
         )
-    )
-    vehicle_hull_points = vehicle_hull.points[vehicle_hull.vertices]
-    vehicle_hull_points_xy = m.get_all_xy(vehicle_hull_points)
-    plt.fill(
-        vehicle_hull_points_xy[:, 0], vehicle_hull_points_xy[:, 1], alpha=0.3, color="r"
-    )
+        plt.gca().add_artist(plt.Circle(p, radius=0.05, alpha=0.5, color="b"))
 
-    traj_hull_points = traj_hull.points[traj_hull.vertices]
-    traj_hull_points_xy = m.get_all_xy(traj_hull_points)
-    plt.fill(traj_hull_points_xy[:, 0], traj_hull_points_xy[:, 1], alpha=0.3, color="b")
-
-    # vehicle_hull_points = vehicle_hull.points[vehicle_hull.vertices]
-    # plt.fill(vehicle_hull_points[:, 0], vehicle_hull_points[:, 1], alpha=0.3, color="r")
-    # plt.gca().add_artist(
-    #     plt.Circle(
-    #         m.get_xy(traj_point[0], traj_point[1]),
-    #         radius=COLLISION_RADIUS,
-    #         alpha=0.3,
-    #         color="b",
-    #     )
-    # )
-
-    # plt.gca().add_artist(
-    #     plt.Circle(
-    #         m.get_xy(traj_point[0], traj_point[1]),
-    #         radius=0.05,
-    #         alpha=0.5,
-    #         color="b",
-    #     )
-    # )
-
-    # print("hull")
-    # embed()
     plot_trajectory(m, traj)
 
 
@@ -187,6 +152,7 @@ class JMTTrajectory1d:
         self._time = t
         self._is_valid = False
         self._cost = None
+        self._behavior = None
 
     def __repr__(self):
         return (
@@ -196,6 +162,14 @@ class JMTTrajectory1d:
             f"time={self._time:7.3f}, "
             f"cost={self._cost}>"
         )
+
+    @property
+    def behavior(self):
+        return self._behavior
+
+    @behavior.setter
+    def behavior(self, behavior):
+        self._behavior = behavior
 
     @property
     def cost(self):
@@ -263,6 +237,7 @@ class JMTTrajectory1d:
         total_jerk=1.0,
         num_points=100,
         force_velocity_dir=False,
+        pos_bounds=None,
     ):
         start = time.time()
         if max_vel is None:
@@ -278,6 +253,14 @@ class JMTTrajectory1d:
             ]
         )
         self._all_points = all_points
+
+        if pos_bounds is not None:
+            out_of_bound = (
+                (pos_bounds[0] > all_points[:, 0]) | (all_points[:, 0] > pos_bounds[1])
+            ).any()
+            if out_of_bound:
+                self._is_valid = False
+                return self._is_valid
 
         # Check maximums
         maximums = np.abs(all_points[:, 1:4]).max(axis=0)
@@ -407,12 +390,6 @@ class JMTTrajectory2d:
     def __init__(self, lon_traj, lat_traj):
         self._lon_traj = lon_traj
         self._lat_traj = lat_traj
-        self._pad_traj()
-
-    def _pad_traj(self):
-        # TODO
-        pass
-        # embed()
 
     @property
     def time(self):
@@ -423,6 +400,10 @@ class JMTTrajectory2d:
 
     def __call__(self, t):
         return self.eval(t)
+
+    @property
+    def behavior(self):
+        return (self._lon_traj.behavior, self._lat_traj.behavior)
 
     @property
     def cost(self):
@@ -439,7 +420,7 @@ class JMTTrajectory2d:
         return self._lat_traj
 
     @staticmethod
-    def _plot(traj, m, plt, color, pos_only):
+    def _plot(traj, m, plt, color, pos_only=True):
 
         time = min(traj._lon_traj.time, traj._lat_traj.time)
         times = np.linspace(0.0, time, 100)
@@ -511,11 +492,14 @@ class JMTTrajectory2d:
     @staticmethod
     def plot(traj):
         plt.figure(0, figsize=(12.8, 6.4))
+        endpoint = traj.lon_traj.end_cond
+        if len(traj.lon_traj.end_cond) == 2:
+            endpoint = traj.lon_traj(traj.lon_traj.time)
         min_s = traj.lon_traj.start_cond[0]
-        max_s = traj.lon_traj.end_cond[0]
+        max_s = endpoint[0]
         s_range = [min_s, max_s]
         m.plot(s_range, plt=plt)
-        JMTTrajectory2d._plot(traj, m, plt)
+        JMTTrajectory2d._plot(traj, m, plt, 0.5)
         plt.show()
 
     @staticmethod
@@ -589,7 +573,13 @@ class JMTSolver:
 
         c34 = np.linalg.solve(A, s_f - M @ c012[1:])
 
-        return JMTTrajectory1d(Polynomial(np.r_[c012, c34, 0.0]), s_i, s_f, T)
+        # Constraint the time
+        traj = JMTTrajectory1d(Polynomial(np.r_[c012, c34, 0.0]), s_i, s_f, T)
+        cropped_time = min(0.02 * 2000, T)
+        cropped_s_f = traj(cropped_time)
+        traj._time = cropped_time
+        traj._end_cond = cropped_s_f[:3]
+        return traj
 
 
 class Kinematics:
@@ -869,12 +859,14 @@ class PTG:
                 self._target_d = Map.get_lane_center_d(Map.get_lane_id(ego_d) - 1)
             elif lat_behavior == LatManeuverType.kRightLaneChanging:
                 self._target_d = Map.get_lane_center_d(Map.get_lane_id(ego_d) + 1)
+            self._lat_behavior = lat_behavior
 
         def __call__(self, T):
             s_i = self._ego_kin.coef[:3]
             s_f = [self._target_d, 0, 0]
             traj = JMTSolver.solve_1d(s_i, s_f, T)
-            is_valid = traj.validate()
+            traj.behavior = self._lat_behavior
+            is_valid = traj.validate(pos_bounds=Map.get_road_boundaries())
             traj.compute_cost(CostWeights(time=1.0, pos=1.0, jek=3.0))
             if is_valid:
                 return [traj]
@@ -886,7 +878,7 @@ class PTG:
         ego_kin = Kinematics(ego["kinematics"][3:])
         task = PTG.LatTrajTask(ego_kin, lat_behavior)
         with Pool() as pool:
-            result = pool.map(task, np.linspace(2.0, 8.0, 10))
+            result = pool.map(task, np.linspace(3.0, 6.0, 10))
         trajs = []
         for traj in result:
             trajs.extend(traj)
@@ -906,51 +898,33 @@ class PTG:
         return (lon_id, lat_id, costs.min())
 
     @staticmethod
-    def check_collision(traj, tracked_vehicles, time_resolution=0.5):
+    def check_collision(traj, tracked_vehicles):
         if len(tracked_vehicles):
+            timesteps = np.linspace(0.0, traj.time, 50)
+            traj_points = traj(timesteps)[:, 0, :]
+
             for vid, vehicle in tracked_vehicles.items():
-                s_k = Kinematics(vehicle["kinematics"][:3])
-                d_k = Kinematics(vehicle["kinematics"][3:])
+                lon_kin = Kinematics(vehicle["kinematics"][:3])
+                lat_kin = Kinematics(vehicle["kinematics"][3:])
 
-                vehicle_points = []
-                curr_time = 0.0
-                while curr_time < traj.time:
-                    traj_point = traj(curr_time)
-                    curr_time += time_resolution
-                    s_kin = s_k.get_kinematics(curr_time)
-                    d_kin = d_k.get_kinematics(curr_time)
+                lons = lon_kin.get_kinematics(timesteps)[0, :]
+                lats = lat_kin.get_kinematics(timesteps)[0, :]
 
-                    s = s_kin[0]
-                    s_vel = s_kin[1]
-                    d = d_kin[0]
-                    d_vel = d_kin[1]
-                    vehicle_hull = create_convex_hull_from_kinematics(
-                        s, d, math.atan2(d, s)
-                    )
+                v_points = np.vstack([lons, lats]).T
 
-                    traj_hull = create_convex_hull_from_kinematics(
-                        traj_point[0, 0],
-                        traj_point[0, 1],
-                        math.atan2(traj_point[1, 1], traj_point[1, 0]),
-                    )
+                distances = np.linalg.norm(traj_points - v_points, axis=1)
 
-                    xy = m.get_xy(s, d)
-                    vehicle_points.append(xy)
-                    dist = np.linalg.norm(traj_point[0] - [s, d])
-
-                    if dist < COLLISION_RADIUS:
-                        # plot_collision(
-                        #     m,
-                        #     traj,
-                        #     traj_point,
-                        #     vid,
-                        #     vehicle_points,
-                        #     dist,
-                        #     vehicle_hull,
-                        #     traj_hull,
-                        # )
-                        return True, vid, dist
-
+                if (distances < COLLISION_RADIUS).any():
+                    # plot_collision(
+                    #     m,
+                    #     traj,
+                    #     [m.get_all_xy(traj_points)[distances.argmin()]],
+                    #     vid,
+                    #     m.get_all_xy(v_points),
+                    #     [m.get_all_xy(v_points)[distances.argmin()]],
+                    #     distances.min(),
+                    # )
+                    return True, vid, distances.min()
         return False, -1, -1.0
 
     class CrusingTrajTask:
@@ -959,13 +933,14 @@ class PTG:
 
         def __call__(self, T):
             trajs = []
-            for dsdot in np.linspace(5.0, 20.0, 10):
+            for dsdot in np.linspace(5.0, 20.0, 15):
                 s_i = self._ego_kin.coef[:3]
                 s_f = [
                     min(self._ego_kin.coef[3] + dsdot, Utils.to_mps(MAX_MPH)),
                     0.0,
                 ]
                 traj = JMTSolver.solve_1d_without_endpos_constraint(s_i, s_f, T)
+                traj.behavior = LonManeuverType.kCrusing
                 is_valid = traj.validate()
                 traj.compute_cost_without_position(
                     CostWeights(time=2.0, vel=2.0, jek=1.0)
@@ -980,13 +955,13 @@ class PTG:
 
         task = PTG.CrusingTrajTask(ego_kin)
         with Pool() as pool:
-            result = pool.map(task, np.linspace(2.0, 10.0, 10))
+            result = pool.map(task, np.linspace(2.0, 15.0, 10))
 
         trajs = []
         for traj in result:
             trajs.extend(traj)
 
-        print(f" - velocity keeping took {time.time() - start:7.3f} secs")
+        # print(f" - velocity keeping took {time.time() - start:7.3f} secs")
         trajs = sorted(
             [traj for traj in trajs if traj.is_valid], key=lambda x: x._total_vel
         )
@@ -994,29 +969,44 @@ class PTG:
             return [trajs[-1]]
         return []
 
-    @staticmethod
-    def _generate_stopping_trajectory(ego):
-        start = time.time()
-        ego_kin = Kinematics(ego["kinematics"][:3])
-        lon_vel = ego_kin.kinematics.coef[1]
+    class StoppingTask:
+        def __init__(self, ego_kin):
+            self._ego_kin = ego_kin
 
-        trajs = []
-        for T in np.linspace(3.0, 20.0, 10):
+        def __call__(self, T):
+            trajs = []
             for dsdot in np.linspace(-5.0, -10.0, 5):
-                s_i = ego_kin.coef[:3]
+                s_i = self._ego_kin.coef[:3]
                 s_f = [
-                    max(ego_kin.coef[1] + dsdot, 0.0),
+                    max(self._ego_kin.coef[1] + dsdot, 0.0),
                     0.0,
                 ]
                 traj = JMTSolver.solve_1d_without_endpos_constraint(s_i, s_f, T)
+                traj.behavior = LonManeuverType.kStopping
                 is_valid = traj.validate()
                 traj.compute_cost_without_position(
-                    CostWeights(time=3.0, vel=2.0, jek=1.0)
+                    CostWeights(time=10.0, vel=2.0, jek=1.0)
                 )
                 if is_valid:
                     trajs.append(traj)
-        print(f" - stop took {time.time() - start:7.3f} secs")
-        return np.asarray(trajs)
+            return trajs
+
+    @staticmethod
+    def _generate_stopping_trajectory(ego):
+        start = time.time()
+
+        ego_kin = Kinematics(ego["kinematics"][:3])
+        task = PTG.StoppingTask(ego_kin)
+
+        with Pool() as pool:
+            result = pool.map(task, np.linspace(3.0, 20.0, 10))
+
+        trajs = []
+        for traj in result:
+            trajs.extend(traj)
+
+        # print(f" - stopping took {time.time() - start:7.3f} secs")
+        return trajs
 
     class FollowingTrajTask:
         def __init__(self, ego_kin, lead_kin):
@@ -1035,6 +1025,7 @@ class PTG:
                 lead_kinematics[2],
             ]
             traj = JMTSolver.solve_1d(s_i, s_f, T)
+            traj.behavior = LonManeuverType.kFollowing
             is_valid = traj.validate()
             traj.compute_cost(CostWeights(time=3.0, pos=2.0, jek=1.0))
             if is_valid:
@@ -1056,7 +1047,7 @@ class PTG:
         for traj in result:
             trajs.extend(traj)
 
-        print(f" - follow took {time.time() - start:7.3f} secs")
+        # print(f" - follow took {time.time() - start:7.3f} secs")
         return trajs
 
 
@@ -1073,7 +1064,7 @@ def find_leading_vehicle(ego, vehicles):
 
 def generate_trajectory(ego, tracked_vehicles):
 
-    print("------------------ start ------------------")
+    print("------------------ start " + "-" * 80)
     start_time = time.time()
     grouped_vehicles = _group_vehicles(tracked_vehicles)
     ego_lane_id = Map.get_lane_id(ego["kinematics"][3])
@@ -1110,7 +1101,7 @@ def generate_trajectory(ego, tracked_vehicles):
         else:
             lon_behaviors[lane_id].append(LonManeuverType.kCrusing)
 
-    pprint.pprint(lon_behaviors)
+    # pprint.pprint(lon_behaviors)
 
     lat_behaviors = dict()
     lat_behaviors[ego_lane_id] = LatManeuverType.kLaneKeeping
@@ -1129,66 +1120,77 @@ def generate_trajectory(ego, tracked_vehicles):
         lat_trajs = []
 
         if lane_id not in lon_behaviors or lane_id not in lat_behaviors:
-            print(f"Skipping lane {lane_id}")
+            print(f"Skipping lane {lane_id}...")
             continue
 
-        print(f"Planning for lane {lane_id}")
+        print(f"Planning for lane {lane_id}...")
 
         for lon_behavior in lon_behaviors[lane_id]:
-            print(f" - generating behavior for {str(lon_behavior)}.")
+            # print(f" - Generating behavior for {str(lon_behavior)}.")
             lon_trajs_per_behavior = PTG.generate_lon_trajectories(
                 lon_behavior, ego, leading_vehicles.get(lane_id)
             )
-            if len(lon_trajs_per_behavior) > 0:
-                print(
-                    f" - lane_id={lane_id}: {str(lon_behavior)} = {min([traj.cost for traj in lon_trajs_per_behavior])}"
-                )
-            else:
-                print(f" - lane_id={lane_id}: {str(lon_behavior)} failed.")
+            # if len(lon_trajs_per_behavior) > 0:
+            #     print(
+            #         f" - lane_id={lane_id}: {str(lon_behavior)} = {min([traj.cost for traj in lon_trajs_per_behavior])}"
+            #     )
+            # else:
+            #     print(f" - lane_id={lane_id}: {str(lon_behavior)} failed.")
             lon_trajs.extend(lon_trajs_per_behavior)
 
         lat_trajs.extend(PTG.generate_lat_trajectories(lat_behaviors[lane_id], ego))
 
         if len(lon_trajs) == 0:
-            print("len(lon_trajs) == 0, planning failed!")
+            print(" - len(lon_trajs) == 0, planning failed!")
             continue
 
         if len(lat_trajs) == 0:
-            print("len(lat_trajs) == 0, planning failed!")
+            print(" - len(lat_trajs) == 0, planning failed!")
             continue
-
-        # for lon_traj in lon_trajs:
-        #     for lat_traj in lat_trajs:
-        #         all_trajs.append(JMTTrajectory2d(lon_traj, lat_traj))
 
         lon_id, lat_id, cost = PTG.get_optimal_combination(lon_trajs, lat_trajs)
 
-        # JMTTrajectory1d.plot_all(lon_trajs)
-        # JMTTrajectory1d.plot_all(lat_trajs)
-
         traj = JMTTrajectory2d(lon_trajs[lon_id], lat_trajs[lat_id])
+
+        print(
+            f" - Planned for behavior: {traj._lon_traj.behavior.name}, {traj._lat_traj.behavior.name}, "
+            f"lon_cost={lon_trajs[lon_id].cost:.3f}, lat_cost={lat_trajs[lat_id].cost:.3f}, cost={traj.cost:.3f}"
+        )
         trajs.append(traj)
 
-        # TODO
+    import functools
 
-        # is_in_collision, vid, distance = PTG.check_collision(traj, tracked_vehicles)
+    with Pool() as pool:
+        result = pool.map(
+            functools.partial(PTG.check_collision, tracked_vehicles=tracked_vehicles),
+            trajs,
+        )
 
-        # if is_in_collision:
-        #     v_lane_id = m.get_lane_id(tracked_vehicles[vid]["kinematics"][3])
-        #     print(
-        #         f" - In collision with {vid} on lane {v_lane_id}, distance={distance:6.3f}"
-        #     )
-        #     continue
-        # cost += 1e6 / abs(distance)
-        # print(cost)
+    for index, collision_result in enumerate(result):
+        is_in_collision, vid, distance = collision_result
+        if is_in_collision:
+            v_lane_id = m.get_lane_id(tracked_vehicles[vid]["kinematics"][3])
+            print(
+                f" - In collision with {vid} on lane {v_lane_id}, distance={distance:6.3f}"
+            )
 
-        if best_cost is None or cost < best_cost:
+        traj = trajs[index]
+
+        if best_cost is None or traj.cost < best_cost:
             best_cost = cost
             best_traj = traj
-    # JMTTrajectory2d.plot_all(trajs)
-    # embed()
+
+    # if best_traj is None:
+    #     embed()
+
     print(f"Trajectory generation took {time.time() - start_time:.3f} seconds")
     assert best_traj is not None, "No best_traj found!"
+
+    # if best_traj._lat_traj.behavior in (
+    #     LatManeuverType.kLeftLaneChanging,
+    #     LatManeuverType.kRightLaneChanging,
+    # ):
+    #     embed()
 
     return dict(
         # lon

@@ -134,8 +134,8 @@ TotalJerkCost::operator()(const JMTTrajectory2d& traj,
   double totalSJerk = 0.0;
   double totalDJerk = 0.0;
 
-  auto sJerkFunc = traj.GetTraj1().GetJerkFn();
-  auto dJerkFunc = traj.GetTraj2().GetJerkFn();
+  auto sJerkFunc = traj.GetLonTraj().GetJerkFn();
+  auto dJerkFunc = traj.GetLatTraj().GetJerkFn();
 
   while (currTime < conf.timeHorizon) {
     totalSJerk += std::abs(sJerkFunc(currTime) * conf.timeStep);
