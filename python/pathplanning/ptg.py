@@ -624,7 +624,7 @@ class Kinematics:
         return self._kinematics.coef
 
 
-def compute_start_state(ego, prevTraj, prevPath, numPointsToPreserve):
+def compute_start_state(ego, prevTraj, prevPath):
 
     # print(f"len(prevPath)={len(prevPath)}")
     ego_kinematics_s = Kinematics(ego["kinematics"][:3])
@@ -663,13 +663,6 @@ def compute_start_state(ego, prevTraj, prevPath, numPointsToPreserve):
     start_state = prev_traj(executed_time + future_time)[:3, :]
 
     m = Map(Path(__file__).parent / "../data/highway_map.csv")
-
-    # m.plot_points(np.asarray(prevPath), plt=plt)
-
-    # from IPython import embed
-
-    # embed()
-    # print(f"start_state={start_state}")
     return start_state
 
 

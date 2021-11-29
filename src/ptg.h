@@ -42,7 +42,6 @@ public:
   Matrix32d ComputeStartState(const Vehicle& ego,
                               const JMTTrajectory2d& prevTraj,
                               const Waypoints& prevPath,
-                              int numPointsToPreserve,
                               bool usePython = false);
 
 private:
@@ -131,14 +130,11 @@ private:
    */
   void _GenerateStoppingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories);
 
-  Matrix32d _ComputeStartStatePy(const Vehicle& ego,
-                                 const JMTTrajectory2d& prevTraj,
-                                 const Waypoints& prevPath,
-                                 int numPointsToPreserve);
+  Matrix32d _ComputeStartStatePy(const Vehicle& ego, const JMTTrajectory2d& prevTraj, const Waypoints& prevPath);
 
   JMTTrajectory2d _GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
-    const Configuration& _conf;
+  const Configuration& _conf;
   const Map& _map;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };

@@ -298,11 +298,10 @@ Matrix32d
 PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
                                                  const JMTTrajectory2d& prevTraj,
                                                  const Waypoints& prevPath,
-                                                 int numPointsToPreserve,
                                                  bool usePython)
 {
   if (usePython) {
-    return _ComputeStartStatePy(ego, prevTraj, prevPath, numPointsToPreserve);
+    return _ComputeStartStatePy(ego, prevTraj, prevPath);
   }
 
   if (prevPath.empty()) {
@@ -311,7 +310,7 @@ PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
 
   double executedTime = 0.0;
   if (prevPath.size() > 0) {
-    executedTime = (_conf.numPoints - prevPath.size() + size_t(numPointsToPreserve)) * _conf.simulator.timeStep;
+    executedTime = (_conf.numPoints - prevPath.size()) * _conf.simulator.timeStep;
   }
 
   SPDLOG_DEBUG("prevPath.size()={:d}, executedTime={:.3f}", prevPath.size(), executedTime);
@@ -446,15 +445,12 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego,
 Matrix32d
 PolynomialTrajectoryGenerator::_ComputeStartStatePy(const Vehicle& ego,
                                                     const JMTTrajectory2d& prevTraj,
-                                                    const Waypoints& prevPath,
-                                                    int numPointsToPreserve)
+                                                    const Waypoints& prevPath)
 {
   py::module pyPTG = py::module::import("build.ptg");
   py::module pyJson = py::module::import("json");
-  py::array_t<double> pyStartState = pyPTG.attr("compute_start_state")(pyJson.attr("loads")(ego.Dump().dump()),
-                                                                       pyJson.attr("loads")(prevTraj.Dump().dump()),
-                                                                       prevPath,
-                                                                       numPointsToPreserve);
+  py::array_t<double> pyStartState = pyPTG.attr("compute_start_state")(
+    pyJson.attr("loads")(ego.Dump().dump()), pyJson.attr("loads")(prevTraj.Dump().dump()), prevPath);
   // py::print(pyStartState);
   auto r = pyStartState.unchecked<2>();
   Matrix32d startState;

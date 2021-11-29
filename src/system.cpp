@@ -91,17 +91,14 @@ System::SpinOnce(const std::string& commandString)
       _pTracker->Update(*_pEgo, perceptions);
 
       std::vector<std::vector<Vehicle>> vehicles(3);
-      for (const auto& [id, vehicle] : _pTracker->GetVehicles()) {
+      for (const auto& [vehicleId, vehicle] : _pTracker->GetVehicles()) {
         int laneId = Map::GetLaneId(vehicle.GetKinematics(0.0)(0, 1));
         if (laneId > -1) {
           vehicles[laneId].push_back(vehicle);
         }
       }
 
-      int numPointsToPreserve = static_cast<int>(prevPath.size() * 0.0);
-
-      Matrix32d startState =
-        _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath, numPointsToPreserve, true);
+      Matrix32d startState = _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath, true);
 
       //
       // Path generation
@@ -128,32 +125,18 @@ System::SpinOnce(const std::string& commandString)
         ++cnt;
       }
 
-      // Combine current waypoints and previous waypoints
-      // TODO: append more constant points to the list when goal is reached
-      Waypoints newPath;
-      for (int i = 0; i < numPointsToPreserve; ++i) {
-        newPath.push_back(prevPath[i])  ;
-      }
-      for (int i = 0; i < (_pConf->numPoints - numPointsToPreserve); ++i) {
-        newPath.push_back(path[i]);
-      }
-
       UpdateCachedTrajectory(trajectory);
-
-      SPDLOG_TRACE("numPointsToPreserve={}, prevPath.size()={}, newPath.size()={}, _pConf->numPoints={}",
-                   numPointsToPreserve,
-                   prevPath.size(),
-                   newPath.size(),
-                   _pConf->numPoints);
+      SPDLOG_TRACE(
+        "prevPath.size()={}, path.size()={}, _pConf->numPoints={}", prevPath.size(), path.size(), _pConf->numPoints);
 
       //
       // Construct result message
       //
 
       json waypointsJson;
-      std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(newPath);
+      std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(path);
 
-      SPDLOG_TRACE("newPath={}", newPath);
+      SPDLOG_TRACE("path={}", path);
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
     }
