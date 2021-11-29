@@ -447,7 +447,7 @@ PolynomialTrajectoryGenerator::_ComputeStartStatePy(const Vehicle& ego,
                                                     const JMTTrajectory2d& prevTraj,
                                                     const Waypoints& prevPath)
 {
-  py::module pyPTG = py::module::import("build.ptg");
+  py::module pyPTG = py::module::import("pathplanning.ptg");
   py::module pyJson = py::module::import("json");
   py::array_t<double> pyStartState = pyPTG.attr("compute_start_state")(
     pyJson.attr("loads")(ego.Dump().dump()), pyJson.attr("loads")(prevTraj.Dump().dump()), prevPath);

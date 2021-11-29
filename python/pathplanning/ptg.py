@@ -7,6 +7,7 @@ import enum
 import copy
 import time
 import logging
+import os
 import math
 import numpy as np
 
@@ -658,11 +659,8 @@ def compute_start_state(ego, prevTraj, prevPath):
     prev_traj = JMTTrajectory2d(lon_traj, lat_traj)
     simulator_time_step = 0.02  # TODO
     executed_time = (100 - len(prevPath)) * simulator_time_step
-    future_time = numPointsToPreserve * simulator_time_step
+    start_state = prev_traj(executed_time)[:3, :]
 
-    start_state = prev_traj(executed_time + future_time)[:3, :]
-
-    m = Map(Path(__file__).parent / "../data/highway_map.csv")
     return start_state
 
 
@@ -826,7 +824,7 @@ class Map:
         plt.show()
 
 
-m = Map(Path(__file__).parent / "../data/highway_map.csv")
+m = Map(Path(os.environ.get("MAP_DATA", "")))
 
 
 def _group_vehicles(tracked_vehicles):
