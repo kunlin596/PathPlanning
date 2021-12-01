@@ -11,7 +11,7 @@
 #include "vehicle.h"
 
 namespace Eigen {
-  using Vector5d = Matrix<double, 5, 1>;
+using Vector5d = Matrix<double, 5, 1>;
 }
 
 namespace pathplanning {
@@ -56,7 +56,6 @@ struct JMTTrajectory1d
     , _time(time)
   {}
 
-
   inline Vector6d Eval(const double t) const
   {
     Vector6d ret;
@@ -81,9 +80,15 @@ struct JMTTrajectory1d
   double GetTime() const { return _time; }
 
   bool IsValid(const Configuration& conf);
-  bool IsValid(double maxVel, double maxAcc, double maxJerk, double timeResolution);
+  // TODO: Add total acc, jerk
+  bool IsValid(double maxVel = Mph2Mps(49.0),
+               double maxAcc = 8.0,
+               double maxJerk = 8.0,
+               double totalAccel = 2.0,
+               double totalJerk = 1.0,
+               double timeResolution = 0.02);
 
-  double ComputeCost(double kTime, double kPos, double kVel, double kAccel, double kJerk);
+  double ComputeCost(double kTime, double kPos, double kJerk, double kEfficiency);
   double GetCost() const { return _cost; }
 
   double GetPosition(double t) const { return _positionFn(t); }

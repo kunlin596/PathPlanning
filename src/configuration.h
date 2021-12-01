@@ -20,6 +20,8 @@ public:
 
   int serverPort = 4567;
 
+  bool usePython = true;
+
   double speedLimit = Mph2Mps(50.0);
 
   double timeStep = 0.02; ///< Seconds

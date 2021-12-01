@@ -61,12 +61,15 @@ System::SpinOnce(const std::string& commandString)
 
   std::string msg;
 
+  // static int step = 0;
+
   if (!commandString.empty()) {
     json commandJson = json::parse(commandString);
     std::string event = commandJson[0].get<std::string>();
     const json& data = commandJson[1];
 
     if (event == "telemetry") {
+
       // Simulator might not be able to consume all of the points, so it returns
       // the remaining points back to you.
       Waypoints prevPath = Path::ConvertXYToWaypoints(data["previous_path_x"], data["previous_path_y"]);
@@ -98,7 +101,12 @@ System::SpinOnce(const std::string& commandString)
         }
       }
 
-      Matrix32d startState = _pPathGenerator->ComputeStartState(*_pEgo, _state.cachedTrajectory, prevPath, true);
+      double executedTime = 0.0;
+      if (prevPath.size() > 0) {
+        executedTime = (_pConf->numPoints - prevPath.size()) * _pConf->simulator.timeStep;
+      }
+
+      Matrix32d startState = _state.cachedTrajectory(executedTime).topRows<3>();
 
       //
       // Path generation
@@ -112,7 +120,7 @@ System::SpinOnce(const std::string& commandString)
       futureEgo.SetKinematics(startState);
       // SPDLOG_INFO("ego={}", *_pEgo);
       // SPDLOG_INFO("futureEgo={}", futureEgo);
-      JMTTrajectory2d trajectory = _pPathGenerator->GenerataTrajectory(futureEgo, _pTracker->GetVehicles(), true);
+      JMTTrajectory2d trajectory = _pPathGenerator->GenerataTrajectory(futureEgo, _pTracker->GetVehicles());
 
       Waypoints path;
 

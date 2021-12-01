@@ -57,10 +57,8 @@ _GroupVehicles(const TrackedVehicleMap& trackedVehicleMap)
  *
  * @return     The front back vehicles per lane.
  */
-std::unordered_map<std::string, Vehicle>
-_GetFrontBackVehiclesPerLane(const Matrix32d& egoKinematics,
-                             const std::vector<Vehicle>& vehicles,
-                             double nonEgoSearchRadius)
+std::pair<std::unordered_map<std::string, Vehicle>, double>
+_FindLeadingVehicle(const Matrix32d& egoKinematics, const std::vector<Vehicle>& vehicles, double nonEgoSearchRadius)
 {
   double frontSDiff = std::numeric_limits<double>::max();
   double backSDiff = std::numeric_limits<double>::max();
@@ -93,12 +91,7 @@ _GetFrontBackVehiclesPerLane(const Matrix32d& egoKinematics,
     SPDLOG_TRACE("Found front id {:2d}, frontSDiff={:7.3f}", vehicles[frontId].GetId(), frontSDiff);
   }
 
-  if (backId != -1 and backSDiff < nonEgoSearchRadius) {
-    result["back"] = vehicles[backId];
-    SPDLOG_TRACE("Found back id {:2d}, backSDiff={:7.3f}", vehicles[backId].GetId(), backSDiff);
-  }
-
-  return result;
+  return std::make_pair(result, frontSDiff);
 }
 
 void
@@ -145,18 +138,14 @@ PolynomialTrajectoryGenerator::_GenerateLonTrajectory(const LongitudinalManeuver
                                                       std::vector<JMTTrajectory1d>& trajectories)
 {
   switch (lonBehavior) {
-    case LongitudinalManeuverType::kVelocityKeeping:
-      _GenerateVelocityKeepingTrajectory(ego, trajectories);
+    case LongitudinalManeuverType::kCrusing:
+      _GenerateCrusingTrajectory(ego, trajectories);
       return;
     case LongitudinalManeuverType::kStopping:
       _GenerateStoppingTrajectory(ego, trajectories);
       return;
     case LongitudinalManeuverType::kFollowing:
-      if (vehicle.GetId() != -1) {
-        _GenerateVehicleFollowingTrajectory(ego, vehicle, trajectories);
-      } else {
-        _GenerateVelocityKeepingTrajectory(ego, trajectories);
-      }
+      _GenerateVehicleFollowingTrajectory(ego, vehicle, trajectories);
       return;
   }
 }
@@ -169,7 +158,6 @@ PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType&
 
   Vector3d egoLatKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 1);
   double targetD = Map::GetLaneCenterD(Map::GetLaneId(egoLatKinematics[0]));
-
   switch (latBehavior) {
     case LateralManeuverType::kLeftLaneChanging:
       targetD = Map::GetLaneCenterD(Map::GetLaneId(targetD) - 1);
@@ -179,105 +167,53 @@ PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType&
       break;
   }
 
-  std::vector<double> targetTimeList = { 3.0, 3.5, 4.0 };
-  _SolveFullConstraints1d(
-    // Constraints
-    egoLatKinematics[0], // d_i
-    egoLatKinematics[1], // d_i dot
-    egoLatKinematics[2], // d_i dot dot
-    targetD,             // d_f
-    0.0,                 // d_f dot
-    0.0,                 // d_f dot dot
-    // Time
-    targetTimeList,
-    // S deltas
-    { 0.0 }, // delta
-    // Weights
-    1.0,    // time
-    1.0,    // pos
-    10.0,   // vel
-    100.0,  // acc
-    1000.0, // jerk
-    // Outputs
-    trajectories);
-}
-
-void
-PolynomialTrajectoryGenerator::_SolveFullConstraints1d(double s0,
-                                                       double s0dot,
-                                                       double s0ddot,
-                                                       double s1,
-                                                       double s1dot,
-                                                       double s1ddot,
-                                                       const std::vector<double>& targetTimeList,
-                                                       const std::vector<double>& dsList,
-                                                       double kTime,
-                                                       double kPos,
-                                                       double kVel,
-                                                       double kAcc,
-                                                       double kJerk,
-                                                       std::vector<JMTTrajectory1d>& trajectories)
-{
   Vector6d conditions;
-  conditions << s0, s0dot, s0ddot, s1, s1dot, s1ddot;
-  for (double ds : dsList) {
-    conditions[3] = s1 + ds;
-    // SPDLOG_DEBUG("Target {}", conditions[3]);
-    for (double Tj : targetTimeList) {
-      auto traj = JMT::Solve1d_6DoF(conditions, Tj);
-      if (!traj.IsValid(_conf))
-        continue;
-      traj.ComputeCost(kTime, kPos, kVel, kAcc, kJerk);
+  conditions.block<3, 1>(0, 0) = egoLatKinematics;
+  conditions.block<3, 1>(3, 0) << targetD, 0.0, 0.0;
+
+  double timeStep = 10.0 / 20.0;
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for (int i = 0; i < 20; ++i) {
+    double T = timeStep * static_cast<double>(i);
+    auto traj = JMT::Solve1d_6DoF(conditions, T);
+    if (traj.IsValid()) {
+      traj.ComputeCost(1.0, 1.0, 2.0, 1.0);
       trajectories.push_back(traj);
     }
   }
 }
 
 void
-PolynomialTrajectoryGenerator::_GenerateVelocityKeepingTrajectory(const Ego& ego,
-                                                                  std::vector<JMTTrajectory1d>& trajectories)
+PolynomialTrajectoryGenerator::_GenerateCrusingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories)
 {
-  std::vector<double> ds1List;
-  std::vector<double> targetTimeList;
-
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
-  double lonVelocity = egoLonKinematics[1];
+  double timeStep = 10.0 / 20.0;
+  double startTime = 5.0;
 
-  double targetVelocity = 0.0;
-  if (lonVelocity < 5.0) {
-    targetVelocity = 5.0;
-    ds1List = { 1.0, 2.5, 5.0, 7.5, 10.0, 15.0 };
-    targetTimeList = { 3.0, 4.0 };
-  } else if (lonVelocity < 10.0) {
-    targetVelocity = 10.0;
-    ds1List = { 7.5, 10.0, 15.0, 20.0, 25.0 };
-    targetTimeList = { 3.0, 4.0 };
-  } else {
-    targetVelocity = 20.0;
-    ds1List = { 15.0, 20.0, 25.0, 30.0 };
-    targetTimeList = { 2.0, 3.0, 4.0, 5.0 };
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for (int i = 0; i < 20; ++i) {
+    double T = startTime + timeStep * static_cast<double>(i);
+
+    double startSddot = 5.0;
+    double sddotStep = 10.0 / 10.0;
+
+    for (int j = 0; j < 20; ++j) {
+      double sddot = startSddot + sddotStep * static_cast<double>(j);
+      Vector5d conditions;
+      conditions.block<3, 1>(0, 0) = egoLonKinematics;
+      conditions.block<2, 1>(3, 0) << std::min(egoLonKinematics[1] + sddot, Mph2Mps(50.0)), 0.0;
+      auto traj = JMT::Solve1d_5DoF(conditions, T);
+      if (traj.IsValid()) {
+        traj.ComputeCost(2.0, 2.0, 1.0, 2.0);
+        trajectories.push_back(traj);
+      }
+    }
   }
-
-  _SolveFullConstraints1d(
-    // Constraints
-    egoLonKinematics[0],
-    egoLonKinematics[1],
-    egoLonKinematics[2],
-    egoLonKinematics[0],
-    targetVelocity,
-    0.0,
-    // Time
-    targetTimeList,
-    // S deltas
-    ds1List,
-    // Weights
-    1.0,
-    10.0,
-    1.0,
-    1.0,
-    10.0,
-    // Outputs
-    trajectories);
 }
 
 void
@@ -285,50 +221,75 @@ PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& eg
                                                                    const Vehicle& vehicle,
                                                                    std::vector<JMTTrajectory1d>& trajectories)
 {
-  // TODO
+  Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
+  double timeStep = 5.0 / 20.0;
+  double startTime = 5.0;
+
+  double tau = 0.1;
+  double offset = 30.0;
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for (int i = 0; i < 20; ++i) {
+    double T = startTime + timeStep * static_cast<double>(i);
+    Vector3d leadingLonKinematics = vehicle.GetKinematics(T).col(0);
+    Vector6d conditions;
+    conditions.block<3, 1>(0, 0) = egoLonKinematics;
+    // clang-format off
+    conditions.block<3, 1>(3, 0) <<
+      leadingLonKinematics[0] - tau * leadingLonKinematics[1] - offset,
+      leadingLonKinematics[1] - tau * leadingLonKinematics[2],
+      leadingLonKinematics[2];
+    // clang-format on
+    auto traj = JMT::Solve1d_6DoF(conditions, T);
+    if (traj.IsValid()) {
+      traj.ComputeCost(5.0, 2.0, 1.0, 5.0);
+      trajectories.push_back(traj);
+    }
+  }
 }
 
 void
 PolynomialTrajectoryGenerator::_GenerateStoppingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories)
 {
-  // TODO
-}
+  Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
+  double timeStep = 10.0 / 20.0;
+  double startTime = 5.0;
 
-Matrix32d
-PolynomialTrajectoryGenerator::ComputeStartState(const Vehicle& ego,
-                                                 const JMTTrajectory2d& prevTraj,
-                                                 const Waypoints& prevPath,
-                                                 bool usePython)
-{
-  if (usePython) {
-    return _ComputeStartStatePy(ego, prevTraj, prevPath);
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for (int i = 0; i < 20; ++i) {
+    double T = startTime + timeStep * static_cast<double>(i);
+
+    double startSddot = 5.0;
+    double sddotStep = 10.0 / 10.0;
+
+    for (int j = 0; j < 20; ++j) {
+      double sddot = startSddot - sddotStep * static_cast<double>(j);
+      Vector5d conditions;
+      conditions.block<3, 1>(0, 0) = egoLonKinematics;
+      conditions.block<2, 1>(3, 0) << std::max(egoLonKinematics[1] + sddot, 0.0), 0.0;
+      auto traj = JMT::Solve1d_5DoF(conditions, T);
+      if (traj.IsValid()) {
+        traj.ComputeCost(2.0, 2.0, 1.0, 2.0);
+        trajectories.push_back(traj);
+      }
+    }
   }
-
-  if (prevPath.empty()) {
-    return ego.GetKinematics(0.0);
-  }
-
-  double executedTime = 0.0;
-  if (prevPath.size() > 0) {
-    executedTime = (_conf.numPoints - prevPath.size()) * _conf.simulator.timeStep;
-  }
-
-  SPDLOG_DEBUG("prevPath.size()={:d}, executedTime={:.3f}", prevPath.size(), executedTime);
-  return prevTraj(executedTime).topRows<3>();
 }
 
 JMTTrajectory2d
-PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego,
-                                                  const TrackedVehicleMap& trackedVehicleMap,
-                                                  bool usePython)
+PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
 {
   // For more information on trajectory generation, see
   // "Optimal Trajectory Generation for Dynamic Street Scenarios in a Frenet Frame",
   // M. Werling, J. Ziegler, S. Kammel and S. Thrun, ICRA 2010
 
-  if (usePython) {
-    return _GenerataTrajectoryPy(ego, trackedVehicleMap);
-  }
+  // if (usePython) {
+  //   return _GenerataTrajectoryPy(ego, trackedVehicleMap);
+  // }
 
   auto groupedVehicles = _GroupVehicles(trackedVehicleMap);
   auto egoLaneId = Map::GetLaneId(ego.GetKinematics(0.0)(0, 1));
@@ -336,17 +297,16 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego,
   // Figure out the lanes for planning
   int leftLaneId = egoLaneId - 1;
   int rightLaneId = egoLaneId + 1;
+
   std::unordered_map<std::string, int> laneIdsForPlanning;
   laneIdsForPlanning["current"] = egoLaneId;
 
-#ifdef LANE_CHANGING
   if (0 <= leftLaneId and leftLaneId < egoLaneId) {
     laneIdsForPlanning["left"] = leftLaneId;
   }
   if (egoLaneId < rightLaneId and rightLaneId < Map::NUM_LANES) {
     laneIdsForPlanning["right"] = rightLaneId;
   }
-#endif
 
   // Figure out lat behaviors
   std::unordered_map<int, LateralManeuverType> latBehaviors;
@@ -359,36 +319,49 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego,
   }
 
   // Figure out lon behaviors
-  std::unordered_map<int, std::vector<LongitudinalManeuverType>> lonBehaviors;
   std::unordered_map<int, Vehicle> leadingVehicles;
-
+  std::unordered_map<int, std::vector<LongitudinalManeuverType>> lonBehaviors;
   for (const auto& [laneName, laneId] : laneIdsForPlanning) {
-    lonBehaviors[laneId] = {
-      LongitudinalManeuverType::kVelocityKeeping,
-      // LongitudinalManeuverType::kStopping
-    };
+    lonBehaviors[laneId] = std::vector<LongitudinalManeuverType>();
+
     if (groupedVehicles.count(laneId)) {
       const auto& vehicles = groupedVehicles[laneId];
-      SPDLOG_TRACE("Searching for nearby vehicle on lane {:d}", laneId);
-      auto frontBackVehicles = _GetFrontBackVehiclesPerLane(ego.GetKinematics(0.0), vehicles, 60.0);
-      if (frontBackVehicles.count("front")) {
-        leadingVehicles[laneId] = frontBackVehicles["front"];
-        lonBehaviors[laneId].push_back(LongitudinalManeuverType::kFollowing);
+      if (vehicles.empty())
+        continue;
+
+      const auto& [leadingVehicle, minDist] =
+        _FindLeadingVehicle(ego.GetKinematics(0.0), vehicles, _conf.tracker.nonEgoSearchRadius);
+
+      if (leadingVehicle.count("front")) {
+        if (minDist < 10.0) {
+          lonBehaviors[laneId].push_back(LongitudinalManeuverType::kStopping);
+        } else if (10.0 < minDist and minDist < 50.0) {
+          leadingVehicles[laneId] = leadingVehicle.at("front");
+          lonBehaviors[laneId].push_back(LongitudinalManeuverType::kFollowing);
+        } else {
+          lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCrusing);
+        }
       } else {
-        leadingVehicles[laneId] = Vehicle();
+        lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCrusing);
       }
     }
   }
 
+  // Plane for each lan w.r.t. the behaviors defined above.
+
   JMTTrajectory2d bestTraj;
   double minCost = std::numeric_limits<double>::min();
-  static int step = 0;
 
   for (const auto& [laneName, laneId] : laneIdsForPlanning) {
+    if (lonBehaviors.count(laneId) == 0 or latBehaviors.count(laneId) == 0) {
+      SPDLOG_DEBUG("Skipping lane {:d}.", laneId);
+    }
 
     // Generate trajectories for ego lane and adjacent lanes
     std::vector<JMTTrajectory1d> lonTrajs;
     std::vector<JMTTrajectory1d> latTrajs;
+
+    SPDLOG_DEBUG("Planning for lane {:d}.", laneId);
 
     // Generate lon trajectories
     for (const auto& behavior : lonBehaviors[laneId]) {
@@ -402,21 +375,6 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego,
       SPDLOG_DEBUG("Planning failed for lane {:d}", laneId);
       continue;
     }
-
-#ifdef DEBUG_MODE
-    SPDLOG_DEBUG("DEBUG_MODE OUTPUT.");
-    namespace bfs = boost::filesystem;
-    bfs::path trajPath("/tmp/traj");
-    if (bfs::exists(trajPath) and bfs::is_directory(trajPath)) {
-      bfs::remove(trajPath);
-    }
-    bfs::create_directory(trajPath);
-
-    for (size_t i = 0; i < lonTrajs.size(); ++i) {
-      std::string lonfilename = fmt::format("{:d}_{:d}_{:d}_lontraj.json", step, laneId, i);
-      utils::WriteJson(trajPath / lonfilename, lonTrajs[i].Dump());
-    }
-#endif
 
     int lonId = -1, latId = -1;
     double cost;
@@ -436,8 +394,6 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego,
       bestTraj = traj;
     }
   }
-
-  step++;
 
   return bestTraj;
 }

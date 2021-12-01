@@ -15,7 +15,7 @@ using namespace nlohmann;
 enum class LongitudinalManeuverType
 {
   kFollowing,
-  kVelocityKeeping,
+  kCrusing,
   kStopping,
 };
 
@@ -35,49 +35,9 @@ public:
   explicit PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf);
   virtual ~PolynomialTrajectoryGenerator() {}
 
-  JMTTrajectory2d GenerataTrajectory(const Ego& ego,
-                                     const TrackedVehicleMap& trackedVehicleMap,
-                                     bool usePython = false);
-
-  Matrix32d ComputeStartState(const Vehicle& ego,
-                              const JMTTrajectory2d& prevTraj,
-                              const Waypoints& prevPath,
-                              bool usePython = false);
+  JMTTrajectory2d GenerataTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
 private:
-  /**
-   * @brief      Solve for multiple feasible 1D JMT trajectories
-   *
-   * @param[in]  s0            The s0, part of constraints
-   * @param[in]  s0dot         The s0 dot, part of constraints
-   * @param[in]  s0ddot        The s0 dot dot, part of constraints
-   * @param[in]  s1            The s1, part of constraints
-   * @param[in]  s1dot         The s1 dot, part of constraints
-   * @param[in]  s1ddot        The s1 dot dot, part of constraints
-   * @param[in]  TjList        The tj list, target time list
-   * @param[in]  dsList        The ds list, deltas for s1
-   * @param[in]  kTime         The weight for time cost
-   * @param[in]  kPos          The weight for position cost
-   * @param[in]  kVel          The weight for velocity cost
-   * @param[in]  kAcc          The weight for acceleration cost
-   * @param[in]  kJerk         The weight for jerk cost
-   * @param      trajectories  The trajectories
-   */
-  void _SolveFullConstraints1d(double s0,
-                               double s0dot,
-                               double s0ddot,
-                               double s1,
-                               double s1dot,
-                               double s1ddot,
-                               const std::vector<double>& TjList,
-                               const std::vector<double>& dsList,
-                               double kTime,
-                               double kPos,
-                               double kVel,
-                               double kAcc,
-                               double kJerk,
-                               std::vector<JMTTrajectory1d>& trajectories);
-
   /**
    * @brief      Generate 1d lateral trajectory for 1 lane
    *
@@ -108,7 +68,7 @@ private:
    * @param[in]  ego           The ego
    * @param      trajectories  The trajectories
    */
-  void _GenerateVelocityKeepingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories);
+  void _GenerateCrusingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories);
 
   /**
    * @brief      Generate Vehicle following trajectory

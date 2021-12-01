@@ -82,10 +82,17 @@ JMTTrajectory1d::IsValid(const Configuration& conf)
 }
 
 bool
-JMTTrajectory1d::IsValid(double maxVel, double maxAcc, double maxJerk, double timeResolution)
+JMTTrajectory1d::IsValid(double maxVel,
+                         double maxAcc,
+                         double maxJerk,
+                         double totalAccel,
+                         double totalJerk,
+                         double timeResolution)
 {
   double currTime = 0.0;
   double prevPos = std::numeric_limits<double>::min();
+  double averAccel = 0.0;
+  double averJerk = 0.0;
   while (currTime < _time + 1e-6) {
     auto values = Eval(currTime);
     if (values[0] > prevPos) {
@@ -110,20 +117,45 @@ JMTTrajectory1d::IsValid(double maxVel, double maxAcc, double maxJerk, double ti
       _isvalid = false;
       return _isvalid;
     }
+    averAccel += std::abs(values[2]) * timeResolution;
+    averJerk += std::abs(values[3]) * timeResolution;
     currTime += timeResolution;
   }
+
+  averAccel /= this->_time;
+  if (averAccel > totalAccel) {
+    _isvalid = false;
+    return _isvalid;
+  }
+
+  averJerk /= this->_time;
+  if (averJerk > totalJerk) {
+    _isvalid = false;
+    return _isvalid;
+  }
+
   _isvalid = true;
   return _isvalid;
 }
 
 double
-JMTTrajectory1d::ComputeCost(double kTime, double kPos, double kVel, double kAccel, double kJerk)
+JMTTrajectory1d::ComputeCost(double kTime, double kPos, double kJerk, double kEfficiency)
 {
-  double timeCost = _time * kTime;
-  double posCost = std::pow(GetPosition(_time) - GetPosition(0.0), 2) * kPos;
-  double velCost = GaussianLoss1D(20.0, 5.0, GetVelocity(_time)) * kVel;
-  double jerkCost = GetJerk(_time) * kJerk;
-  _cost = timeCost + posCost + velCost + jerkCost;
+  double timeCost = Logistic(_time) * kTime;
+
+  double posCost = Logistic(GetPosition(_time) - GetPosition(0.0)) * kPos;
+
+  double currTime = 0.0;
+  double totalJerk = 0.0;
+  while (currTime < _time) {
+    totalJerk += std::pow(GetJerk(currTime), 2);
+    currTime += 0.02;
+  }
+  double jerkCost = totalJerk * kJerk;
+
+  double efficiencyCost = Logistic(1.0 - _endCond[1] / Mps2Mph(49.0)) * kEfficiency;
+
+  _cost = timeCost + posCost + jerkCost + efficiencyCost;
   return _cost;
 }
 
