@@ -86,7 +86,6 @@ add_library(
   src/path.cpp
   src/jmt.cpp
   src/collision_checker.cpp
-  src/goalsampler.cpp
   src/ptg.cpp
 )
 
