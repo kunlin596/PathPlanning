@@ -87,49 +87,42 @@ JMTTrajectory1d::IsValid(double maxVel,
                          double maxJerk,
                          double totalAccel,
                          double totalJerk,
-                         double timeResolution)
+                         int numPoints)
 {
-  double currTime = 0.0;
-  double prevPos = std::numeric_limits<double>::min();
   double averAccel = 0.0;
   double averJerk = 0.0;
-  while (currTime < _time + 1e-6) {
+  double timeResolution = _time / static_cast<double>(numPoints);
+  for (double currTime = 0.0; currTime < (_time + 1e-6); currTime += timeResolution) {
     auto values = Eval(currTime);
-    if (values[0] > prevPos) {
-      prevPos = values[0];
-    } else {
-      _isvalid = false;
-      return _isvalid;
-    }
-
     if (std::abs(values[1]) > maxVel) {
-      SPDLOG_TRACE("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], maxVel);
+      SPDLOG_DEBUG("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], maxVel);
       _isvalid = false;
       return _isvalid;
     }
     if (std::abs(values[2]) > maxAcc) {
-      SPDLOG_TRACE("accel is out of range, {:7.3f} bigger than {:7.3f}", values[2], maxAcc);
+      SPDLOG_DEBUG("accel is out of range, {:7.3f} bigger than {:7.3f}", values[2], maxAcc);
       _isvalid = false;
       return _isvalid;
     }
     if (std::abs(values[3]) > maxJerk) {
-      SPDLOG_TRACE("jerk is out of range, {:7.3f} bigger than {:7.3f}", values[3], maxJerk);
+      SPDLOG_DEBUG("jerk is out of range, {:7.3f} bigger than {:7.3f}", values[3], maxJerk);
       _isvalid = false;
       return _isvalid;
     }
     averAccel += std::abs(values[2]) * timeResolution;
     averJerk += std::abs(values[3]) * timeResolution;
-    currTime += timeResolution;
   }
 
-  averAccel /= this->_time;
+  averAccel /= _time;
   if (averAccel > totalAccel) {
     _isvalid = false;
+    SPDLOG_DEBUG("total acceleration is out of range, {:7.3f} bigger than {:7.3f}", averAccel, totalAccel);
     return _isvalid;
   }
 
-  averJerk /= this->_time;
+  averJerk /= _time;
   if (averJerk > totalJerk) {
+    SPDLOG_DEBUG("total jerk is out of range, {:7.3f} bigger than {:7.3f}", averJerk, totalJerk);
     _isvalid = false;
     return _isvalid;
   }
@@ -253,6 +246,12 @@ JMTTrajectory2d::Eval(const double t) const
   kinematics.col(0) = _lonTraj(t);
   kinematics.col(1) = _latTraj(t);
   return kinematics;
+}
+
+Matrix62d
+JMTTrajectory2d::operator()(const double t) const
+{
+  return Eval(t);
 }
 
 std::vector<JMTTrajectory2d>

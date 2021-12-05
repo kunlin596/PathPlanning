@@ -54,7 +54,8 @@ struct JMTTrajectory1d
     , _startCond(startCond)
     , _endCond2d(endCond)
     , _time(time)
-  {}
+  {
+  }
 
   inline Vector6d Eval(const double t) const
   {
@@ -80,13 +81,13 @@ struct JMTTrajectory1d
   double GetTime() const { return _time; }
 
   bool IsValid(const Configuration& conf);
-  // TODO: Add total acc, jerk
+
   bool IsValid(double maxVel = Mph2Mps(49.0),
                double maxAcc = 8.0,
                double maxJerk = 8.0,
                double totalAccel = 2.0,
-               double totalJerk = 1.0,
-               double timeResolution = 0.02);
+               double totalJerk = 2.0,
+               int numPoints = 100);
 
   double ComputeCost(double kTime, double kPos, double kJerk, double kEfficiency);
   double GetCost() const { return _cost; }
@@ -138,7 +139,7 @@ struct JMTTrajectory2d
   bool GetIsValid() const { return _isvalid; }
 
   Eigen::Matrix62d Eval(const double t) const;
-  Eigen::Matrix62d operator()(const double t) const { return Eval(t); }
+  Eigen::Matrix62d operator()(const double t) const;
 
   inline Matrix32d GetStartCond() const
   {

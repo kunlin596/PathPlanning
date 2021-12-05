@@ -77,21 +77,25 @@ System::SpinOnce(const std::string& commandString)
       // NOTE: Ego's localization data (No Noise)
       // ["x"] The car's x position in map coordinates
       // ["y"] The car's y position in map coordinates
-      // ["s"] The car's s position in frenet coordinates
-      // ["d"] The car's d position in frenet coordinates
+      // ["s"] The car's s position in Frenet coordinates
+      // ["d"] The car's d position in Frenet coordinates
       // ["yaw"] The car's yaw angle in the map int degrees
       // ["speed"] The car's speed in MPH
 
       Waypoint endPathSD = { data["end_path_s"], data["end_path_d"] };
 
-      _pEgo->Update(
-        data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]), *_pMap, *_pConf);
+      Ego &ego = *_pEgo;
+      Map& map = *_pMap;
+      Configuration& conf = *_pConf;
+
+      ego.Update(
+        data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]), map, conf);
 
       // Create the latest perceptions from input command
       // Velocity is already meters per seconds no need to convert
-      Perceptions perceptions = Perception::CreatePerceptions(data["sensor_fusion"], *_pMap, _pConf->timeStep);
+      Perceptions perceptions = Perception::CreatePerceptions(data["sensor_fusion"], map, conf.timeStep);
 
-      _pTracker->Update(*_pEgo, perceptions);
+      _pTracker->Update(ego, perceptions);
 
       std::vector<std::vector<Vehicle>> vehicles(3);
       for (const auto& [vehicleId, vehicle] : _pTracker->GetVehicles()) {
@@ -102,11 +106,11 @@ System::SpinOnce(const std::string& commandString)
       }
 
       double executedTime = 0.0;
+      Matrix32d startState = ego.GetKinematics(0.0).topRows<3>();
       if (prevPath.size() > 0) {
-        executedTime = (_pConf->numPoints - prevPath.size()) * _pConf->simulator.timeStep;
+        executedTime = (conf.numPoints - prevPath.size()) * conf.simulator.timeStep;
+        startState = _state.cachedTrajectory(executedTime).topRows<3>();
       }
-
-      Matrix32d startState = _state.cachedTrajectory(executedTime).topRows<3>();
 
       //
       // Path generation
@@ -116,7 +120,7 @@ System::SpinOnce(const std::string& commandString)
       // SPDLOG_INFO("startState={}", startState);
 
       // Find trajectory
-      Ego futureEgo = *_pEgo;
+      Ego futureEgo = ego;
       futureEgo.SetKinematics(startState);
       // SPDLOG_INFO("ego={}", *_pEgo);
       // SPDLOG_INFO("futureEgo={}", futureEgo);
@@ -127,7 +131,7 @@ System::SpinOnce(const std::string& commandString)
       Matrix62d p;
       double currTime = 0.0;
       int cnt = 0;
-      while (currTime < trajectory.GetTime() and cnt < _pConf->numPoints) {
+      while (currTime < trajectory.GetTime() and cnt < conf.numPoints) {
         p = trajectory(currTime);
         path.push_back(_pMap->GetXY(p(0, 0), p(0, 1)));
         currTime += _pConf->simulator.timeStep;

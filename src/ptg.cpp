@@ -6,6 +6,7 @@
 #include "utils.h"
 
 #include <boost/assert.hpp>
+#include <map>
 
 #include <pybind11/pybind11.h>
 
@@ -156,6 +157,8 @@ PolynomialTrajectoryGenerator::_GenerateLonTrajectory(const LongitudinalManeuver
     case LongitudinalManeuverType::kFollowing:
       _GenerateVehicleFollowingTrajectory(ego, vehicle, trajectories);
       return;
+    default:
+      return;
   }
 }
 
@@ -166,7 +169,8 @@ PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType&
 {
 
   Vector3d egoLatKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 1);
-  double targetD = Map::GetLaneCenterD(Map::GetLaneId(egoLatKinematics[0]));
+
+  double targetD;
   switch (latBehavior) {
     case LateralManeuverType::kLeftLaneChanging:
       targetD = Map::GetLaneCenterD(Map::GetLaneId(targetD) - 1);
@@ -174,19 +178,24 @@ PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType&
     case LateralManeuverType::kRightLaneChanging:
       targetD = Map::GetLaneCenterD(Map::GetLaneId(targetD) + 1);
       break;
+    default:
+      targetD = Map::GetLaneCenterD(Map::GetLaneId(egoLatKinematics[0]));
+      break;
   }
 
   Vector6d conditions;
-  conditions.block<3, 1>(0, 0) = egoLatKinematics;
-  conditions.block<3, 1>(3, 0) << targetD, 0.0, 0.0;
+  conditions.topRows<3>() = egoLatKinematics;
+  conditions.bottomRows<3>() << targetD, 0.0, 0.0;
 
-  double timeStep = 10.0 / 20.0;
+  double minTime = 5.0;
+  double maxTime = 10.0;
+  double numTimeSteps = 20.0;
+  double timeStep = (maxTime - minTime) / numTimeSteps;
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-  for (int i = 0; i < 20; ++i) {
-    double T = timeStep * static_cast<double>(i);
+// #ifdef _OPENMP
+// #pragma omp parallel for
+// #endif
+  for (double T = minTime; T < (maxTime + 1e-6); T += timeStep) {
     auto traj = JMT::Solve1d_6DoF(conditions, T);
     if (traj.IsValid()) {
       traj.ComputeCost(1.0, 1.0, 2.0, 1.0);
@@ -199,23 +208,24 @@ void
 PolynomialTrajectoryGenerator::_GenerateCrusingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories)
 {
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
-  double timeStep = 10.0 / 20.0;
-  double startTime = 5.0;
+  double minTime = 2.0;
+  double maxTime = 20.0;
+  double numTimeSteps = 15.0;
+  double timeStep = (maxTime - minTime) / numTimeSteps;
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-  for (int i = 0; i < 20; ++i) {
-    double T = startTime + timeStep * static_cast<double>(i);
+// #ifdef _OPENMP
+// #pragma omp parallel for
+// #endif
+  for (double T = minTime; (T < maxTime + 1e-6); T += timeStep) {
+    double minSddot = 5.0;
+    double maxSddot = 20.0;
+    double numSddotStep = 15.0;
+    double sddotStep = (maxSddot - minSddot) / numSddotStep;
 
-    double startSddot = 5.0;
-    double sddotStep = 10.0 / 10.0;
-
-    for (int j = 0; j < 20; ++j) {
-      double sddot = startSddot + sddotStep * static_cast<double>(j);
+    for (double sddot = minSddot; sddot < (maxSddot + 1e-6); sddot += sddotStep) {
       Vector5d conditions;
-      conditions.block<3, 1>(0, 0) = egoLonKinematics;
-      conditions.block<2, 1>(3, 0) << std::min(egoLonKinematics[1] + sddot, Mph2Mps(50.0)), 0.0;
+      conditions.topRows<3>() = egoLonKinematics;
+      conditions.bottomRows<2>() << std::min(egoLonKinematics[1] + sddot, Mph2Mps(50.0)), 0.0;
       auto traj = JMT::Solve1d_5DoF(conditions, T);
       if (traj.IsValid()) {
         traj.ComputeCost(2.0, 2.0, 1.0, 2.0);
@@ -237,9 +247,9 @@ PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& eg
   double tau = 0.1;
   double offset = 30.0;
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+// #ifdef _OPENMP
+// #pragma omp parallel for
+// #endif
   for (int i = 0; i < 20; ++i) {
     double T = startTime + timeStep * static_cast<double>(i);
     Vector3d leadingLonKinematics = vehicle.GetKinematics(T).col(0);
@@ -266,9 +276,9 @@ PolynomialTrajectoryGenerator::_GenerateStoppingTrajectory(const Ego& ego, std::
   double timeStep = 10.0 / 20.0;
   double startTime = 5.0;
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+// #ifdef _OPENMP
+// #pragma omp parallel for
+// #endif
   for (int i = 0; i < 20; ++i) {
     double T = startTime + timeStep * static_cast<double>(i);
 
@@ -339,11 +349,12 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   //   return _GenerataTrajectoryPy(ego, trackedVehicleMap);
   // }
 
+  using std::map;
   using std::string;
   using std::unordered_map;
   using std::vector;
 
-  SPDLOG_DEBUG("Planning starting, counter {:d}.", ++_counter);
+  SPDLOG_INFO("Planning starting, counter {:d}.", ++_counter);
   auto egoLaneId = Map::GetLaneId(ego.GetKinematics(0.0)(0, 1));
 
   // Figure out the lanes for planning
@@ -352,22 +363,22 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 
   // Lane ids are determined by lateral planning decisions, since longitudinal planning will happen anyways.
   // Depending on which lane ego is on, we can decide which lane to plan.
-  unordered_map<string, int> laneIdsForPlanning;
-  laneIdsForPlanning["current"] = egoLaneId;
+  map<LaneType, int> laneIdsForPlanning;
   if (0 <= leftLaneId and leftLaneId < egoLaneId) {
-    laneIdsForPlanning["left"] = leftLaneId;
+    laneIdsForPlanning[LaneType::kLeft] = leftLaneId;
   }
+  laneIdsForPlanning[LaneType::kEgo] = egoLaneId;
   if (egoLaneId < rightLaneId and rightLaneId < Map::NUM_LANES) {
-    laneIdsForPlanning["right"] = rightLaneId;
+    laneIdsForPlanning[LaneType::kRight] = rightLaneId;
   }
 
   // Figure out lateral behaviors w.r.t. lane ids for planning.
   unordered_map<int, LateralManeuverType> latBehaviors;
   latBehaviors[egoLaneId] = LateralManeuverType::kLaneKeeping;
-  if (laneIdsForPlanning.count("left")) {
+  if (laneIdsForPlanning.count(LaneType::kLeft)) {
     latBehaviors[leftLaneId] = LateralManeuverType::kLeftLaneChanging;
   }
-  if (laneIdsForPlanning.count("right")) {
+  if (laneIdsForPlanning.count(LaneType::kRight)) {
     latBehaviors[rightLaneId] = LateralManeuverType::kRightLaneChanging;
   }
 
@@ -383,10 +394,8 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     lonBehaviors[laneId] = vector<LongitudinalManeuverType>();
 
     // If there are vehicles, find the leading vehicle and plan accordingly.
-    if (groupedVehicles.count(laneId)) {
+    if (groupedVehicles.count(laneId) and !groupedVehicles[laneId].empty()) {
       const auto& vehicles = groupedVehicles[laneId];
-      if (vehicles.empty())
-        continue;
 
       Vehicle leadingVehicle;
       double leadingDistance = std::numeric_limits<double>::quiet_NaN();
@@ -402,20 +411,26 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 
       // TODO: Take following vehicle in to account and implement merging behavior.
       // NOTE: The distance values for determine the behavior below is purely heuristic.
-      if (not std::isnan(leadingDistance)) {
+      if (!std::isnan(leadingDistance)) {
         if (leadingDistance < 10.0) {
+          // Leading vehicle is too close so need to start stopping now!
           lonBehaviors[laneId].push_back(LongitudinalManeuverType::kStopping);
         } else if (10.0 < leadingDistance and leadingDistance < 50.0) {
+          // Leading vehicle is within a reasonable distance to be followed.
           lonBehaviors[laneId].push_back(LongitudinalManeuverType::kFollowing);
           leadingVehicles[laneId] = leadingVehicle;
         } else {
+          // Leading vehicle is too far from a possible following distance.
           lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCruising);
         }
+      } else {
+        // No leading vehicle in the search distance.
+        lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCruising);
       }
     }
 
-    // No vehicles, just plan for cruising.
     else {
+      // No vehicles, just plan for cruising.
       lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCruising);
     }
   }
@@ -425,17 +440,18 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   double minCost = std::numeric_limits<double>::quiet_NaN();
   for (const auto& [laneName, laneId] : laneIdsForPlanning) {
     if (lonBehaviors.count(laneId) == 0 or latBehaviors.count(laneId) == 0) {
-      SPDLOG_DEBUG("  Skipping lane {:d}.", laneId);
+      SPDLOG_INFO("  Skipping lane {:d}.", laneId);
     }
 
     // Generate 1D trajectories for the current lane.
     vector<JMTTrajectory1d> lonTrajs;
     vector<JMTTrajectory1d> latTrajs;
 
-    SPDLOG_DEBUG("  Planning for lane {:d}.", laneId);
+    SPDLOG_INFO("  Planning for lane {:d}.", laneId);
 
     // Generate longitudinal trajectories
     for (const auto& behavior : lonBehaviors[laneId]) {
+      SPDLOG_INFO("   - Planning for lonBehavior={}.", behavior);
       _GenerateLonTrajectory(behavior, ego, leadingVehicles[laneId], lonTrajs);
     }
 
@@ -443,10 +459,10 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     _GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs);
 
     if (lonTrajs.empty() or latTrajs.empty()) {
-      SPDLOG_DEBUG("   - Planning failed for lane {:d}, lonTrajs.size()={:d}, latTrajs.size()={:d}",
-                   laneId,
-                   lonTrajs.size(),
-                   latTrajs.size());
+      SPDLOG_INFO("   - Planning failed for lane {:d}, lonTrajs.size()={:d}, latTrajs.size()={:d}",
+                  laneId,
+                  lonTrajs.size(),
+                  latTrajs.size());
       continue;
     }
 
@@ -456,7 +472,7 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     _GetOptimalCombination(lonTrajs, latTrajs, lonId, latId, cost);
 
     if (lonId == -1 or latId == -1) {
-      SPDLOG_DEBUG("   - Planning failed for lane {:d}, cannot find optimal combination, lonId={:d}, latId={:d}",
+      SPDLOG_INFO("   - Planning failed for lane {:d}, cannot find optimal combination, lonId={:d}, latId={:d}",
                    laneId,
                    lonId,
                    latId);
@@ -469,7 +485,7 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 
     auto [collidedVehicleId, distance] = CollisionChecker::IsInCollision(traj, trackedVehicleMap, _conf);
     if (collidedVehicleId != -1) {
-      SPDLOG_DEBUG(
+      SPDLOG_INFO(
         "   - Planning failed for lane {:d}, trajectory is colliding with collidedVehicleId={:d}, distance={:7.3f}.",
         laneId,
         collidedVehicleId,
@@ -477,7 +493,7 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
       continue;
     }
 
-    SPDLOG_DEBUG("   * Planning completed for lane {:d}, cost={:7.3f}", laneId, cost);
+    SPDLOG_INFO("   * Planning completed for lane {:d}, cost={:7.3f}", laneId, cost);
 
     if (std::isnan(minCost) or cost < minCost) {
       minCost = cost;
@@ -486,9 +502,9 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   }
 
   if (std::isnan(minCost)) {
-    SPDLOG_DEBUG("   - Planning failed for all lanes.");
+    SPDLOG_ERROR("   - Planning failed for all lanes.");
   } else {
-    SPDLOG_DEBUG("   * Planning completed, minCost={:7.3f}", minCost);
+    SPDLOG_INFO("   * Planning completed, minCost={:7.3f}", minCost);
   }
 
   return bestTraj;

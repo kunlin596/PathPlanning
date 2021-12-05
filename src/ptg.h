@@ -12,6 +12,13 @@ namespace pathplanning {
 
 using namespace nlohmann;
 
+enum class LaneType
+{
+  kEgo,
+  kLeft,
+  kRight,
+};
+
 enum class LongitudinalManeuverType
 {
   kFollowing,
@@ -23,7 +30,7 @@ enum class LateralManeuverType
 {
   kLaneKeeping,
   kLeftLaneChanging,
-  kRightLaneChanging
+  kRightLaneChanging,
 };
 
 /**
