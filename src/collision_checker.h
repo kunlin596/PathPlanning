@@ -9,11 +9,11 @@ struct CollisionChecker
   static double GetMinDistance(const JMTTrajectory2d& traj, const Vehicle& vehicle, double timeStep);
 
   static std::pair<int, double> GetMinDistance(const JMTTrajectory2d& traj,
-                                               const std::unordered_map<int, Vehicle>& vehicles,
+                                               const std::vector<Vehicle>& vehicles,
                                                double timeStep);
 
   static std::pair<int, double> IsInCollision(const JMTTrajectory2d& traj,
-                                              const TrackedVehicleMap& trackedVehicleMap,
+                                              const std::vector<Vehicle>& vehicles,
                                               const Configuration& conf);
 };
 

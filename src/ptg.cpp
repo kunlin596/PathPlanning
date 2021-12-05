@@ -189,31 +189,41 @@ PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType&
     targetD = Map::GetLaneCenterD(0);
   }
 
-  Vector6d conditions;
-  conditions.topRows<3>() = egoLatKinematics;
-  conditions.bottomRows<3>() << targetD, 0.0, 0.0;
-
   double minTime = 1.5;
   double maxTime = 4.0;
   double numTimeSteps = 20.0;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
-  std::vector<JMTTrajectory1d> trajs(static_cast<int>(numTimeSteps));
+  double minDs = -0.05;
+  double maxDs = 0.05;
+  double numDsStep = 5.0;
+  double dsStep = (maxDs - minDs) / numDsStep;
+
+  std::vector<JMTTrajectory1d> trajs(static_cast<int>(numTimeSteps * numDsStep));
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
   for (int i = 0; i < static_cast<int>(numTimeSteps); ++i) {
     double T = minTime + (double)i * timeStep;
-    auto traj = JMT::Solve1d_6DoF(conditions, T);
-    if (traj.Validate(Map::GetRoadBoundary())) {
-      traj.ComputeCost(10.0, 1.0, 2.0, 1.0);
+    for (int j = 0; j < static_cast<int>(numDsStep); ++j) {
+      double ds = minDs + static_cast<double>(j) * dsStep;
+      Vector6d conditions;
+      conditions.topRows<3>() = egoLatKinematics;
+      conditions.bottomRows<3>() << targetD + ds, 0.0, 0.0;
+      auto traj = JMT::Solve1d_6DoF(conditions, T);
+      if (traj.Validate(Map::GetRoadBoundary())) {
+        traj.ComputeCost(10.0, 1.0, 2.0, 1.0);
+      }
+      trajs[i * static_cast<int>(numDsStep) + j] = traj;
     }
-    trajs[i] = traj;
   }
 
+  // NOTE: Hard code the cost threshold for now.
   trajs.erase(
-    std::remove_if(trajs.begin(), trajs.end(), [](const JMTTrajectory1d& traj) { return !traj.GetIsValid(); }),
+    std::remove_if(trajs.begin(),
+                   trajs.end(),
+                   [](const JMTTrajectory1d& traj) { return !traj.GetIsValid() and (traj.GetCost() < 100.0); }),
     trajs.end());
 
   if (!trajs.empty()) {
@@ -235,7 +245,7 @@ PolynomialTrajectoryGenerator::_GenerateCrusingTrajectory(const Ego& ego, std::v
   double numTimeSteps = 20.0;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
-  double minSddot = 1.0;
+  double minSddot = -2.0;
   double maxSddot = 5.0;
   double numSddotStep = 20.0;
   double sddotStep = (maxSddot - minSddot) / numSddotStep;
@@ -252,7 +262,7 @@ PolynomialTrajectoryGenerator::_GenerateCrusingTrajectory(const Ego& ego, std::v
       double sddot = minSddot + (double)j * sddotStep;
       Vector5d conditions;
       conditions.topRows<3>() = egoLonKinematics;
-      conditions.bottomRows<2>() << std::min(egoLonKinematics[1] + sddot, Mph2Mps(49.0)), 0.0;
+      conditions.bottomRows<2>() << std::min(egoLonKinematics[1] + sddot, Mph2Mps(45.0)), 0.0;
       auto traj = JMT::Solve1d_5DoF(conditions, T);
       if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
         traj.ComputeCost(10.0, 2.0, 1.0, 2.0);
@@ -291,9 +301,8 @@ PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& eg
 
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
   Vector3d vehicleLonKinematics = vehicle.GetKinematics(0.0).block<3, 1>(0, 0);
-  double minTime =
-    (vehicleLonKinematics[0] - egoLonKinematics[0]) / std::max(vehicleLonKinematics[1], egoLonKinematics[1]);
-  double maxTime = minTime + 4.0;
+  double minTime = 1.0;
+  double maxTime = 10.0;
   double numTimeSteps = 20.0;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
@@ -312,7 +321,7 @@ PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& eg
     // clang-format off
     conditions.block<3, 1>(3, 0) <<
       leadingLonKinematics[0] - tau * leadingLonKinematics[1] - offset,
-      leadingLonKinematics[1] - tau * leadingLonKinematics[2],
+      std::max(leadingLonKinematics[1] - tau * leadingLonKinematics[2], Mph2Mps(45.0)),
       leadingLonKinematics[2];
     // clang-format on
     auto traj = JMT::Solve1d_6DoF(conditions, T);
@@ -493,9 +502,9 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   // Figure out longitudinal behaviors w.r.t. the traffic conditions on that lane.
   map<int, vector<LongitudinalManeuverType>> lonBehaviors;
 
-  double maxLaneChangingTriggerDistance = 10.0;
-  double maxStoppingTriggerDistance = 20.0;
-  double maxFollowTriggerDistance = 50.0;
+  double maxLaneChangingTriggerDistance = 20.0;
+  double maxStoppingTriggerDistance = 40.0;
+  double maxFollowTriggerDistance = 70.0;
 
   SPDLOG_INFO("  Compute longitudinal behavior.");
   for (const auto& [laneName, laneId] : laneIdsForPlanning) {
@@ -633,12 +642,12 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
       continue;
     }
 
-    auto [collidedVehicleId, distance] = CollisionChecker::IsInCollision(traj, trackedVehicleMap, _conf);
+    auto [collidedVehicleId, distance] = CollisionChecker::IsInCollision(traj, groupedVehicles[laneId], _conf);
     if (collidedVehicleId != -1) {
       const Vehicle& collidedVehicle = trackedVehicleMap.at(collidedVehicleId);
       int collisionLaneId = Map::GetLaneId(collidedVehicle.GetKinematics(0.0)(0, 1));
       SPDLOG_INFO("   - Planning failed for lane {:d}, trajectory is colliding with collidedVehicleId={:d}, "
-                  "distance={:7.3f}, collisionLaneId={:d}, collision lonlat={}, ego lonlat={}",
+                  "distance={:7.3f}, collisionLaneId={:d}, collision lonlat=[{}], ego lonlat=[{}]",
                   laneId,
                   collidedVehicleId,
                   distance,
