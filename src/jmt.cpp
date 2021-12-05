@@ -38,7 +38,10 @@ JMT::Solve1d_6DoF(const Vector6d& conditions, const double t)
   Vector6d coeffs;
   coeffs << c012[0], c012[1], c012[2], c345[0], c345[1], c345[2];
 
-  return JMTTrajectory1d(coeffs, s_i, s_f, t);
+  JMTTrajectory1d origTraj(coeffs, s_i, s_f, t);
+  double clippedTime = std::min(3.0, t);
+  Vector3d new_s_f = origTraj(clippedTime).topRows<3>();
+  return JMTTrajectory1d(coeffs, s_i, new_s_f, clippedTime);
 }
 
 JMTTrajectory1d
@@ -222,48 +225,11 @@ JMTTrajectory2d::Write(const std::string& filename) const
 bool
 JMTTrajectory2d::Validate(const Map& map, const Configuration& conf)
 {
-  if (not _lonTraj.Validate() or not _latTraj.Validate(map.GetRoadBoundary())) {
+  if (!_lonTraj.GetIsValid() or !_latTraj.GetIsValid()) {
     _isvalid = false;
     return _isvalid;
   }
 
-  double currTime = 0.0;
-  std::vector<Waypoint> sampledWaypoints;
-
-  auto roadBoundaries = Map::GetRoadBoundary();
-  roadBoundaries[0] -= Vehicle::Size;
-  roadBoundaries[1] += Vehicle::Size;
-
-  while (currTime < GetTime() + 1e-6) {
-    auto kinematics = Eval(currTime);
-
-    if (roadBoundaries[0] > kinematics(0, 1) or kinematics(0, 1) > roadBoundaries[1]) {
-      SPDLOG_WARN("trajectory is off road, d={:7.3f}, roadBoundaries={}", kinematics(0, 1), roadBoundaries);
-      _isvalid = false;
-      return _isvalid;
-    }
-
-    sampledWaypoints.push_back(map.GetXY(kinematics(0, 0), kinematics(0, 1)));
-    currTime += conf.trajectory.timeResolution;
-  }
-
-  for (size_t i = 1; i < sampledWaypoints.size() - 1; ++i) {
-    auto point1 = sampledWaypoints[i - 1];
-    auto point2 = sampledWaypoints[i];
-    auto point3 = sampledWaypoints[i + 1];
-
-    // Compute the curvature between point 2 and 3
-    double heading1 = GetAngle(point1, point2);
-    double heading2 = GetAngle(point2, point3);
-    double dist = GetDistance(point3, point2);
-    double curvature = Rad2Deg(heading2 - heading1) / dist;
-    if (curvature > conf.trajectory.maxCurvature) {
-      _message = fmt::format("curvature is {:7.3f}, threshold {:7.3f}", curvature, conf.trajectory.maxCurvature);
-      SPDLOG_DEBUG(_message);
-      _isvalid = false;
-      return _isvalid;
-    }
-  }
   _isvalid = true;
   return _isvalid;
 }

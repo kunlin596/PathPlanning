@@ -5,6 +5,7 @@
 #include "utils.h"
 
 namespace {
+using namespace pathplanning;
 /**
  * @brief      Normalize input JSON string data
  *
@@ -28,11 +29,10 @@ _NormalizeJsonString(std::string s)
 }
 
 std::string
-_EmptyControlMessage()
+_EmptyControlMessage(const Waypoints& prevPath)
 {
   nlohmann::json waypointsJson;
-  waypointsJson["next_x"] = std::vector<double>();
-  waypointsJson["next_y"] = std::vector<double>();
+  std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(prevPath);
   return "42[\"control\"," + waypointsJson.dump() + "]";
 }
 
@@ -84,12 +84,11 @@ System::SpinOnce(const std::string& commandString)
 
       Waypoint endPathSD = { data["end_path_s"], data["end_path_d"] };
 
-      Ego &ego = *_pEgo;
+      Ego& ego = *_pEgo;
       Map& map = *_pMap;
       Configuration& conf = *_pConf;
 
-      ego.Update(
-        data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]), map, conf);
+      ego.Update(data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]), map, conf);
 
       // Create the latest perceptions from input command
       // Velocity is already meters per seconds no need to convert
@@ -108,7 +107,7 @@ System::SpinOnce(const std::string& commandString)
       double executedTime = 0.0;
       Matrix32d startState = ego.GetKinematics(0.0).topRows<3>();
       if (prevPath.size() > 0) {
-        executedTime = (conf.numPoints - prevPath.size()) * conf.simulator.timeStep;
+        executedTime = (_state.prevPathSize - prevPath.size()) * conf.simulator.timeStep;
         startState = _state.cachedTrajectory(executedTime).topRows<3>();
       }
 
@@ -117,37 +116,24 @@ System::SpinOnce(const std::string& commandString)
       //
       json log;
 
-      // SPDLOG_INFO("startState={}", startState);
-
       // Find trajectory
       Ego futureEgo = ego;
       futureEgo.SetKinematics(startState);
-      // SPDLOG_INFO("ego={}", *_pEgo);
-      // SPDLOG_INFO("futureEgo={}", futureEgo);
       JMTTrajectory2d trajectory = _pPathGenerator->GenerataTrajectory(futureEgo, _pTracker->GetVehicles());
+      if (!trajectory.GetIsValid()) {
+        SPDLOG_ERROR("Planning failed, returning prev path.");
+        return _EmptyControlMessage(prevPath);
+      }
 
       Waypoints path;
 
       Matrix62d p;
       double currTime = 0.0;
-      int cnt = 0;
-      while (currTime < trajectory.GetTime() and cnt < conf.numPoints) {
+      while (currTime < trajectory.GetTime()) {
         p = trajectory(currTime);
         path.push_back(_pMap->GetXY(p(0, 0), p(0, 1)));
         currTime += _pConf->simulator.timeStep;
-        ++cnt;
       }
-
-      // // Pad the trajectory with constant velocity
-      // double endLonPos = p(0, 0);
-      // double endLatPos = p(0, 1);
-      // double endLonVel = p(1, 0);
-      // double endLatVel = p(1, 1);
-      // while (path.size() < _pConf->numPoints) {
-      //   endLonPos += endLonVel * _pConf->simulator.timeStep;
-      //   endLatPos += endLatVel * _pConf->simulator.timeStep;
-      //   path.push_back(_pMap->GetXY(endLonPos, endLatPos));
-      // }
 
       UpdateCachedTrajectory(trajectory);
       SPDLOG_TRACE(
@@ -161,6 +147,7 @@ System::SpinOnce(const std::string& commandString)
       std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(path);
 
       SPDLOG_TRACE("path={}", path);
+      _state.prevPathSize = path.size();
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
     }

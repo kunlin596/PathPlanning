@@ -243,9 +243,9 @@ PolynomialTrajectoryGenerator::_GenerateCrusingTrajectory(const Ego& ego, std::v
       double sddot = minSddot + (double)j * sddotStep;
       Vector5d conditions;
       conditions.topRows<3>() = egoLonKinematics;
-      conditions.bottomRows<2>() << std::min(egoLonKinematics[1] + sddot, Mph2Mps(49.0)), 0.0;
+      conditions.bottomRows<2>() << std::min(egoLonKinematics[1] + sddot, Mph2Mps(49.5)), 0.0;
       auto traj = JMT::Solve1d_5DoF(conditions, T);
-      if (traj.Validate()) {
+      if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
         traj.ComputeCost(10.0, 2.0, 1.0, 2.0);
       }
       trajs[i * static_cast<int>(numSddotStep) + j] = traj;
@@ -305,7 +305,7 @@ PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& eg
       leadingLonKinematics[2];
     // clang-format on
     auto traj = JMT::Solve1d_6DoF(conditions, T);
-    if (traj.Validate()) {
+    if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
       traj.ComputeCost(10.0, 2.0, 1.0, 5.0);
     }
     trajs[i] = traj;
@@ -360,9 +360,9 @@ PolynomialTrajectoryGenerator::_GenerateStoppingTrajectory(const Ego& ego, std::
       double sddot = minSddot + sddotStep * static_cast<double>(j);
       Vector5d conditions;
       conditions.block<3, 1>(0, 0) = egoLonKinematics;
-      conditions.block<2, 1>(3, 0) << std::max(egoLonKinematics[1] + sddot, 0.0), 0.0;
+      conditions.block<2, 1>(3, 0) << egoLonKinematics[1] + sddot, 0.0;
       auto traj = JMT::Solve1d_5DoF(conditions, T);
-      if (traj.Validate()) {
+      if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
         traj.ComputeCost(10.0, 2.0, 1.0, 2.0);
       }
       trajs[i * static_cast<int>(numSddotStep) + j] = traj;
@@ -463,12 +463,12 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     laneIdsForPlanning[LaneType::kRight] = rightLaneId;
   }
 
-  // Figure out lateral behaviors w.r.t. lane ids for planning.
-  unordered_map<int, LateralManeuverType> latBehaviors;
-  latBehaviors[egoLaneId] = LateralManeuverType::kLaneKeeping;
+  // Figure out lateral behaviors w.r.t. lane ids for planning
+  map<int, LateralManeuverType> latBehaviors;
   if (laneIdsForPlanning.count(LaneType::kLeft)) {
     latBehaviors[leftLaneId] = LateralManeuverType::kLeftLaneChanging;
   }
+  latBehaviors[egoLaneId] = LateralManeuverType::kLaneKeeping;
   if (laneIdsForPlanning.count(LaneType::kRight)) {
     latBehaviors[rightLaneId] = LateralManeuverType::kRightLaneChanging;
   }
@@ -480,13 +480,17 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   unordered_map<int, Vehicle> leadingVehicles;
 
   // Figure out longitudinal behaviors w.r.t. the traffic conditions on that lane.
-  unordered_map<int, vector<LongitudinalManeuverType>> lonBehaviors;
+  map<int, vector<LongitudinalManeuverType>> lonBehaviors;
 
   double maxStoppingTriggerDistance = 20.0;
   double maxFollowTriggerDistance = 50.0;
 
   SPDLOG_INFO("  Compute longitudinal behavior.");
   for (const auto& [laneName, laneId] : laneIdsForPlanning) {
+    if (latBehaviors.count(laneId) == 0) {
+      continue;
+    }
+
     lonBehaviors[laneId] = vector<LongitudinalManeuverType>();
 
     // If there are vehicles, find the leading vehicle and plan accordingly.
@@ -560,7 +564,10 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   for (const auto& [laneName, laneId] : laneIdsForPlanning) {
     if (lonBehaviors.count(laneId) == 0 or latBehaviors.count(laneId) == 0) {
       SPDLOG_INFO("  Skipping lane {:d}.", laneId);
+      continue;
     }
+
+    BOOST_ASSERT(!lonBehaviors[laneId].empty());
 
     // Generate 1D trajectories for the current lane.
     vector<JMTTrajectory1d> lonTrajs;
@@ -570,18 +577,17 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 
     // Generate longitudinal trajectories
     for (const auto& behavior : lonBehaviors[laneId]) {
-      SPDLOG_INFO("   - Planning for lonBehavior={:s}.", behavior);
+      SPDLOG_INFO("   - Planning for {:s}.", behavior);
       _GenerateLonTrajectory(behavior, ego, leadingVehicles[laneId], lonTrajs);
     }
 
     // Generate lateral trajectories
     _GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs);
+    SPDLOG_INFO("   - Planning for {:s}.", latBehaviors[laneId]);
 
     if (lonTrajs.empty() or latTrajs.empty()) {
-      SPDLOG_INFO("   - Planning failed for lane {:d}, lonTrajs.size()={:d}, latTrajs.size()={:d}",
-                  laneId,
-                  lonTrajs.size(),
-                  latTrajs.size());
+      SPDLOG_INFO(
+        "   - Planning failed for lane {:d}, #lonTrajs={:d}, #latTrajs={:d}", laneId, lonTrajs.size(), latTrajs.size());
       continue;
     }
 
@@ -602,13 +608,19 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     const auto& bestLatTraj = latTrajs[latId];
     auto traj = JMTTrajectory2d(bestLonTraj, bestLatTraj);
 
+    traj.Validate(_map, _conf);
+    if (!traj.GetIsValid()) {
+      SPDLOG_INFO("   - Planning failed for lane {:d}, best trajectory for lane is not valid.", laneId);
+      continue;
+    }
+
     auto [collidedVehicleId, distance] = CollisionChecker::IsInCollision(traj, trackedVehicleMap, _conf);
     if (collidedVehicleId != -1) {
       const Vehicle& collidedVehicle = trackedVehicleMap.at(collidedVehicleId);
       int collisionLaneId = Map::GetLaneId(collidedVehicle.GetKinematics(0.0)(0, 1));
       SPDLOG_INFO("   - Planning failed for lane {:d}, trajectory is colliding with collidedVehicleId={:d}, "
-                  "distance={:7.3f}, collisionLaneId={:d}, lonlat=[{}], ego lonlat=[{}]",
-                  collisionLaneId,
+                  "distance={:7.3f}, collisionLaneId={:d}, collision lonlat=[{}], ego lonlat=[{}]",
+                  laneId,
                   collidedVehicleId,
                   distance,
                   collisionLaneId,

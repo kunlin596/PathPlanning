@@ -20,6 +20,7 @@ public:
   struct State
   {
     JMTTrajectory2d cachedTrajectory;
+    size_t prevPathSize = 0;
   };
 
   /**
