@@ -180,12 +180,21 @@ PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType&
       break;
   }
 
+  // Recover
+  if (egoLatKinematics[0] > _map.GetRoadBoundary()[1]) {
+    SPDLOG_WARN("Previous planning went wrong, recover from out of lane from right!");
+    targetD = Map::GetLaneCenterD(Map::NUM_LANES - 1);
+  } else if (egoLatKinematics[0] < _map.GetRoadBoundary()[0]) {
+    SPDLOG_WARN("Previous planning went wrong, recover from out of lane from left!");
+    targetD = Map::GetLaneCenterD(0);
+  }
+
   Vector6d conditions;
   conditions.topRows<3>() = egoLatKinematics;
   conditions.bottomRows<3>() << targetD, 0.0, 0.0;
 
-  double minTime = 5.0;
-  double maxTime = 10.0;
+  double minTime = 1.5;
+  double maxTime = 4.0;
   double numTimeSteps = 20.0;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
@@ -221,14 +230,14 @@ PolynomialTrajectoryGenerator::_GenerateCrusingTrajectory(const Ego& ego, std::v
 {
   auto start = std::chrono::steady_clock::now();
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
-  double minTime = 2.0;
-  double maxTime = 20.0;
-  double numTimeSteps = 20.0;
+  double minTime = 1.5;
+  double maxTime = 4.0;
+  double numTimeSteps = 10.0;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
-  double minSddot = 3.0;
-  double maxSddot = 10.0;
-  double numSddotStep = 20.0;
+  double minSddot = 0.0;
+  double maxSddot = 5.0;
+  double numSddotStep = 10.0;
   double sddotStep = (maxSddot - minSddot) / numSddotStep;
 
   int totalCount = static_cast<int>(numTimeSteps * numSddotStep);
@@ -281,9 +290,9 @@ PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& eg
   auto start = std::chrono::steady_clock::now();
 
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
-  double minTime = 5.0;
-  double maxTime = 15.0;
-  double numTimeSteps = 20.0;
+  double minTime = 1.5;
+  double maxTime = 4.0;
+  double numTimeSteps = 10.0;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
   double tau = 0.1;
@@ -339,14 +348,14 @@ PolynomialTrajectoryGenerator::_GenerateStoppingTrajectory(const Ego& ego, std::
 
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
 
-  double minTime = 5.0;
-  double maxTime = 20.0;
-  double numTimeSteps = 20.0;
+  double minTime = 1.5;
+  double maxTime = 4.0;
+  double numTimeSteps = 10.0;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
-  double minSddot = -5.0;
+  double minSddot = -1.0;
   double maxSddot = -10.0;
-  double numSddotStep = 20.0;
+  double numSddotStep = 10.0;
   double sddotStep = (maxSddot - minSddot) / numSddotStep;
 
   std::vector<JMTTrajectory1d> trajs(static_cast<int>(numTimeSteps * numSddotStep));
