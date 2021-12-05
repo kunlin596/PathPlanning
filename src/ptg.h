@@ -15,7 +15,7 @@ using namespace nlohmann;
 enum class LongitudinalManeuverType
 {
   kFollowing,
-  kCrusing,
+  kCruising,
   kStopping,
 };
 
@@ -95,6 +95,7 @@ private:
   JMTTrajectory2d _GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
   const Configuration& _conf;
+  int _counter = 0;
   const Map& _map;
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };

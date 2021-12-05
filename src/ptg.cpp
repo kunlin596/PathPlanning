@@ -57,8 +57,14 @@ _GroupVehicles(const TrackedVehicleMap& trackedVehicleMap)
  *
  * @return     The front back vehicles per lane.
  */
-std::pair<std::unordered_map<std::string, Vehicle>, double>
-_FindLeadingVehicle(const Matrix32d& egoKinematics, const std::vector<Vehicle>& vehicles, double nonEgoSearchRadius)
+void
+_FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
+                             const std::vector<Vehicle>& vehicles,
+                             double nonEgoSearchRadius,
+                             Vehicle& leadingVehicle,
+                             double& leadingDistance,
+                             Vehicle& followingVehicle,
+                             double& followingDistance)
 {
   double frontSDiff = std::numeric_limits<double>::max();
   double backSDiff = std::numeric_limits<double>::max();
@@ -84,14 +90,17 @@ _FindLeadingVehicle(const Matrix32d& egoKinematics, const std::vector<Vehicle>& 
     }
   }
 
-  std::unordered_map<std::string, Vehicle> result;
-
   if (frontId != -1 and frontSDiff < nonEgoSearchRadius) {
-    result["front"] = vehicles[frontId];
+    leadingVehicle = vehicles[frontId];
+    leadingDistance = frontSDiff;
     SPDLOG_TRACE("Found front id {:2d}, frontSDiff={:7.3f}", vehicles[frontId].GetId(), frontSDiff);
   }
 
-  return std::make_pair(result, frontSDiff);
+  if (backId != -1 and backSDiff < nonEgoSearchRadius) {
+    followingVehicle = vehicles[backId];
+    followingDistance = backSDiff;
+    SPDLOG_TRACE("Found front id {:2d}, backSDiff={:7.3f}", vehicles[frontId].GetId(), backSDiff);
+  }
 }
 
 void
@@ -138,7 +147,7 @@ PolynomialTrajectoryGenerator::_GenerateLonTrajectory(const LongitudinalManeuver
                                                       std::vector<JMTTrajectory1d>& trajectories)
 {
   switch (lonBehavior) {
-    case LongitudinalManeuverType::kCrusing:
+    case LongitudinalManeuverType::kCruising:
       _GenerateCrusingTrajectory(ego, trajectories);
       return;
     case LongitudinalManeuverType::kStopping:
@@ -287,20 +296,64 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   // "Optimal Trajectory Generation for Dynamic Street Scenarios in a Frenet Frame",
   // M. Werling, J. Ziegler, S. Kammel and S. Thrun, ICRA 2010
 
+  // The trajectory generation strategy is described as follows.
+  //
+  // For each possible lane, where will be,
+  // {
+  //   [
+  //     // lane 0
+  //     {
+  //       "lonBehaviors": {
+  //         "kCruising",
+  //         "kStopping",
+  //         ...
+  //       },
+  //       "latBehaviors": [
+  //         "kLaneKeeping",
+  //         "kRightLaneChanging"
+  //       ]
+  //     },
+  //     // lane 1
+  //     {
+  //       "lonBehaviors": {
+  //         "kCruising",
+  //         "kStopping",
+  //         ...
+  //       },
+  //       "latBehaviors": [
+  //         "kLaneKeeping",
+  //         "kRightLaneChanging",
+  //         "kRightLaneChanging"
+  //       ]
+  //     },
+  //     ...
+  //   ]
+  // }
+  //
+  // Then for each lane, the optimal combination of longitudinal and lateral 1D trajectories will be computed to find
+  // the feasible and best 2D plan for that lane.
+  // 
+  // Finally we compare all 2D trajectories for each lane with each other and determine the final winner.
+
   // if (usePython) {
   //   return _GenerataTrajectoryPy(ego, trackedVehicleMap);
   // }
 
-  auto groupedVehicles = _GroupVehicles(trackedVehicleMap);
+  using std::string;
+  using std::unordered_map;
+  using std::vector;
+
+  SPDLOG_DEBUG("Planning starting, counter {:d}.", ++_counter);
   auto egoLaneId = Map::GetLaneId(ego.GetKinematics(0.0)(0, 1));
 
   // Figure out the lanes for planning
   int leftLaneId = egoLaneId - 1;
   int rightLaneId = egoLaneId + 1;
 
-  std::unordered_map<std::string, int> laneIdsForPlanning;
+  // Lane ids are determined by lateral planning decisions, since longitudinal planning will happen anyways.
+  // Depending on which lane ego is on, we can decide which lane to plan.
+  unordered_map<string, int> laneIdsForPlanning;
   laneIdsForPlanning["current"] = egoLaneId;
-
   if (0 <= leftLaneId and leftLaneId < egoLaneId) {
     laneIdsForPlanning["left"] = leftLaneId;
   }
@@ -308,8 +361,8 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     laneIdsForPlanning["right"] = rightLaneId;
   }
 
-  // Figure out lat behaviors
-  std::unordered_map<int, LateralManeuverType> latBehaviors;
+  // Figure out lateral behaviors w.r.t. lane ids for planning.
+  unordered_map<int, LateralManeuverType> latBehaviors;
   latBehaviors[egoLaneId] = LateralManeuverType::kLaneKeeping;
   if (laneIdsForPlanning.count("left")) {
     latBehaviors[leftLaneId] = LateralManeuverType::kLeftLaneChanging;
@@ -318,67 +371,97 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     latBehaviors[rightLaneId] = LateralManeuverType::kRightLaneChanging;
   }
 
-  // Figure out lon behaviors
-  std::unordered_map<int, Vehicle> leadingVehicles;
-  std::unordered_map<int, std::vector<LongitudinalManeuverType>> lonBehaviors;
-  for (const auto& [laneName, laneId] : laneIdsForPlanning) {
-    lonBehaviors[laneId] = std::vector<LongitudinalManeuverType>();
+  // Group vehicles for longitudinal planning.
+  unordered_map<int, std::vector<Vehicle>> groupedVehicles = _GroupVehicles(trackedVehicleMap);
 
+  // Cache the leading vehicles when checking for longitudinal behaviors.
+  unordered_map<int, Vehicle> leadingVehicles;
+
+  // Figure out longitudinal behaviors w.r.t. the traffic conditions on that lane.
+  unordered_map<int, vector<LongitudinalManeuverType>> lonBehaviors;
+  for (const auto& [laneName, laneId] : laneIdsForPlanning) {
+    lonBehaviors[laneId] = vector<LongitudinalManeuverType>();
+
+    // If there are vehicles, find the leading vehicle and plan accordingly.
     if (groupedVehicles.count(laneId)) {
       const auto& vehicles = groupedVehicles[laneId];
       if (vehicles.empty())
         continue;
 
-      const auto& [leadingVehicle, minDist] =
-        _FindLeadingVehicle(ego.GetKinematics(0.0), vehicles, _conf.tracker.nonEgoSearchRadius);
+      Vehicle leadingVehicle;
+      double leadingDistance = std::numeric_limits<double>::quiet_NaN();
+      Vehicle followingVehicle;
+      double followingDistance = std::numeric_limits<double>::quiet_NaN();
+      _FindLeadingFollowingVehicle(ego.GetKinematics(0.0),
+                                   vehicles,
+                                   _conf.tracker.nonEgoSearchRadius,
+                                   leadingVehicle,
+                                   leadingDistance,
+                                   followingVehicle,
+                                   followingDistance);
 
-      if (leadingVehicle.count("front")) {
-        if (minDist < 10.0) {
+      // TODO: Take following vehicle in to account and implement merging behavior.
+      // NOTE: The distance values for determine the behavior below is purely heuristic.
+      if (not std::isnan(leadingDistance)) {
+        if (leadingDistance < 10.0) {
           lonBehaviors[laneId].push_back(LongitudinalManeuverType::kStopping);
-        } else if (10.0 < minDist and minDist < 50.0) {
-          leadingVehicles[laneId] = leadingVehicle.at("front");
+        } else if (10.0 < leadingDistance and leadingDistance < 50.0) {
           lonBehaviors[laneId].push_back(LongitudinalManeuverType::kFollowing);
+          leadingVehicles[laneId] = leadingVehicle;
         } else {
-          lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCrusing);
+          lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCruising);
         }
-      } else {
-        lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCrusing);
       }
+    }
+
+    // No vehicles, just plan for cruising.
+    else {
+      lonBehaviors[laneId].push_back(LongitudinalManeuverType::kCruising);
     }
   }
 
-  // Plane for each lan w.r.t. the behaviors defined above.
-
+  // Plan for JMT for each lane w.r.t. the behaviors determined above.
   JMTTrajectory2d bestTraj;
-  double minCost = std::numeric_limits<double>::min();
-
+  double minCost = std::numeric_limits<double>::quiet_NaN();
   for (const auto& [laneName, laneId] : laneIdsForPlanning) {
     if (lonBehaviors.count(laneId) == 0 or latBehaviors.count(laneId) == 0) {
-      SPDLOG_DEBUG("Skipping lane {:d}.", laneId);
+      SPDLOG_DEBUG("  Skipping lane {:d}.", laneId);
     }
 
-    // Generate trajectories for ego lane and adjacent lanes
-    std::vector<JMTTrajectory1d> lonTrajs;
-    std::vector<JMTTrajectory1d> latTrajs;
+    // Generate 1D trajectories for the current lane.
+    vector<JMTTrajectory1d> lonTrajs;
+    vector<JMTTrajectory1d> latTrajs;
 
-    SPDLOG_DEBUG("Planning for lane {:d}.", laneId);
+    SPDLOG_DEBUG("  Planning for lane {:d}.", laneId);
 
-    // Generate lon trajectories
+    // Generate longitudinal trajectories
     for (const auto& behavior : lonBehaviors[laneId]) {
       _GenerateLonTrajectory(behavior, ego, leadingVehicles[laneId], lonTrajs);
     }
 
-    // Generate lat trajectories
+    // Generate lateral trajectories
     _GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs);
 
     if (lonTrajs.empty() or latTrajs.empty()) {
-      SPDLOG_DEBUG("Planning failed for lane {:d}", laneId);
+      SPDLOG_DEBUG("   - Planning failed for lane {:d}, lonTrajs.size()={:d}, latTrajs.size()={:d}",
+                   laneId,
+                   lonTrajs.size(),
+                   latTrajs.size());
       continue;
     }
 
+    // Figure out optimal combination
     int lonId = -1, latId = -1;
     double cost;
     _GetOptimalCombination(lonTrajs, latTrajs, lonId, latId, cost);
+
+    if (lonId == -1 or latId == -1) {
+      SPDLOG_DEBUG("   - Planning failed for lane {:d}, cannot find optimal combination, lonId={:d}, latId={:d}",
+                   laneId,
+                   lonId,
+                   latId);
+      continue;
+    }
 
     const auto& bestLonTraj = lonTrajs[lonId];
     const auto& bestLatTraj = latTrajs[latId];
@@ -386,13 +469,26 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 
     auto [collidedVehicleId, distance] = CollisionChecker::IsInCollision(traj, trackedVehicleMap, _conf);
     if (collidedVehicleId != -1) {
+      SPDLOG_DEBUG(
+        "   - Planning failed for lane {:d}, trajectory is colliding with collidedVehicleId={:d}, distance={:7.3f}.",
+        laneId,
+        collidedVehicleId,
+        distance);
       continue;
     }
 
-    if (cost < minCost) {
+    SPDLOG_DEBUG("   * Planning completed for lane {:d}, cost={:7.3f}", laneId, cost);
+
+    if (std::isnan(minCost) or cost < minCost) {
       minCost = cost;
       bestTraj = traj;
     }
+  }
+
+  if (std::isnan(minCost)) {
+    SPDLOG_DEBUG("   - Planning failed for all lanes.");
+  } else {
+    SPDLOG_DEBUG("   * Planning completed, minCost={:7.3f}", minCost);
   }
 
   return bestTraj;
