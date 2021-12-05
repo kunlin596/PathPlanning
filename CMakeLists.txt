@@ -86,7 +86,6 @@ add_library(
   src/path.cpp
   src/jmt.cpp
   src/collision_checker.cpp
-  src/traj_evaluator.cpp
   src/goalsampler.cpp
   src/ptg.cpp
 )
@@ -97,9 +96,9 @@ target_link_libraries(
   common
   tracker
   ${OpenMP_LIBS}
+  ${Python3_LIBRARIES}
   PRIVATE
   ${Boost_FILESYSTEM_LIBRARY}
-  ${Python3_LIBRARIES}
 )
 
 add_executable(
