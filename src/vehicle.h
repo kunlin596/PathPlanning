@@ -30,7 +30,7 @@ using namespace nlohmann;
  */
 struct Vehicle
 {
-  static constexpr double Size = 4.5;
+  static constexpr double Size = 3.0;
 
   Vehicle() {}
 

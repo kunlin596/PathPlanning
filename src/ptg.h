@@ -107,6 +107,12 @@ private:
   std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };
 
+std::ostream&
+operator<<(std::ostream& out, const LongitudinalManeuverType& type);
+
+std::ostream&
+operator<<(std::ostream& out, const LateralManeuverType& type);
+
 }; // namespace pathplanning
 
 #endif

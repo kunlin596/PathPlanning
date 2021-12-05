@@ -12,8 +12,8 @@ namespace pathplanning {
 JMTTrajectory1d
 JMT::Solve1d_6DoF(const Vector6d& conditions, const double t)
 {
-  const Vector3d& start = conditions.topRows<3>();
-  const Vector3d& end = conditions.bottomRows<3>();
+  const Vector3d& s_i = conditions.topRows<3>();
+  const Vector3d& s_f = conditions.bottomRows<3>();
 
   double t2 = t * t;
   double t3 = t2 * t;
@@ -30,22 +30,22 @@ JMT::Solve1d_6DoF(const Vector6d& conditions, const double t)
 
   Matrix3d M = Matrix3d::Identity();
   M(0, 1) = M(1, 2) = t;
-  M(1, 1) = 0.5 * t2;
+  M(0, 2) = 0.5 * t2;
 
-  Vector3d c012 = { start[0], start[1], start[2] / 2.0 };
-  Vector3d c345 = A.colPivHouseholderQr().solve(end - M * c012);
+  Vector3d c012 = { s_i[0], s_i[1], s_i[2] / 2.0 };
+  Vector3d c345 = A.colPivHouseholderQr().solve(s_f - M * s_i);
 
   Vector6d coeffs;
   coeffs << c012[0], c012[1], c012[2], c345[0], c345[1], c345[2];
 
-  return JMTTrajectory1d(coeffs, start, end, t);
+  return JMTTrajectory1d(coeffs, s_i, s_f, t);
 }
 
 JMTTrajectory1d
 JMT::Solve1d_5DoF(const Vector5d& conditions, const double t)
 {
-  const Vector3d& start = conditions.topRows<3>();
-  const Vector2d& end = conditions.bottomRows<2>();
+  const Vector3d& s_i = conditions.topRows<3>();
+  const Vector2d& s_f = conditions.bottomRows<2>();
 
   double t2 = t * t;
   double t3 = t2 * t;
@@ -58,15 +58,18 @@ JMT::Solve1d_5DoF(const Vector5d& conditions, const double t)
     6.0 * t  , 12.0 * t2  ;
   // clang-format on
   Matrix2d M = Matrix2d::Identity();
-  M(1, 1) = t;
+  M(0, 1) = t;
 
-  Vector3d c012 = { start[0], start[1], start[2] / 2.0 };
-  Vector2d c34 = A.colPivHouseholderQr().solve(end - M * c012.bottomRows<2>());
+  Vector3d c012 = { s_i[0], s_i[1], s_i[2] / 2.0 };
+  Vector2d c34 = A.colPivHouseholderQr().solve(s_f - M * c012.bottomRows<2>());
 
   Vector6d coeffs;
   coeffs << c012[0], c012[1], c012[2], c34[0], c34[1], 0.0;
 
-  return JMTTrajectory1d(coeffs, start, end, t);
+  JMTTrajectory1d origTraj(coeffs, s_i, s_f, t);
+  double clippedTime = std::min(0.02 * 100, t);
+  Vector3d new_s_f = origTraj(clippedTime).topRows<3>();
+  return JMTTrajectory1d(coeffs, s_i, new_s_f, clippedTime);
 }
 
 JMTTrajectory2d
@@ -76,54 +79,78 @@ JMT::Solve2d(const Matrix62d& conditions, const double t)
 }
 
 bool
-JMTTrajectory1d::IsValid(const Configuration& conf)
+JMTTrajectory1d::Validate(const Configuration& conf)
 {
-  return IsValid(conf.speedLimit, conf.trajectory.maxAcc, conf.trajectory.maxJerk, conf.trajectory.timeResolution);
+  return Validate({ std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN() },
+                  conf.speedLimit,
+                  conf.trajectory.maxAcc,
+                  conf.trajectory.maxJerk,
+                  conf.trajectory.timeResolution);
 }
 
 bool
-JMTTrajectory1d::IsValid(double maxVel,
-                         double maxAcc,
-                         double maxJerk,
-                         double totalAccel,
-                         double totalJerk,
-                         int numPoints)
+JMTTrajectory1d::Validate(const std::array<double, 2>& posBound,
+                          double maxVel,
+                          double maxAcc,
+                          double maxJerk,
+                          double totalAccel,
+                          double totalJerk,
+                          int numPoints)
 {
-  double averAccel = 0.0;
-  double averJerk = 0.0;
+  _avgAccel = 0.0;
+  _avgJerk = 0.0;
+  _avgVelocity = 0.0;
+
   double timeResolution = _time / static_cast<double>(numPoints);
   for (double currTime = 0.0; currTime < (_time + 1e-6); currTime += timeResolution) {
     auto values = Eval(currTime);
+    if (!std::isnan(posBound[0]) and !std::isnan(posBound[1])) {
+      if ((values[0] < posBound[0]) or (posBound[1] < values[0])) {
+        _message =  fmt::format("position is out of range, {:7.3f} out of [{:7.3f}, {:7.3f}]", values[0], posBound[0], posBound[1]);
+        _isvalid = false;
+        SPDLOG_DEBUG(_message);
+        return _isvalid;
+      }
+    }
+
     if (std::abs(values[1]) > maxVel) {
-      SPDLOG_DEBUG("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], maxVel);
+      _message = fmt::format("speed is out of range, {:7.3f} bigger than {:7.3f}", values[1], maxVel);
       _isvalid = false;
+      SPDLOG_DEBUG(_message);
       return _isvalid;
     }
     if (std::abs(values[2]) > maxAcc) {
-      SPDLOG_DEBUG("accel is out of range, {:7.3f} bigger than {:7.3f}", values[2], maxAcc);
+      _message = fmt::format("accel is out of range, {:7.3f} bigger than {:7.3f}", values[2], maxAcc);
       _isvalid = false;
+      SPDLOG_DEBUG(_message);
       return _isvalid;
     }
     if (std::abs(values[3]) > maxJerk) {
-      SPDLOG_DEBUG("jerk is out of range, {:7.3f} bigger than {:7.3f}", values[3], maxJerk);
+      _message = fmt::format("jerk is out of range, {:7.3f} bigger than {:7.3f}", values[3], maxJerk);
       _isvalid = false;
+      SPDLOG_DEBUG(_message);
       return _isvalid;
     }
-    averAccel += std::abs(values[2]) * timeResolution;
-    averJerk += std::abs(values[3]) * timeResolution;
+    _avgVelocity += std::abs(values[1]) * timeResolution;
+    _avgAccel += std::abs(values[2]) * timeResolution;
+    _avgJerk += std::abs(values[3]) * timeResolution;
   }
 
-  averAccel /= _time;
-  if (averAccel > totalAccel) {
+  _avgVelocity /= _time;
+
+  _avgAccel /= _time;
+  if (_avgAccel > totalAccel) {
     _isvalid = false;
-    SPDLOG_DEBUG("total acceleration is out of range, {:7.3f} bigger than {:7.3f}", averAccel, totalAccel);
+    _message = fmt::format("total acceleration is out of range, {:7.3f} bigger than {:7.3f}", _avgAccel, totalAccel);
+    SPDLOG_DEBUG(_message);
     return _isvalid;
   }
 
-  averJerk /= _time;
-  if (averJerk > totalJerk) {
-    SPDLOG_DEBUG("total jerk is out of range, {:7.3f} bigger than {:7.3f}", averJerk, totalJerk);
+  _avgJerk /= _time;
+  if (_avgJerk > totalJerk) {
+    _message = fmt::format("total jerk is out of range, {:7.3f} bigger than {:7.3f}", _avgJerk, totalJerk);
     _isvalid = false;
+    SPDLOG_DEBUG(_message);
     return _isvalid;
   }
 
@@ -192,9 +219,9 @@ JMTTrajectory2d::Write(const std::string& filename) const
 }
 
 bool
-JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf)
+JMTTrajectory2d::Validate(const Map& map, const Configuration& conf)
 {
-  if (not _lonTraj.IsValid(conf) or not _latTraj.IsValid(conf)) {
+  if (not _lonTraj.Validate() or not _latTraj.Validate(map.GetRoadBoundary())) {
     _isvalid = false;
     return _isvalid;
   }
@@ -230,7 +257,8 @@ JMTTrajectory2d::IsValid(const Map& map, const Configuration& conf)
     double dist = GetDistance(point3, point2);
     double curvature = Rad2Deg(heading2 - heading1) / dist;
     if (curvature > conf.trajectory.maxCurvature) {
-      SPDLOG_TRACE("curvature is {:7.3f}, threashold {:7.3f}", curvature, conf.trajectory.maxCurvature);
+      _message = fmt::format("curvature is {:7.3f}, threshold {:7.3f}", curvature, conf.trajectory.maxCurvature);
+      SPDLOG_DEBUG(_message);
       _isvalid = false;
       return _isvalid;
     }
@@ -265,7 +293,7 @@ JMT::SolveMultipleFeasible2d(const Matrix62d& conditions, const Map& map, const 
   while (currTime < (minT + conf.trajectory.maxTime + 1e-6)) {
     auto traj = JMT::Solve2d(conditions, currTime);
     traj.Write(fmt::format("/tmp/jmt/{}.json", cnt));
-    if (traj.IsValid(map, conf)) {
+    if (traj.Validate(map, conf)) {
       trajs.push_back(traj);
     }
     currTime += conf.trajectory.timeResolution;

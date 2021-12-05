@@ -8,7 +8,9 @@ Perception::CreatePerceptions(const std::vector<std::vector<double>>& data, cons
   std::unordered_map<int, Perception> perceptions;
   for (size_t i = 0; i < data.size(); ++i) {
     const std::vector<double> d = data[i];
-    perceptions[d[0]] = Perception(d[0], d[1], d[2], d[3], d[4], d[5], d[6], map, time);
+    if (d[6] > 0) {
+      perceptions[d[0]] = Perception(d[0], d[1], d[2], d[3], d[4], d[5], d[6], map, time);
+    }
   }
   return perceptions;
 }

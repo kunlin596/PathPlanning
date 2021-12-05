@@ -77,7 +77,7 @@ BufferCost::operator()(const JMTTrajectory2d& traj,
                        const TrackedVehicleMap& trackedVehicleMap,
                        const Configuration& conf)
 {
-  const auto& [id, dist] = CollisionChecker::GetMinDistance(traj, trackedVehicleMap, conf.timeHorizon, conf.timeStep);
+  const auto& [id, dist] = CollisionChecker::GetMinDistance(traj, trackedVehicleMap, conf.timeStep);
   double threshold = std::max(Vehicle::Size, conf.trajectory.collisionCheckingRadius);
   static constexpr double SIGMA = Vehicle::Size; // meter
   return Gaussian1D(threshold, dist, SIGMA);

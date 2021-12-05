@@ -192,13 +192,29 @@ ComputeFrenetVelocity(const Map& map,
                       const std::array<double, 2>& sd,
                       const double dt)
 {
-  std::array<double, 2> sd2 = map.GetSD(
-    pos[0] + vel[0] * dt,
-    pos[1] + vel[1] * dt,
-    std::atan2(vel[1], vel[0]));
+  using std::array;
+  using Eigen::Vector2d;
 
-  std::array<double, 2> velsd = { (sd2[0] - sd[0]) / dt, (sd2[1] - sd[1]) / dt };
-  return velsd;
+  Vector2d velDir = { vel[0], vel[1] };
+  double speed = velDir.norm();
+  if (speed < 1e-6) {
+    return { 0.0, 0.0 };
+  }
+
+  velDir /= speed;
+
+  // Hard code the local tangential (Fernet) frame by 0.1 meter.
+  Vector2d frenetFrameHeadingVec = { sd[0] + 0.1, sd[1] };
+  auto tempFrenetFrameHeadingVec = map.GetXY(frenetFrameHeadingVec[0], frenetFrameHeadingVec[1]);
+
+  Vector2d localFrameOrigin = { pos[0], pos[1] };
+  Vector2d localFrameDir = { tempFrenetFrameHeadingVec[0], tempFrenetFrameHeadingVec[1] };
+  localFrameDir = localFrameDir - localFrameOrigin;
+  localFrameDir /= localFrameDir.norm();
+
+  double headingAngle = std::acos(localFrameDir.transpose() * velDir);
+  array<double, 2> sdVel = { speed * std::cos(headingAngle), speed * std::sin(headingAngle) };
+  return sdVel;
 }
 
 } // namespace pathplanning

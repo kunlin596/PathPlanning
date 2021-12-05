@@ -6,14 +6,10 @@ namespace pathplanning {
 
 struct CollisionChecker
 {
-  static double GetMinDistance(const JMTTrajectory2d& traj,
-                               const Vehicle& vehicle,
-                               double maxTimeDuration,
-                               double timeStep);
+  static double GetMinDistance(const JMTTrajectory2d& traj, const Vehicle& vehicle, double timeStep);
 
   static std::pair<int, double> GetMinDistance(const JMTTrajectory2d& traj,
                                                const std::unordered_map<int, Vehicle>& vehicles,
-                                               double maxTimeDuration,
                                                double timeStep);
 
   static std::pair<int, double> IsInCollision(const JMTTrajectory2d& traj,

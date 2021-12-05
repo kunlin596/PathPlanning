@@ -11,42 +11,24 @@ void
 Tracker::Update(const Ego& ego, const Perceptions& perceptions)
 {
   // TODO: Implementation can be simplified.
-  std::array<double, 2> egoSD = { ego._kinematics(0, 0), ego._kinematics(0, 1) };
+  std::array<double, 2> egoSd = { ego._kinematics(0, 0), ego._kinematics(0, 1) };
+
+  _trackedVehicleMap.clear();
 
   // Filter out the vehicles that are out of search range
-  std::set<int> idToBeIgnored;
+  Perceptions filteredPerceptions;
   for (const auto& [perceptionId, perception] : perceptions) {
-    double dist = GetDistance(perception.sd, egoSD);
-    if (dist > _conf.tracker.nonEgoSearchRadius) {
-      idToBeIgnored.insert(perceptionId);
+    double dist = GetDistance(perception.sd, egoSd);
+    if (dist < _conf.tracker.nonEgoSearchRadius) {
+      filteredPerceptions[perceptionId] = perception;
     }
   }
 
-  // Naively remove disappeared vehicle from tracked vehicle.
-  std::vector<int> idToBeRemoved;
-  for (const auto& [vehicleId, vehicleData] : _trackedVehicleMap) {
-    if (perceptions.count(vehicleId) == 0) {
-      idToBeRemoved.push_back(vehicleId);
-    }
-  }
-
-  // SPDLOG_DEBUG("received new perceptions: {:s}", perceptions);
-  for (auto& id : idToBeRemoved) {
-    _trackedVehicleMap.erase(id);
-  }
-
-  // Process new vehicles
-  for (const auto& [perceptionId, perception] : perceptions) {
-
-    if (idToBeIgnored.count(perceptionId) and _trackedVehicleMap.count(perceptionId)) {
-      _trackedVehicleMap.erase(perceptionId);
-      continue;
-    }
-
+  for (const auto& [perceptionId, perception] : filteredPerceptions) {
     int laneId = Map::GetLaneId(perception.sd[1]);
     _trackedVehicleMap[perceptionId] = perception.GetVehicle();
   }
-  SPDLOG_TRACE("Size of tracked vehicles {}", _trackedVehicleMap.size());
+  SPDLOG_TRACE("Size of tracked vehicles {}.", _trackedVehicleMap.size());
 }
 
 std::ostream&

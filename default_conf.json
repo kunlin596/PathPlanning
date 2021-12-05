@@ -12,7 +12,7 @@
     "maxAcc": 10.0,
     "expectedAccInOneSec": 3.0,
     "expectedJerkInOneSec": 2.0,
-    "collisionCheckingRadius": 4.0,
+    "collisionCheckingRadius": 1.5,
     "maxCurvature": 20.0,
     "timeResolution": 0.5
   },

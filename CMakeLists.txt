@@ -99,6 +99,7 @@ target_link_libraries(
   ${OpenMP_LIBS}
   PRIVATE
   ${Boost_FILESYSTEM_LIBRARY}
+  ${Python3_LIBRARIES}
 )
 
 add_executable(

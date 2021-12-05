@@ -80,14 +80,16 @@ struct JMTTrajectory1d
   const ConstantFunctor& GetCrackleFn() const { return _crackleFn; }
   double GetTime() const { return _time; }
 
-  bool IsValid(const Configuration& conf);
+  bool Validate(const Configuration& conf);
 
-  bool IsValid(double maxVel = Mph2Mps(49.0),
-               double maxAcc = 8.0,
-               double maxJerk = 8.0,
-               double totalAccel = 2.0,
-               double totalJerk = 2.0,
-               int numPoints = 100);
+  bool Validate(const std::array<double, 2>& posBound = { std::numeric_limits<double>::quiet_NaN(),
+                                                          std::numeric_limits<double>::quiet_NaN() },
+                double maxVel = Mph2Mps(49.0),
+                double maxAcc = 8.0,
+                double maxJerk = 8.0,
+                double totalAccel = 2.0,
+                double totalJerk = 2.0,
+                int numPoints = 100);
 
   double ComputeCost(double kTime, double kPos, double kJerk, double kEfficiency);
   double GetCost() const { return _cost; }
@@ -100,6 +102,10 @@ struct JMTTrajectory1d
   double GetCrackle(double t) const { return _snapFn(t); }
 
   bool GetIsValid() const { return _isvalid; }
+
+  double GetAverageVelocity() const { return _avgVelocity; };
+  double GetAverageAcceleration() const { return _avgAccel; };
+  double GetAverageJerk() const { return _avgJerk; };
 
 private:
   QuinticFunctor _positionFn;   ///< position
@@ -114,6 +120,10 @@ private:
   double _time = 0.0;           ///< trajectory execution time
   double _cost = 0.0;           ///< kinematic cost for this trajectory
   bool _isvalid = false;
+  double _avgVelocity = std::numeric_limits<double>::quiet_NaN();
+  double _avgAccel = std::numeric_limits<double>::quiet_NaN();
+  double _avgJerk = std::numeric_limits<double>::quiet_NaN();
+  std::string _message = "";
 };
 
 /**
@@ -135,7 +145,7 @@ struct JMTTrajectory2d
 
   JMTTrajectory2d(const JMTTrajectory1d& traj1, const JMTTrajectory1d& traj2);
 
-  bool IsValid(const Map& map, const Configuration& conf);
+  bool Validate(const Map& map, const Configuration& conf);
   bool GetIsValid() const { return _isvalid; }
 
   Eigen::Matrix62d Eval(const double t) const;
@@ -184,6 +194,7 @@ private:
   JMTTrajectory1d _lonTraj;
   JMTTrajectory1d _latTraj;
   bool _isvalid = false;
+  std::string _message = "";
 };
 
 /**
