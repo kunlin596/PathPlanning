@@ -2,6 +2,24 @@
 
 namespace pathplanning {
 
+Perception::Perception(int id,
+                       double x,
+                       double y,
+                       double vx,
+                       double vy,
+                       double s,
+                       double d,
+                       const Map& map,
+                       const double time)
+  : id(id)
+  , xy({ x, y })
+  , xyVel({ vx, vy })
+  , sd({ s, d })
+{
+  speed = std::sqrt(xyVel[0] * xyVel[0] + xyVel[1] * xyVel[1]);
+  sdVel = ComputeFrenetVelocity(map, xy, xyVel, sd, time);
+}
+
 std::unordered_map<int, Perception>
 Perception::CreatePerceptions(const std::vector<std::vector<double>>& data, const Map& map, const double time)
 {

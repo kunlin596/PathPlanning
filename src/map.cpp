@@ -203,7 +203,7 @@ ComputeFrenetVelocity(const Map& map,
 
   velDir /= speed;
 
-  // Hard code the local tangential (Fernet) frame by 0.1 meter.
+  // Hard code the local tangential (Frenet) frame by 0.1 meter.
   Vector2d frenetFrameHeadingVec = { sd[0] + 0.1, sd[1] };
   auto tempFrenetFrameHeadingVec = map.GetXY(frenetFrameHeadingVec[0], frenetFrameHeadingVec[1]);
 

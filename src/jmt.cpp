@@ -106,7 +106,8 @@ JMTTrajectory1d::Validate(const std::array<double, 2>& posBound,
     auto values = Eval(currTime);
     if (!std::isnan(posBound[0]) and !std::isnan(posBound[1])) {
       if ((values[0] < posBound[0]) or (posBound[1] < values[0])) {
-        _message =  fmt::format("position is out of range, {:7.3f} out of [{:7.3f}, {:7.3f}]", values[0], posBound[0], posBound[1]);
+        _message = fmt::format(
+          "position is out of range, {:7.3f} out of [{:7.3f}, {:7.3f}]", values[0], posBound[0], posBound[1]);
         _isvalid = false;
         SPDLOG_DEBUG(_message);
         return _isvalid;
@@ -280,31 +281,6 @@ Matrix62d
 JMTTrajectory2d::operator()(const double t) const
 {
   return Eval(t);
-}
-
-std::vector<JMTTrajectory2d>
-JMT::SolveMultipleFeasible2d(const Matrix62d& conditions, const Map& map, const Configuration& conf)
-{
-  std::vector<JMTTrajectory2d> trajs;
-  int cnt = 0;
-
-  double minT = (conditions(3, 0) - conditions(0, 0)) / conf.speedLimit;
-  double currTime = minT;
-  while (currTime < (minT + conf.trajectory.maxTime + 1e-6)) {
-    auto traj = JMT::Solve2d(conditions, currTime);
-    traj.Write(fmt::format("/tmp/jmt/{}.json", cnt));
-    if (traj.Validate(map, conf)) {
-      trajs.push_back(traj);
-    }
-    currTime += conf.trajectory.timeResolution;
-    ++cnt;
-  }
-  if (trajs.empty()) {
-    SPDLOG_WARN("Checked {} time steps, and found {} feasible trajectories", cnt, trajs.size());
-  } else {
-    SPDLOG_DEBUG("Checked {} time steps, and found {} feasible trajectories", cnt, trajs.size());
-  }
-  return trajs;
 }
 
 std::ostream&

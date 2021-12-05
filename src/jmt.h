@@ -273,19 +273,6 @@ struct JMT
    * @return     The sd waypoint function.
    */
   static JMTTrajectory2d Solve2d(const Matrix62d& conditions, const double t);
-
-  /**
-   * @brief      Compute set of feasible trajectory
-   *
-   * @param[in]  sParams  The s parameters
-   * @param[in]  dParams  The d parameters
-   * @param[in]  conf     The configuration
-   *
-   * @return     set of feasible trajectories
-   */
-  static std::vector<JMTTrajectory2d> SolveMultipleFeasible2d(const Matrix62d& conditions,
-                                                              const Map& map,
-                                                              const Configuration& conf);
 };
 
 std::ostream&
