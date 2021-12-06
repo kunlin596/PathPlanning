@@ -92,12 +92,12 @@ System::SpinOnce(const std::string& commandString)
 
       // Create the latest perceptions from input command
       // Velocity is already meters per seconds no need to convert
-      _pTracker->Update(ego, Perception::CreatePerceptions(data["sensor_fusion"], map, conf.timeStep));
+      _pTracker->Update(ego, Perception::CreatePerceptions(data["sensor_fusion"], map, conf.simulatorTimeStep));
 
       double executedTime = 0.0;
       Matrix32d startState = ego.GetKinematics(0.0).topRows<3>();
       if (prevPath.size() > 0) {
-        executedTime = (_state.prevPathSize - prevPath.size()) * conf.simulator.timeStep;
+        executedTime = (_state.prevPathSize - prevPath.size()) * conf.simulatorTimeStep;
         startState = _state.cachedTrajectory(executedTime).topRows<3>();
       }
 
@@ -122,7 +122,7 @@ System::SpinOnce(const std::string& commandString)
       while (currTime < trajectory.GetTime()) {
         p = trajectory(currTime);
         path.push_back(_pMap->GetXY(p(0, 0), p(0, 1)));
-        currTime += _pConf->simulator.timeStep;
+        currTime += _pConf->simulatorTimeStep;
       }
 
       // Construct result message
