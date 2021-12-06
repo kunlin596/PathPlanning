@@ -19,7 +19,7 @@ Tracker::Update(const Ego& ego, const Perceptions& perceptions)
   Perceptions filteredPerceptions;
   for (const auto& [perceptionId, perception] : perceptions) {
     double dist = GetDistance(perception.sd, egoSd);
-    if (dist < _conf.tracker.nonEgoSearchRadius) {
+    if (dist < _conf.nonEgoSearchRadius) {
       filteredPerceptions[perceptionId] = perception;
     }
   }

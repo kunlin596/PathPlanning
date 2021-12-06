@@ -48,7 +48,7 @@ Ego::Update(double x, double y, double s, double d, double yaw, double speed, co
   double velx = std::cos(yaw) * speed;
   double vely = std::sin(yaw) * speed;
 
-  auto sdvel = ComputeFrenetVelocity(map, { _x, _y }, { velx, vely }, { s, d }, conf.simulator.timeStep);
+  auto sdvel = ComputeFrenetVelocity(map, { _x, _y }, { velx, vely }, { s, d }, conf.simulatorTimeStep);
   _kinematics.col(0) << s, sdvel[0], 0.0;
   _kinematics.col(1) << d, sdvel[1], 0.0;
 }

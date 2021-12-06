@@ -1,41 +1,10 @@
 {
   "serverPort": 4567,
-  "speedLimit": 49.5,
-  "timeStep": 0.02,
-  "timeHorizon": 1.0,
+  "maxVelocity": 22.352,
+  "simulatorTimeStep": 0.02,
   "nonEgoSearchRadius": 100,
-  "numPoints": 100,
-  "trajectory": {
-    "planningDistance": 30,
-    "maxTime": 10.0,
-    "maxJerk": 10.0,
-    "maxAcc": 10.0,
-    "expectedAccInOneSec": 3.0,
-    "expectedJerkInOneSec": 2.0,
-    "collisionCheckingRadius": 1.5,
-    "maxCurvature": 20.0,
-    "timeResolution": 0.5
-  },
-  "goalSampler": {
-    "use": false,
-    "sampleTimeStep": 0.5,
-    "numTimeSteps": 2,
-    "numSamplesPerTimeStep": 5,
-    "sampleSigmas": [
-      2.0, 1.0, 1.0,
-      0.1, 0.1, 0.1
-    ]
-  },
-  "driverProfileName" : "default",
-  "driverProfiles": {
-    "default": {
-      "timeDiff": 1.0,
-      "sDiff": 1.0,
-      "dDiff": 1.0,
-      "buffer": 1.0,
-      "efficiency": 1.0,
-      "totalAcc": 1.0,
-      "totalJerk": 1.0
-    }
-  }
+  "maxJerk": 10.0,
+  "maxAcceleration": 10.0,
+  "averageAcceleration": 3.0,
+  "averageJerk": 2.0
 }

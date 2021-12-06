@@ -50,8 +50,8 @@ CollisionChecker::IsInCollision(const JMTTrajectory2d& traj,
                                 const std::vector<Vehicle>& vehicles,
                                 const Configuration& conf)
 {
-  const auto& [id, dist] = GetMinDistance(traj, vehicles, conf.trajectory.collisionCheckingTimeStep);
-  double threshold = std::max(Vehicle::Size / 2.0, conf.trajectory.collisionCheckingRadius);
+  const auto& [id, dist] = GetMinDistance(traj, vehicles, conf.simulatorTimeStep);
+  double threshold = std::max(Vehicle::Size / 2.0, conf.collisionCheckingRadius);
   if (0.0 < dist and dist < threshold) {
     return { id, dist };
   }

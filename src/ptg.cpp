@@ -554,7 +554,7 @@ PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryCpp(const Ego& ego, const
       double followingDistance = std::numeric_limits<double>::quiet_NaN();
       _FindLeadingFollowingVehicle(ego.GetKinematics(0.0),
                                    vehicles,
-                                   _conf.tracker.nonEgoSearchRadius,
+                                   _conf.nonEgoSearchRadius,
                                    leadingVehicle,
                                    leadingDistance,
                                    followingVehicle,

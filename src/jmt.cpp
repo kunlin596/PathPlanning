@@ -85,10 +85,10 @@ bool
 JMTTrajectory1d::Validate(const Configuration& conf)
 {
   return Validate({ std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN() },
-                  conf.speedLimit,
-                  conf.trajectory.maxAcc,
-                  conf.trajectory.maxJerk,
-                  conf.trajectory.timeResolution);
+                  conf.maxVelocity,
+                  conf.maxAcceleration,
+                  conf.maxJerk,
+                  conf.simulatorTimeStep);
 }
 
 bool
