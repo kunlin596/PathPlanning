@@ -146,7 +146,7 @@ private:
 PolynomialTrajectoryGenerator::PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf)
   : _map(map)
   , _conf(conf)
-  , _pImpl(std::make_shared<PolynomialTrajectoryGenerator::Impl>(_map, _conf))
+  , _pImpl(std::make_shared<PolynomialTrajectoryGenerator::Impl>(map, conf))
 {}
 
 void

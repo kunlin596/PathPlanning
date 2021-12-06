@@ -47,8 +47,8 @@ private:
   struct Impl;
   std::shared_ptr<Impl> _pImpl;
 
-  const Configuration& _conf;
   const Map& _map;
+  const Configuration& _conf;
 };
 
 std::ostream&
