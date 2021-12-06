@@ -148,7 +148,7 @@ public:
                              const Vehicle& vehicle,
                              std::vector<JMTTrajectory1d>& trajectories) const;
 
-  void GenerateCrusingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories) const;
+  void GenerateCruisingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories) const;
 
   void GenerateVehicleFollowingTrajectory(const Ego& ego,
                                           const Vehicle& vehicle,
@@ -180,7 +180,7 @@ PolynomialTrajectoryGenerator::Impl::GenerateLonTrajectory(const LongitudinalMan
 {
   switch (lonBehavior) {
     case LongitudinalManeuverType::kCruising:
-      GenerateCrusingTrajectory(ego, trajectories);
+      GenerateCruisingTrajectory(ego, trajectories);
       return;
     case LongitudinalManeuverType::kStopping:
       GenerateStoppingTrajectory(ego, trajectories);
@@ -267,19 +267,19 @@ PolynomialTrajectoryGenerator::Impl::GenerateLatTrajectory(const LateralManeuver
 }
 
 void
-PolynomialTrajectoryGenerator::Impl::GenerateCrusingTrajectory(const Ego& ego,
-                                                               std::vector<JMTTrajectory1d>& trajectories) const
+PolynomialTrajectoryGenerator::Impl::GenerateCruisingTrajectory(const Ego& ego,
+                                                                std::vector<JMTTrajectory1d>& trajectories) const
 {
   auto start = std::chrono::steady_clock::now();
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
-  double minTime = 1.0;
-  double maxTime = 4.0;
-  double numTimeSteps = 20.0;
+  double minTime = _conf.lonCruiseMinTime;
+  double maxTime = _conf.lonCruiseMaxTime;
+  double numTimeSteps = _conf.lonCruiseNumTimeSteps;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
-  double minSddot = -2.0;
-  double maxSddot = 5.0;
-  double numSddotStep = 20.0;
+  double minSddot = _conf.lonCruiseMinSddot;
+  double maxSddot = _conf.lonCruiseMaxSddot;
+  double numSddotStep = _conf.lonCruiseNumSddotSteps;
   double sddotStep = (maxSddot - minSddot) / numSddotStep;
 
   int totalCount = static_cast<int>(numTimeSteps * numSddotStep);
@@ -297,7 +297,10 @@ PolynomialTrajectoryGenerator::Impl::GenerateCrusingTrajectory(const Ego& ego,
       conditions.bottomRows<2>() << std::min(egoLonKinematics[1] + sddot, Mph2Mps(45.0)), 0.0;
       auto traj = JMT::Solve1d_5DoF(conditions, T);
       if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
-        traj.ComputeCost(10.0, 2.0, 1.0, 2.0);
+        traj.ComputeCost(_conf.lonCruiseTimeWeight,
+                         _conf.lonCruisePosWeight,
+                         _conf.lonCruiseJerkWeight,
+                         _conf.lonCruiseEfficiencyWeight);
       }
       trajs[i * static_cast<int>(numSddotStep) + j] = traj;
     }
@@ -532,9 +535,9 @@ PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryCpp(const Ego& ego, const
   // Figure out longitudinal behaviors w.r.t. the traffic conditions on that lane.
   map<int, vector<LongitudinalManeuverType>> lonBehaviors;
 
-  double maxLaneChangingTriggerDistance = 20.0;
-  double maxStoppingTriggerDistance = 40.0;
-  double maxFollowTriggerDistance = 70.0;
+  double maxLaneChangingTriggerDistance = _conf.maxLaneChangingTriggerDistance;
+  double maxStoppingTriggerDistance = _conf.maxStoppingTriggerDistance;
+  double maxFollowTriggerDistance = _conf.maxFollowTriggerDistance;
 
   SPDLOG_INFO("  Compute longitudinal behavior.");
   for (const auto& [laneName, laneId] : laneIdsForPlanning) {

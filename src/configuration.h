@@ -31,6 +31,23 @@ public:
   double averageJerk = 2.0;
   double collisionCheckingRadius = 7.0;
 
+  // Longitudinal behaviors
+  double maxLaneChangingTriggerDistance = 20.0;
+  double maxStoppingTriggerDistance = 40.0;
+  double maxFollowTriggerDistance = 70.0;
+
+  // Longitudinal cruising trajectory parameters
+  double lonCruiseMinTime = 1.0;
+  double lonCruiseMaxTime = 4.0;
+  double lonCruiseNumTimeSteps = 20.0;
+  double lonCruiseMinSddot = -2.0;
+  double lonCruiseMaxSddot = 5.0;
+  double lonCruiseNumSddotSteps = 20.0;
+  double lonCruiseTimeWeight = 10.0;
+  double lonCruisePosWeight = 2.0;
+  double lonCruiseJerkWeight = 1.0;
+  double lonCruiseEfficiencyWeight = 2.0;
+
   void Parse(const std::string& filename);
 };
 
