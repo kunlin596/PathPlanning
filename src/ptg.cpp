@@ -104,11 +104,11 @@ _FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
 }
 
 void
-_GetOptimalCombination(const std::vector<JMTTrajectory1d>& lonTrajs,
-                       const std::vector<JMTTrajectory1d>& latTrajs,
-                       int& lonId,
-                       int& latId,
-                       double& minCost)
+GetOptimalCombination(const std::vector<JMTTrajectory1d>& lonTrajs,
+                      const std::vector<JMTTrajectory1d>& latTrajs,
+                      int& lonId,
+                      int& latId,
+                      double& minCost)
 {
   if ((lonTrajs.size() == 0) || (latTrajs.size() == 0)) {
     lonId = -1;
@@ -135,26 +135,59 @@ _GetOptimalCombination(const std::vector<JMTTrajectory1d>& lonTrajs,
 
 namespace pathplanning {
 
+class PolynomialTrajectoryGenerator::Impl
+{
+public:
+  Impl(const Map& map, const Configuration& conf)
+    : _map(map)
+    , _conf(conf)
+  {}
+
+  void GenerateLatTrajectory(const LateralManeuverType& latBehavior,
+                             const Ego& ego,
+                             std::vector<JMTTrajectory1d>& trajectories) const;
+
+  void GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
+                             const Ego& ego,
+                             const Vehicle& vehicle,
+                             std::vector<JMTTrajectory1d>& trajectories) const;
+
+  void GenerateCrusingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories) const;
+
+  void GenerateVehicleFollowingTrajectory(const Ego& ego,
+                                          const Vehicle& vehicle,
+                                          std::vector<JMTTrajectory1d>& trajectories) const;
+
+  void GenerateStoppingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories) const;
+
+  JMTTrajectory2d GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap) const;
+
+private:
+  const Map& _map;
+  const Configuration& _conf;
+};
+
 PolynomialTrajectoryGenerator::PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf)
   : _map(map)
   , _conf(conf)
+  , _pImpl(std::make_shared<PolynomialTrajectoryGenerator::Impl>(_map, _conf))
 {}
 
 void
-PolynomialTrajectoryGenerator::_GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
-                                                      const Ego& ego,
-                                                      const Vehicle& vehicle,
-                                                      std::vector<JMTTrajectory1d>& trajectories)
+PolynomialTrajectoryGenerator::Impl::GenerateLonTrajectory(const LongitudinalManeuverType& lonBehavior,
+                                                           const Ego& ego,
+                                                           const Vehicle& vehicle,
+                                                           std::vector<JMTTrajectory1d>& trajectories) const
 {
   switch (lonBehavior) {
     case LongitudinalManeuverType::kCruising:
-      _GenerateCrusingTrajectory(ego, trajectories);
+      GenerateCrusingTrajectory(ego, trajectories);
       return;
     case LongitudinalManeuverType::kStopping:
-      _GenerateStoppingTrajectory(ego, trajectories);
+      GenerateStoppingTrajectory(ego, trajectories);
       return;
     case LongitudinalManeuverType::kFollowing:
-      _GenerateVehicleFollowingTrajectory(ego, vehicle, trajectories);
+      GenerateVehicleFollowingTrajectory(ego, vehicle, trajectories);
       return;
     default:
       return;
@@ -162,9 +195,9 @@ PolynomialTrajectoryGenerator::_GenerateLonTrajectory(const LongitudinalManeuver
 }
 
 void
-PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType& latBehavior,
-                                                      const Ego& ego,
-                                                      std::vector<JMTTrajectory1d>& trajectories)
+PolynomialTrajectoryGenerator::Impl::GenerateLatTrajectory(const LateralManeuverType& latBehavior,
+                                                           const Ego& ego,
+                                                           std::vector<JMTTrajectory1d>& trajectories) const
 {
 
   Vector3d egoLatKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 1);
@@ -235,7 +268,8 @@ PolynomialTrajectoryGenerator::_GenerateLatTrajectory(const LateralManeuverType&
 }
 
 void
-PolynomialTrajectoryGenerator::_GenerateCrusingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories)
+PolynomialTrajectoryGenerator::Impl::GenerateCrusingTrajectory(const Ego& ego,
+                                                               std::vector<JMTTrajectory1d>& trajectories) const
 {
   auto start = std::chrono::steady_clock::now();
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
@@ -292,9 +326,10 @@ PolynomialTrajectoryGenerator::_GenerateCrusingTrajectory(const Ego& ego, std::v
 }
 
 void
-PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& ego,
-                                                                   const Vehicle& vehicle,
-                                                                   std::vector<JMTTrajectory1d>& trajectories)
+PolynomialTrajectoryGenerator::Impl::GenerateVehicleFollowingTrajectory(
+  const Ego& ego,
+  const Vehicle& vehicle,
+  std::vector<JMTTrajectory1d>& trajectories) const
 {
   auto start = std::chrono::steady_clock::now();
 
@@ -352,7 +387,8 @@ PolynomialTrajectoryGenerator::_GenerateVehicleFollowingTrajectory(const Ego& eg
 }
 
 void
-PolynomialTrajectoryGenerator::_GenerateStoppingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories)
+PolynomialTrajectoryGenerator::Impl::GenerateStoppingTrajectory(const Ego& ego,
+                                                                std::vector<JMTTrajectory1d>& trajectories) const
 {
   auto start = std::chrono::steady_clock::now();
 
@@ -455,10 +491,6 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   //
   // Finally we compare all 2D trajectories for each lane with each other and determine the final winner.
 
-  // if (usePython) {
-  //   return _GenerataTrajectoryPy(ego, trackedVehicleMap);
-  // }
-
   using std::map;
   using std::string;
   using std::unordered_map;
@@ -466,6 +498,8 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 
   SPDLOG_INFO("-------------------- Planning starting {:d} --------------------", ++_counter);
   auto egoLaneId = Map::GetLaneId(ego.GetKinematics(0.0)(0, 1));
+
+  const auto& impl = *_pImpl;
 
   // Figure out the lanes for planning
   int leftLaneId = egoLaneId - 1;
@@ -603,11 +637,11 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     // Generate longitudinal trajectories
     for (const auto& behavior : lonBehaviors[laneId]) {
       SPDLOG_INFO("   - Planning for {:s}.", behavior);
-      _GenerateLonTrajectory(behavior, ego, leadingVehicles[laneId], lonTrajs);
+      impl.GenerateLonTrajectory(behavior, ego, leadingVehicles[laneId], lonTrajs);
     }
 
     // Generate lateral trajectories
-    _GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs);
+    impl.GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs);
     SPDLOG_INFO("   - Planning for {:s}.", latBehaviors[laneId]);
 
     if (lonTrajs.empty() or latTrajs.empty()) {
@@ -619,7 +653,7 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     // Figure out optimal combination
     int lonId = -1, latId = -1;
     double cost;
-    _GetOptimalCombination(lonTrajs, latTrajs, lonId, latId, cost);
+    GetOptimalCombination(lonTrajs, latTrajs, lonId, latId, cost);
 
     if (lonId == -1 or latId == -1) {
       SPDLOG_INFO("   - Planning failed for lane {:d}, cannot find optimal combination, lonId={:d}, latId={:d}",
@@ -673,27 +707,9 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
   return bestTraj;
 }
 
-Matrix32d
-PolynomialTrajectoryGenerator::_ComputeStartStatePy(const Vehicle& ego,
-                                                    const JMTTrajectory2d& prevTraj,
-                                                    const Waypoints& prevPath)
-{
-  py::module pyPTG = py::module::import("pathplanning.ptg");
-  py::module pyJson = py::module::import("json");
-  py::array_t<double> pyStartState = pyPTG.attr("compute_start_state")(
-    pyJson.attr("loads")(ego.Dump().dump()), pyJson.attr("loads")(prevTraj.Dump().dump()), prevPath);
-  // py::print(pyStartState);
-  auto r = pyStartState.unchecked<2>();
-  Matrix32d startState;
-  for (py::ssize_t i = 0; i < r.shape(0); i++)
-    for (py::ssize_t j = 0; j < r.shape(1); j++)
-      startState(i, j) = r(i, j);
-  // SPDLOG_DEBUG(startState);
-  return startState;
-}
-
 JMTTrajectory2d
-PolynomialTrajectoryGenerator::_GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
+PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryPy(const Ego& ego,
+                                                          const TrackedVehicleMap& trackedVehicleMap) const
 {
   py::module pyPTG = py::module::import("pathplanning.ptg");
   py::dict pyTrackedVehicleMap;
