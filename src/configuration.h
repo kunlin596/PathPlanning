@@ -63,7 +63,7 @@ public:
 
   // Longitudinal stopping trajectory parameters
   double lonStoppingMinTime = 1.5;
-  double lonStoppingMaxTime = 4.0;
+  double lonStoppingMaxTime = 6.0;
   double lonStoppingNumTimeSteps = 10.0;
   double lonStoppingMinSddot = -1.0;
   double lonStoppingMaxSddot = -10.0;
