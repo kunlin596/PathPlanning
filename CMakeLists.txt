@@ -137,25 +137,6 @@ target_link_libraries(
   gtest_main
 )
 
-add_executable(test_ptg src/tests/test_ptg.cpp)
-target_link_libraries(
-  test_ptg
-  PRIVATE
-  trajectory
-  gtest
-  gtest_main
-)
-
-add_executable(test_traj_evaluator src/tests/test_traj_evaluator.cpp)
-target_link_libraries(
-  test_traj_evaluator
-  PRIVATE
-  trajectory
-  gtest
-  gtest_main
-)
-
 include(GoogleTest)
 gtest_discover_tests(test_jmt)
 gtest_discover_tests(test_math)
-gtest_discover_tests(test_traj_evaluator)
