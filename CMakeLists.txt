@@ -123,7 +123,7 @@ add_executable(test_math src/tests/test_math.cpp)
 target_link_libraries(
   test_math
   PRIVATE
-  driving
+  common
   gtest
   gtest_main
 )

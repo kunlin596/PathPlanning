@@ -3,22 +3,29 @@
 
 namespace {
 using namespace pathplanning;
+using namespace Eigen;
 }
 
 TEST(MathTest, QuinticFunctorTest)
 {
+  VectorXd coeffs;
+
   QuinticFunctor func;
-  func = QuinticFunctor({ 0, 0, 0, 0, 0, 0 });
+  coeffs << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+  func = QuinticFunctor(coeffs);
   EXPECT_EQ(func(0.0), 0.0);
 
-  func = QuinticFunctor({ 10.0, 0, 0, 0, 0, 0 });
+  coeffs << 10.0, 0, 0, 0, 0, 0;
+  func = QuinticFunctor(coeffs);
   EXPECT_EQ(func(0.0), 10.0);
 
-  func = QuinticFunctor({ 1.0, 1.0, 1.0, 0.0, 0.0, 0.0 });
+  coeffs << 1.0, 1.0, 1.0, 0.0, 0.0, 0.0;
+  func = QuinticFunctor(coeffs);
   EXPECT_EQ(func(1.0), 3.0);
   EXPECT_EQ(func(2.0), 7.0);
 
-  func = QuinticFunctor({ 0.0, 0.0, 0.0, 0.0, 2.0, 2.0 });
+  coeffs << 0.0, 0.0, 0.0, 0.0, 2.0, 2.0;
+  func = QuinticFunctor(coeffs);
   EXPECT_EQ(func(2.0), 96.0);
 }
 
@@ -30,8 +37,12 @@ TEST(MathTest, LogisticTest)
 
 TEST(MathTest, DifferentiaionTets)
 {
+
+  VectorXd coeffs;
+  coeffs << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0;
+
   QuinticFunctor func5;
-  func5 = QuinticFunctor({ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 });
+  func5 = QuinticFunctor();
   QuarticFunctor func4 = func5.Differentiate();
   EXPECT_EQ(func4.coeffs[0], 2.0);
   EXPECT_EQ(func4.coeffs[1], 6.0);
