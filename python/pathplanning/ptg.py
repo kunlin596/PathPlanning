@@ -24,8 +24,8 @@ log = logging.getLogger(__name__)
 
 np.set_printoptions(suppress=True, precision=5, sign=" ", floatmode="fixed")
 
-COLLISION_RADIUS = 1.5
-MAX_MPH = 50.0
+COLLISION_RADIUS = 2.5
+MAX_MPH = 49.0
 SIGMA_S = [1.0, 1.0, 1.0]
 
 from dataclasses import dataclass
@@ -41,13 +41,13 @@ class CostWeights:
     efficiency: float = 1.0
 
 
-def plot_trajectory(m, traj):
+def plot_trajectory(m, traj, color=None):
     """Plot trajectory on map"""
     curr_time = 0.0
     points = []
     times = np.linspace(0.0, traj.time)
     points = m.get_all_xy(traj(times)[:, 0, :])
-    m.plot_points(points, plt)
+    return m.plot_points(points, color=color, plt=plt)
 
 
 def plot_collision(
@@ -228,10 +228,10 @@ class JMTTrajectory1d:
     def validate(
         self,
         max_vel=None,
-        max_acc=10.0,
-        max_jerk=10.0,
+        max_acc=8.0,
+        max_jerk=8.0,
         total_acc=2.0,
-        total_jerk=1.0,
+        total_jerk=2.0,
         num_points=100,
         force_velocity_dir=False,
         pos_bounds=None,
@@ -404,8 +404,8 @@ class JMTTrajectory2d:
 
     @property
     def cost(self):
-        k_lon = 1.0
-        k_lat = 2.0
+        k_lon = 1.5
+        k_lat = 1.0
         return k_lon * self._lon_traj.cost + k_lat * self._lat_traj.cost
 
     @property
@@ -423,12 +423,14 @@ class JMTTrajectory2d:
     def eval_points(self, num_points=100):
         return m.get_all_xy(self.eval_frenet_points(num_points))
 
-    def validate_heading(self, initial_heading, max_heading=10.0):
+    def validate_heading(self, initial_heading, max_heading=30.0):
         points = self.eval_points()
         diff = points[1:, :] - points[:-1, :]
         diff /= np.linalg.norm(diff, axis=1)[..., -1]
         headings = np.rad2deg(np.arctan2(diff[:, 1], diff[:, 0]))
-        is_initial_heading_valid = abs(headings[0] - initial_heading) < max_heading
+        # print(headings)
+        # is_initial_heading_valid = abs(headings[0] - initial_heading) < max_heading
+        is_initial_heading_valid = True
         is_traj_heading_valid = (
             np.abs(headings[1:] - headings[:-1]) < max_heading
         ).all()
@@ -529,7 +531,6 @@ class JMTTrajectory2d:
         min_s = np.min([traj.lon_traj.start_cond[0] for traj in trajs])
         max_s = np.max([traj.lon_traj.end_cond[0] for traj in trajs])
 
-        m = Map(Path(__file__).parent / "../data/highway_map.csv")
         if not pos_only:
             plt.subplot(3, 2, 1)
         m.plot([min_s, max_s], plt=plt)
@@ -588,7 +589,7 @@ class JMTSolver:
         A = np.array([[3 * T2, 4 * T3], [6 * T, 12 * T2]])
         M = np.array([[1.0, T], [0.0, 1.0]])
 
-        c34 = np.linalg.solve(A, s_f - M @ c012[1:])
+        c34 = np.linalg.solve(A, s_f - M @ s_i[1:])
 
         # Constraint the time
         traj = JMTTrajectory1d(Polynomial(np.r_[c012, c34, 0.0]), s_i, s_f, T)
@@ -630,45 +631,6 @@ class Kinematics:
     @property
     def coef(self):
         return self._kinematics.coef
-
-
-def compute_start_state(ego, prevTraj, prevPath):
-
-    # print(f"len(prevPath)={len(prevPath)}")
-    ego_kinematics_s = Kinematics(ego["kinematics"][:3])
-    ego_kinematics_d = Kinematics(ego["kinematics"][3:])
-    if len(prevPath) == 0:
-        start_state = np.array(
-            [
-                ego_kinematics_s.get_kinematics(0.0)[:3],
-                ego_kinematics_d.get_kinematics(0.0)[:3],
-            ]
-        ).T
-        # print(f"initial start_state={start_state}")
-        return start_state
-
-    lon_time = prevTraj["lonTraj"]["time"]
-    lon_poly = Kinematics(prevTraj["lonTraj"]["position"])
-    lon_start_cond = lon_poly.get_kinematics(0.0)[:3]
-    lon_end_cond = lon_poly.get_kinematics(lon_time)[:3]
-    lon_traj = JMTTrajectory1d(
-        lon_poly.kinematics, lon_start_cond, lon_end_cond, lon_time
-    )
-
-    lat_time = prevTraj["latTraj"]["time"]
-    lat_poly = Kinematics(prevTraj["latTraj"]["position"])
-    lat_start_cond = lat_poly.get_kinematics(0.0)[:3]
-    lat_end_cond = lat_poly.get_kinematics(lat_time)[:3]
-    lat_traj = JMTTrajectory1d(
-        lat_poly.kinematics, lat_start_cond, lon_end_cond, lat_time
-    )
-
-    prev_traj = JMTTrajectory2d(lon_traj, lat_traj)
-    simulator_time_step = 0.02  # TODO
-    executed_time = (100 - len(prevPath)) * simulator_time_step
-    start_state = prev_traj(executed_time)[:3, :]
-
-    return start_state
 
 
 class Map:
@@ -820,13 +782,24 @@ class Map:
             )
         return cropped_lanes
 
-    def plot_points(self, points, plt=None):
+    def plot_points(self, points, color=None, plt=None):
+        handles = []
         for lane in self._crop_map_using_xy(
             points.min(axis=0) - 10, points.max(axis=0) + 10
         ):
-            plt.plot(lane[:, 0], lane[:, 1], "r-", alpha=0.5)
-            plt.plot(points[:, 0], points[:, 1], markersize=3, marker="x")
+            handles.append(plt.plot(lane[:, 0], lane[:, 1], "r-", alpha=0.5))
+            handles.append(
+                plt.plot(
+                    points[:, 0],
+                    points[:, 1],
+                    markersize=5,
+                    marker="x",
+                    linewidth=2,
+                    color=color,
+                )
+            )
         plt.axis("equal")
+        return handles
 
 
 m = Map(Path(os.environ.get("MAP_DATA", "")))
@@ -901,7 +874,7 @@ class PTG:
         return np.asarray(trajs)
 
     @staticmethod
-    def get_optimal_combination(lon_trajs, lat_trajs, k_lon=1.0, k_lat=2.0):
+    def get_optimal_combination(lon_trajs, lat_trajs, k_lon=1.5, k_lat=1.0):
         costs = []
         for lon_traj in lon_trajs:
             for lat_traj in lat_trajs:
@@ -915,7 +888,7 @@ class PTG:
     @staticmethod
     def check_collision(traj, tracked_vehicles):
         if len(tracked_vehicles):
-            timesteps = np.linspace(0.0, traj.time, 50)
+            timesteps = np.linspace(0.0, traj.time, 25)
             traj_points = traj(timesteps)[:, 0, :]
 
             for vid, vehicle in tracked_vehicles.items():
@@ -1089,17 +1062,17 @@ def generate_trajectory(ego, tracked_vehicles):
 
     lane_ids_for_planning = dict(current=ego_lane_id)
 
-    if 0 <= left_lane_id < ego_lane_id:
-        lane_ids_for_planning["left"] = left_lane_id
-    if ego_lane_id < right_lane_id <= Map.NUM_LANES:
-        lane_ids_for_planning["right"] = right_lane_id
+    if ego["kinematics"][1] > Utils.to_mps(10.0):
+        if 0 <= left_lane_id < ego_lane_id:
+            lane_ids_for_planning["left"] = left_lane_id
+        if ego_lane_id < right_lane_id <= Map.NUM_LANES:
+            lane_ids_for_planning["right"] = right_lane_id
 
     lon_behaviors = dict()
     leading_vehicles = dict()  # TODO
 
     for lane_name, lane_id in lane_ids_for_planning.items():
         lon_behaviors[lane_id] = []
-
         vehicles = grouped_vehicles.get(lane_id)
         if vehicles is not None and len(vehicles) > 0:
             leading_vehicle, min_dist = find_leading_vehicle(ego, vehicles)
@@ -1115,8 +1088,6 @@ def generate_trajectory(ego, tracked_vehicles):
                 lon_behaviors[lane_id].append(LonManeuverType.kCrusing)
         else:
             lon_behaviors[lane_id].append(LonManeuverType.kCrusing)
-
-    # pprint.pprint(lon_behaviors)
 
     lat_behaviors = dict()
     lat_behaviors[ego_lane_id] = LatManeuverType.kLaneKeeping
@@ -1167,6 +1138,9 @@ def generate_trajectory(ego, tracked_vehicles):
 
         traj = JMTTrajectory2d(lon_trajs[lon_id], lat_trajs[lat_id])
 
+        if not traj.validate_heading(initial_heading=ego["yaw"]):
+            continue
+
         print(
             f" - Planned for behavior: {traj._lon_traj.behavior.name}, {traj._lat_traj.behavior.name}, "
             f"lon_cost={lon_trajs[lon_id].cost:.3f}, lat_cost={lat_trajs[lat_id].cost:.3f}, cost={traj.cost:.3f}"
@@ -1206,6 +1180,16 @@ def generate_trajectory(ego, tracked_vehicles):
     # ):
     #     embed()
 
+    if os.environ.get("PTG_MODE", "Debug"):
+        import pickle
+
+        debug_output_path = Path(f"/tmp/path/")
+        os.makedirs(debug_output_path, exist_ok=True)
+        with open(debug_output_path / f"{time.time()}.plan", "wb") as f:
+            pickle.dump(
+                dict(trajs=trajs, ego=ego, tracked_vehicles=tracked_vehicles), f
+            )
+
     return dict(
         # lon
         lon_coef=best_traj.lon_traj.pos_poly.coef,
@@ -1220,7 +1204,162 @@ def generate_trajectory(ego, tracked_vehicles):
     )
 
 
+def plot_vehicles(tracked_vehicles, colors):
+    points = [
+        np.asarray(vehicle["kinematics"])[[0, 3]]
+        for vid, vehicle in tracked_vehicles.items()
+    ]
+    points = m.get_all_xy(points)
+
+    timesteps = np.linspace(0.0, 5.0, 50)
+    for vid, vehicle in tracked_vehicles.items():
+        if vid not in colors:
+            colors[vid] = np.random.random(3)
+        kin = dict(
+            s_kin=Kinematics(vehicle["kinematics"][:3]),
+            d_kin=Kinematics(vehicle["kinematics"][3:]),
+        )
+
+        pred_s = kin["s_kin"].get_kinematics(timesteps)[0]
+        pred_d = kin["d_kin"].get_kinematics(timesteps)[0]
+        vpoints = m.get_all_xy(np.vstack([pred_s, pred_d]).T)
+        plt.plot(
+            vpoints[:, 0],
+            vpoints[:, 1],
+            color=colors[vid],
+            marker="o",
+            markersize=3,
+            alpha=0.5,
+        )
+
+
+def clear_artists(handles):
+    if not isinstance(handles, list):
+        handles.remove()
+        return
+
+    for h in handles:
+        clear_artists(h)
+
+
 if __name__ == "__main__":
-    from IPython import embed
+    import pickle
+    import argparse
+
+    parser = argparse.ArgumentParser(description="PTG")
+    parser.add_argument(
+        "--path",
+        "-p",
+        dest="path",
+        type=str,
+        help="Path to the path planning cache data",
+    )
+    parser.add_argument(
+        "--last",
+        "-l",
+        dest="last",
+        default=None,
+        type=int,
+        help="Only plot the last N data.",
+    )
+
+    options = parser.parse_args()
+
+    plans = []
+    datapath = options.path
+    filenames = sorted(os.listdir(datapath), key=lambda x: float(x[:-5]))
+    for filename in filenames:
+        abspath = os.path.join(datapath, filename)
+        with open(abspath, "rb") as f:
+            plans.append(pickle.load(f))
+
+    colors = dict()
+    ego_handler = None
+    plt.ion()
+    plt.show()
+
+    handles1 = None
+    handles2 = None
+
+    if options.last is not None:
+        plans = plans[-options.last :]
+
+    # best_trajs = []
+    # for index, plan2 in enumerate(plans[1:]):
+    #     ego = plan2["ego"]
+
+    #     plan1 = plans[index - 1]
+
+    #     trajs1 = sorted(plan1["trajs"], key=lambda x: x.cost)
+    #     trajs1 = [trajs1[0]]
+    #     trajs2 = sorted(plan2["trajs"], key=lambda x: x.cost)
+    #     trajs2 = [trajs2[0]]
+
+    #     best_trajs.append(trajs2[0])
+
+    #     if handles1 is not None:
+    #         clear_artists(handles1)
+
+    #     for traj in trajs1:
+    #         handles1 = plot_trajectory(m, traj, color="r")
+    #     handles1.extend(plot_trajectory(m, trajs1[0], color="gray"))
+
+    #     if handles2 is not None:
+    #         clear_artists(handles2)
+
+    #     for traj in trajs2:
+    #         handles2 = plot_trajectory(m, traj, color="g")
+    #     handles2.extend(plot_trajectory(m, trajs2[0], color="black"))
+
+    #     sd = m.get_xy(
+    #         ego["kinematics"][0],
+    #         ego["kinematics"][3],
+    #     )
+
+    #     ego_handler = plt.plot(
+    #         sd[0], sd[1], marker="o", markersize=20, alpha=0.5, color="black"
+    #     )
+
+    #     print(f"plan={index}")
+    #     # colors = dict()
+    #     # tracked_vehicles = plan2["tracked_vehicles"]
+    #     # plot_vehicles(tracked_vehicles, colors)
+
+    #     # if len(trajs2) > 1:
+    #     input()
+
+    # curr_time = 0
+    # pos = []
+    # for p in plans:
+    #     trajs = sorted(p["trajs"], key=lambda x: x.cost)
+    #     best_lon_traj = trajs[0].lon_traj
+    #     max_time = trajs[0].time
+    #     times = np.arange(0.0, max_time, 0.02)
+    #     x = best_lon_traj(times)
+
+    #     curr_time += max_time
+    #     times1 = times + curr_time
+
+    #     plt.subplot(3, 1, 1)
+    #     plt.plot(times, x[0, :], marker="o", linewidth=1)
+    #     plt.subplot(3, 1, 2)
+    #     plt.plot(times, x[1, :], marker="o", linewidth=1)
+    #     plt.subplot(3, 1, 3)
+    #     plt.plot(times, x[2, :], marker="o", linewidth=1)
+
+    # for traj in trajs:
+    #     valid = traj.validate_heading(initial_heading=ego["yaw"])
+    #     print(f"{traj.behavior}, {valid}")
+
+    # plt.axis("equal")
+    # points = traj.eval_points()
+    # diff = points[1:, :] - points[:-1, :]
+    # diff /= np.linalg.norm(diff, axis=1)[..., -1]
+    # for index in range(len(points[1:])):
+    #     plt.arrow(
+    #         points[index + 1][0], points[index + 1][1], diff[index][0], diff[index][1]
+    #     )
+    # plt.plot(points[:, 0], points[:, 1], "r-")
+    # headings = np.rad2deg(np.arctan2(diff[:, 1], diff[:, 0]))
 
     embed()
