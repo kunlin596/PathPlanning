@@ -59,7 +59,11 @@ public:
    */
   int Spin();
 
-  void UpdateCachedTrajectory(const JMTTrajectory2d& traj) { _state.cachedTrajectory = traj; }
+  void UpdateCachedTrajectory(const JMTTrajectory2d& traj, int prevPathSize)
+  {
+    _state.cachedTrajectory = traj;
+    _state.prevPathSize = prevPathSize;
+  }
 
   State GetState() const { return _state; }
 

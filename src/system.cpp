@@ -130,8 +130,7 @@ System::SpinOnce(const std::string& commandString)
       std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(path);
 
       SPDLOG_DEBUG("path={}", path);
-      UpdateCachedTrajectory(trajectory);
-      _state.prevPathSize = path.size();
+      UpdateCachedTrajectory(trajectory, path.size());
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
     }
