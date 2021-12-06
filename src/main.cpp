@@ -9,8 +9,9 @@ main(int argc, char** argv)
 {
   namespace po = boost::program_options;
   using namespace pathplanning;
-  namespace py = pybind11;
-  py::scoped_interpreter guard{};
+
+  // namespace py = pybind11;
+  // py::scoped_interpreter guard{};
 
   std::string confFileName;
   std::string mapFileName;
