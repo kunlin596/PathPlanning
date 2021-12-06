@@ -20,7 +20,7 @@ public:
 
   int serverPort = 4567;
 
-  bool usePython = true;
+  std::string mode = "cpp";
 
   double speedLimit = Mph2Mps(50.0);
 

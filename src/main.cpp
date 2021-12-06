@@ -2,6 +2,7 @@
 #include "system.h"
 #include <boost/program_options.hpp>
 #include <iostream>
+
 #include <pybind11/embed.h>
 
 int
@@ -10,8 +11,8 @@ main(int argc, char** argv)
   namespace po = boost::program_options;
   using namespace pathplanning;
 
-  // namespace py = pybind11;
-  // py::scoped_interpreter guard{};
+  namespace py = pybind11;
+  py::scoped_interpreter guard{};
 
   std::string confFileName;
   std::string mapFileName;

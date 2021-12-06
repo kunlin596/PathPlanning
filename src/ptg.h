@@ -49,8 +49,6 @@ private:
 
   const Configuration& _conf;
   const Map& _map;
-
-  int _counter = 0;
 };
 
 std::ostream&

@@ -8,14 +8,9 @@
 #include <chrono>
 #include <map>
 
-#include <pybind11/pybind11.h>
-
 #include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-
-#ifdef DEBUG_MODE
-#include <boost/filesystem.hpp>
-#endif
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -23,6 +18,7 @@
 
 namespace {
 using namespace pathplanning;
+
 namespace py = pybind11;
 
 /**
@@ -67,8 +63,8 @@ _FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
                              Vehicle& followingVehicle,
                              double& followingDistance)
 {
-  double leadingLonDiff = std::numeric_limits<double>::max();
-  double followingLonDiff = std::numeric_limits<double>::max();
+  double leadingLonDiff = std::numeric_limits<double>::infinity();
+  double followingLonDiff = std::numeric_limits<double>::infinity();
 
   int leadingId = -1;
   int followingId = -1;
@@ -160,11 +156,14 @@ public:
 
   void GenerateStoppingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories) const;
 
-  JMTTrajectory2d GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap) const;
+  JMTTrajectory2d GenerataTrajectoryCpp(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
+
+  JMTTrajectory2d GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
 private:
   const Map& _map;
   const Configuration& _conf;
+  int _counter = 0;
 };
 
 PolynomialTrajectoryGenerator::PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf)
@@ -446,7 +445,7 @@ PolynomialTrajectoryGenerator::Impl::GenerateStoppingTrajectory(const Ego& ego,
 }
 
 JMTTrajectory2d
-PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
+PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryCpp(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
 {
   // For more information on trajectory generation, see
   // "Optimal Trajectory Generation for Dynamic Street Scenarios in a Frenet Frame",
@@ -498,8 +497,6 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 
   SPDLOG_INFO("-------------------- Planning starting {:d} --------------------", ++_counter);
   auto egoLaneId = Map::GetLaneId(ego.GetKinematics(0.0)(0, 1));
-
-  const auto& impl = *_pImpl;
 
   // Figure out the lanes for planning
   int leftLaneId = egoLaneId - 1;
@@ -637,11 +634,11 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
     // Generate longitudinal trajectories
     for (const auto& behavior : lonBehaviors[laneId]) {
       SPDLOG_INFO("   - Planning for {:s}.", behavior);
-      impl.GenerateLonTrajectory(behavior, ego, leadingVehicles[laneId], lonTrajs);
+      GenerateLonTrajectory(behavior, ego, leadingVehicles[laneId], lonTrajs);
     }
 
     // Generate lateral trajectories
-    impl.GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs);
+    GenerateLatTrajectory(latBehaviors[laneId], ego, latTrajs);
     SPDLOG_INFO("   - Planning for {:s}.", latBehaviors[laneId]);
 
     if (lonTrajs.empty() or latTrajs.empty()) {
@@ -708,8 +705,7 @@ PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedV
 }
 
 JMTTrajectory2d
-PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryPy(const Ego& ego,
-                                                          const TrackedVehicleMap& trackedVehicleMap) const
+PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
 {
   py::module pyPTG = py::module::import("pathplanning.ptg");
   py::dict pyTrackedVehicleMap;
@@ -738,6 +734,19 @@ PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryPy(const Ego& ego,
 
   return JMTTrajectory2d(JMTTrajectory1d(QuinticFunctor(lonCoef), lonStartCond, lonEndCond, lonTime),
                          JMTTrajectory1d(QuinticFunctor(latCoef), latStartCond, latEndCond, latTime));
+}
+
+JMTTrajectory2d
+PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
+{
+  if (_conf.mode == "python") {
+    return _pImpl->GenerataTrajectoryPy(ego, trackedVehicleMap);
+  } else if (_conf.mode == "cpp") {
+    return _pImpl->GenerataTrajectoryCpp(ego, trackedVehicleMap);
+  }
+
+  throw std::runtime_error(
+    fmt::format("Planner mode {} is not supported, choose from [`python` and `cpp`].", _conf.mode));
 }
 
 std::ostream&
