@@ -1,8 +1,8 @@
 #include "configuration.h"
 
 #define PARSE_PROPERTY(NAME)                                                                                           \
-  if (j.count("##NAME")) {                                                                                             \
-    NAME = j["##NAME"];                                                                                                \
+  if (j.count(#NAME)) {                                                                                                \
+    NAME = j[#NAME];                                                                                                   \
   }
 
 namespace pathplanning {
