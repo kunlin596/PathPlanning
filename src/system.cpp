@@ -92,17 +92,7 @@ System::SpinOnce(const std::string& commandString)
 
       // Create the latest perceptions from input command
       // Velocity is already meters per seconds no need to convert
-      Perceptions perceptions = Perception::CreatePerceptions(data["sensor_fusion"], map, conf.timeStep);
-
-      _pTracker->Update(ego, perceptions);
-
-      std::vector<std::vector<Vehicle>> vehicles(3);
-      for (const auto& [vehicleId, vehicle] : _pTracker->GetVehicles()) {
-        int laneId = Map::GetLaneId(vehicle.GetKinematics(0.0)(0, 1));
-        if (laneId > -1) {
-          vehicles[laneId].push_back(vehicle);
-        }
-      }
+      _pTracker->Update(ego, Perception::CreatePerceptions(data["sensor_fusion"], map, conf.timeStep));
 
       double executedTime = 0.0;
       Matrix32d startState = ego.GetKinematics(0.0).topRows<3>();
@@ -135,18 +125,12 @@ System::SpinOnce(const std::string& commandString)
         currTime += _pConf->simulator.timeStep;
       }
 
-      UpdateCachedTrajectory(trajectory);
-      SPDLOG_TRACE(
-        "prevPath.size()={}, path.size()={}, _pConf->numPoints={}", prevPath.size(), path.size(), _pConf->numPoints);
-
-      //
       // Construct result message
-      //
-
       json waypointsJson;
       std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(path);
 
-      SPDLOG_TRACE("path={}", path);
+      SPDLOG_DEBUG("path={}", path);
+      UpdateCachedTrajectory(trajectory);
       _state.prevPathSize = path.size();
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
