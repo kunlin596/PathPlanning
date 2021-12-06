@@ -87,6 +87,10 @@ public:
   double latJerkWeight = 2.0;
   double latEfficiencyWeight = 1.0;
 
+  // 2d trajectory parameters
+  double lonWeight = 1.0;
+  double latWeight = 2.0;
+
   void Parse(const std::string& filename);
 };
 

@@ -98,35 +98,6 @@ _FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
     SPDLOG_TRACE("Found following id {:2d}, followingLonDiff={:7.3f}", vehicles[followingId].GetId(), followingLonDiff);
   }
 }
-
-void
-GetOptimalCombination(const std::vector<JMTTrajectory1d>& lonTrajs,
-                      const std::vector<JMTTrajectory1d>& latTrajs,
-                      int& lonId,
-                      int& latId,
-                      double& minCost)
-{
-  if ((lonTrajs.size() == 0) || (latTrajs.size() == 0)) {
-    lonId = -1;
-    latId = -1;
-    return;
-  }
-
-  // cost weight for longitudinal / lateral
-  double kLon = 1.0;
-  double kLat = 2.0;
-
-  // build sum matrix
-  Eigen::MatrixXd sdCostSum(lonTrajs.size(), latTrajs.size());
-  for (int row = 0; row < lonTrajs.size(); ++row) {
-    for (int col = 0; col < latTrajs.size(); ++col) {
-      sdCostSum(row, col) = kLon * lonTrajs[row].GetCost() + kLat * latTrajs[col].GetCost();
-    }
-  }
-  // find minimum
-  minCost = sdCostSum.minCoeff(&lonId, &latId);
-}
-
 }
 
 namespace pathplanning {
@@ -159,6 +130,12 @@ public:
   JMTTrajectory2d GenerataTrajectoryCpp(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
   JMTTrajectory2d GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
+
+  void GetOptimalCombination(const std::vector<JMTTrajectory1d>& lonTrajs,
+                             const std::vector<JMTTrajectory1d>& latTrajs,
+                             int& lonId,
+                             int& latId,
+                             double& minCost) const;
 
 private:
   const Map& _map;
@@ -451,6 +428,34 @@ PolynomialTrajectoryGenerator::Impl::GenerateStoppingTrajectory(const Ego& ego,
                 trajs.size(),
                 elapsedTime.count());
   }
+}
+
+void
+PolynomialTrajectoryGenerator::Impl::GetOptimalCombination(const std::vector<JMTTrajectory1d>& lonTrajs,
+                                                           const std::vector<JMTTrajectory1d>& latTrajs,
+                                                           int& lonId,
+                                                           int& latId,
+                                                           double& minCost) const
+{
+  if ((lonTrajs.size() == 0) || (latTrajs.size() == 0)) {
+    lonId = -1;
+    latId = -1;
+    return;
+  }
+
+  // cost weight for longitudinal / lateral
+  double lonWeight = _conf.lonWeight;
+  double latWeight = _conf.latWeight;
+
+  // build sum matrix
+  Eigen::MatrixXd sdCostSum(lonTrajs.size(), latTrajs.size());
+  for (int row = 0; row < lonTrajs.size(); ++row) {
+    for (int col = 0; col < latTrajs.size(); ++col) {
+      sdCostSum(row, col) = lonWeight * lonTrajs[row].GetCost() + latWeight * latTrajs[col].GetCost();
+    }
+  }
+  // find minimum
+  minCost = sdCostSum.minCoeff(&lonId, &latId);
 }
 
 JMTTrajectory2d
