@@ -220,33 +220,33 @@ PolynomialTrajectoryGenerator::Impl::GenerateLatTrajectory(const LateralManeuver
     targetD = Map::GetLaneCenterD(0);
   }
 
-  double minTime = 1.5;
-  double maxTime = 4.0;
-  double numTimeSteps = 20.0;
+  double minTime = _conf.latMinTime;
+  double maxTime = _conf.latMaxTime;
+  double numTimeSteps = _conf.latNumTimeSteps;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
-  double minDs = -0.05;
-  double maxDs = 0.05;
-  double numDsStep = 5.0;
-  double dsStep = (maxDs - minDs) / numDsStep;
+  double minDs = _conf.latMinDs;
+  double maxDs = _conf.latMaxDs;
+  double numDsSteps = _conf.latNumDsSteps;
+  double dsStep = (maxDs - minDs) / numDsSteps;
 
-  std::vector<JMTTrajectory1d> trajs(static_cast<int>(numTimeSteps * numDsStep));
+  std::vector<JMTTrajectory1d> trajs(static_cast<int>(numTimeSteps * numDsSteps));
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
   for (int i = 0; i < static_cast<int>(numTimeSteps); ++i) {
     double T = minTime + (double)i * timeStep;
-    for (int j = 0; j < static_cast<int>(numDsStep); ++j) {
+    for (int j = 0; j < static_cast<int>(numDsSteps); ++j) {
       double ds = minDs + static_cast<double>(j) * dsStep;
       Vector6d conditions;
       conditions.topRows<3>() = egoLatKinematics;
       conditions.bottomRows<3>() << targetD + ds, 0.0, 0.0;
       auto traj = JMT::Solve1d_6DoF(conditions, T);
       if (traj.Validate(Map::GetRoadBoundary())) {
-        traj.ComputeCost(10.0, 1.0, 2.0, 1.0);
+        traj.ComputeCost(_conf.latTimeWeight, _conf.latPosWeight, _conf.latJerkWeight, _conf.latEfficiencyWeight);
       }
-      trajs[i * static_cast<int>(numDsStep) + j] = traj;
+      trajs[i * static_cast<int>(numDsSteps) + j] = traj;
     }
   }
 

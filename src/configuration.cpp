@@ -65,5 +65,16 @@ Configuration::Parse(const std::string& filename)
   PARSE_PROPERTY(lonStoppingPosWeight);
   PARSE_PROPERTY(lonStoppingJerkWeight);
   PARSE_PROPERTY(lonStoppingEfficiencyWeight);
+
+  PARSE_PROPERTY(latMinTime);
+  PARSE_PROPERTY(latMaxTime);
+  PARSE_PROPERTY(latNumTimeSteps);
+  PARSE_PROPERTY(latMinDs);
+  PARSE_PROPERTY(latMaxDs);
+  PARSE_PROPERTY(latNumDsSteps);
+  PARSE_PROPERTY(latTimeWeight);
+  PARSE_PROPERTY(latPosWeight);
+  PARSE_PROPERTY(latJerkWeight);
+  PARSE_PROPERTY(latEfficiencyWeight);
 }
 } // namespace pathplanning

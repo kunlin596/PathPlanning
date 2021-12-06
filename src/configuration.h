@@ -74,6 +74,19 @@ public:
   double lonStoppingJerkWeight = 1.0;
   double lonStoppingEfficiencyWeight = 2.0;
 
+  // Lateral trajectory parameters
+  double latMinTime = 1.5;
+  double latMaxTime = 4.0;
+  double latNumTimeSteps = 20.0;
+  double latMinDs = -0.05;
+  double latMaxDs = 0.05;
+  double latNumDsSteps = 5.0;
+
+  double latTimeWeight = 10.0;
+  double latPosWeight = 1.0;
+  double latJerkWeight = 2.0;
+  double latEfficiencyWeight = 1.0;
+
   void Parse(const std::string& filename);
 };
 
