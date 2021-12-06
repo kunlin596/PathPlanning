@@ -1,5 +1,7 @@
 # CarND Path Planning Project
 Self-Driving Car Engineer Nanodegree Program
+
+![](./images/sample2.png)
    
 ### Description
 In this project, the goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit.
