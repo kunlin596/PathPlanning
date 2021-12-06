@@ -61,6 +61,19 @@ public:
   double lonFollowingJerkWeight = 1.0;
   double lonFollowingEfficiencyWeight = 5.0;
 
+  // Longitudinal stopping trajectory parameters
+  double lonStoppingMinTime = 1.5;
+  double lonStoppingMaxTime = 4.0;
+  double lonStoppingNumTimeSteps = 10.0;
+  double lonStoppingMinSddot = -1.0;
+  double lonStoppingMaxSddot = -10.0;
+  double lonStoppingNumSddotSteps = 20.0;
+
+  double lonStoppingTimeWeight = 10.0;
+  double lonStoppingPosWeight = 2.0;
+  double lonStoppingJerkWeight = 1.0;
+  double lonStoppingEfficiencyWeight = 2.0;
+
   void Parse(const std::string& filename);
 };
 

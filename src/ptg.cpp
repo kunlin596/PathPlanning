@@ -399,14 +399,14 @@ PolynomialTrajectoryGenerator::Impl::GenerateStoppingTrajectory(const Ego& ego,
 
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
 
-  double minTime = 1.5;
-  double maxTime = 4.0;
-  double numTimeSteps = 10.0;
+  double minTime = _conf.lonStoppingMinTime;
+  double maxTime = _conf.lonStoppingMaxTime;
+  double numTimeSteps = _conf.lonStoppingNumTimeSteps;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
-  double minSddot = -1.0;
-  double maxSddot = -10.0;
-  double numSddotStep = 20.0;
+  double minSddot = _conf.lonStoppingMinSddot;
+  double maxSddot = _conf.lonStoppingMaxSddot;
+  double numSddotStep = _conf.lonStoppingNumSddotSteps;
   double sddotStep = (maxSddot - minSddot) / numSddotStep;
 
   std::vector<JMTTrajectory1d> trajs(static_cast<int>(numTimeSteps * numSddotStep));
@@ -423,7 +423,10 @@ PolynomialTrajectoryGenerator::Impl::GenerateStoppingTrajectory(const Ego& ego,
       conditions.block<2, 1>(3, 0) << egoLonKinematics[1] + sddot, 0.0;
       auto traj = JMT::Solve1d_5DoF(conditions, T);
       if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
-        traj.ComputeCost(10.0, 2.0, 1.0, 2.0);
+        traj.ComputeCost(_conf.lonStoppingTimeWeight,
+                         _conf.lonStoppingPosWeight,
+                         _conf.lonStoppingJerkWeight,
+                         _conf.lonStoppingEfficiencyWeight);
       }
       trajs[i * static_cast<int>(numSddotStep) + j] = traj;
     }
