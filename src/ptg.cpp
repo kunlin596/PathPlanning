@@ -337,13 +337,13 @@ PolynomialTrajectoryGenerator::Impl::GenerateVehicleFollowingTrajectory(
 
   Vector3d egoLonKinematics = ego.GetKinematics(0.0).block<3, 1>(0, 0);
   Vector3d vehicleLonKinematics = vehicle.GetKinematics(0.0).block<3, 1>(0, 0);
-  double minTime = 1.0;
-  double maxTime = 10.0;
-  double numTimeSteps = 20.0;
+  double minTime = _conf.lonFollowingMinTime;
+  double maxTime = _conf.lonFollowingMaxTime;
+  double numTimeSteps = _conf.lonFollowingNumTimeSteps;
   double timeStep = (maxTime - minTime) / numTimeSteps;
 
-  double tau = 0.1;
-  double offset = 30.0;
+  double tau = _conf.lonFollowingTau;
+  double offset = _conf.lonFollowingLonOffset;
 
   std::vector<JMTTrajectory1d> trajs(numTimeSteps);
 #ifdef _OPENMP
@@ -362,7 +362,10 @@ PolynomialTrajectoryGenerator::Impl::GenerateVehicleFollowingTrajectory(
     // clang-format on
     auto traj = JMT::Solve1d_6DoF(conditions, T);
     if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
-      traj.ComputeCost(10.0, 2.0, 1.0, 5.0);
+      traj.ComputeCost(_conf.lonFollowingTimeWeight,
+                       _conf.lonFollowingPosWeight,
+                       _conf.lonFollowingJerkWeight,
+                       _conf.lonFollowingEfficiencyWeight);
     }
     trajs[i] = traj;
   }

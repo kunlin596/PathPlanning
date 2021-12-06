@@ -43,10 +43,23 @@ public:
   double lonCruiseMinSddot = -2.0;
   double lonCruiseMaxSddot = 5.0;
   double lonCruiseNumSddotSteps = 20.0;
+
   double lonCruiseTimeWeight = 10.0;
   double lonCruisePosWeight = 2.0;
   double lonCruiseJerkWeight = 1.0;
   double lonCruiseEfficiencyWeight = 2.0;
+
+  // Longitudinal vehicle following trajectory parameters
+  double lonFollowingMinTime = 1.0;
+  double lonFollowingMaxTime = 10.0;
+  double lonFollowingNumTimeSteps = 20.0;
+  double lonFollowingTau = 0.1;
+  double lonFollowingLonOffset = 30.0;
+
+  double lonFollowingTimeWeight = 10.0;
+  double lonFollowingPosWeight = 2.0;
+  double lonFollowingJerkWeight = 1.0;
+  double lonFollowingEfficiencyWeight = 5.0;
 
   void Parse(const std::string& filename);
 };
