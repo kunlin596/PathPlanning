@@ -103,7 +103,6 @@ private:
   const Configuration& _conf;
   int _counter = 0;
   const Map& _map;
-  std::unique_ptr<JMTTrajectoryEvaluator> _pEvaluator;
 };
 
 std::ostream&

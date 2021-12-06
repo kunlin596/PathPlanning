@@ -1,7 +1,6 @@
 #include "ptg.h"
 
 #include "collision_checker.h"
-#include "goalsampler.h"
 #include "log.h"
 #include "utils.h"
 
