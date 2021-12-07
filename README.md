@@ -12,6 +12,8 @@ The ego car **should avoid** hitting other cars at all cost as well as driving i
 
 The highway's waypoints loop around so the frenet s value, distance along the road, goes from 0 to 6945.554.
 
+__More technical details please check [writeup](./writeup.pdf)__.
+
 ## Simulator
 
 ### Usage
