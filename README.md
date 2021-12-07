@@ -62,7 +62,7 @@ TODO
 #### Debian/Ubuntu
 
 ```shell
-apt install python3-dev pybind11-dev libspdlog-dev libboost-dev
+apt install python3-dev pybind11-dev libspdlog-dev libboost-dev libgtest-dev
 ```
 
 #### Other libraries shipped with the repo
