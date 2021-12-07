@@ -109,7 +109,7 @@ System::SpinOnce(const std::string& commandString)
       // Find trajectory
       Ego futureEgo = ego;
       futureEgo.SetKinematics(startState);
-      JMTTrajectory2d trajectory = _pPathGenerator->GenerataTrajectory(futureEgo, _pTracker->GetVehicles());
+      JMTTrajectory2d trajectory = _pPathGenerator->GenerateTrajectory(futureEgo, _pTracker->GetVehicles());
       if (!trajectory.GetIsValid()) {
         SPDLOG_ERROR("Planning failed, returning prev path.");
         return _EmptyControlMessage(prevPath);

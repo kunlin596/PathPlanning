@@ -41,7 +41,7 @@ public:
   explicit PolynomialTrajectoryGenerator(const Map& map, const Configuration& conf);
   virtual ~PolynomialTrajectoryGenerator() {}
 
-  JMTTrajectory2d GenerataTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
+  JMTTrajectory2d GenerateTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
 private:
   struct Impl;

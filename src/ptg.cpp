@@ -127,9 +127,9 @@ public:
 
   void GenerateStoppingTrajectory(const Ego& ego, std::vector<JMTTrajectory1d>& trajectories) const;
 
-  JMTTrajectory2d GenerataTrajectoryCpp(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
+  JMTTrajectory2d GenerateTrajectoryCpp(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
-  JMTTrajectory2d GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
+  JMTTrajectory2d GenerateTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
   void GetOptimalCombination(const std::vector<JMTTrajectory1d>& lonTrajs,
                              const std::vector<JMTTrajectory1d>& latTrajs,
@@ -459,7 +459,7 @@ PolynomialTrajectoryGenerator::Impl::GetOptimalCombination(const std::vector<JMT
 }
 
 JMTTrajectory2d
-PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryCpp(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
+PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
 {
   // For more information on trajectory generation, see
   // "Optimal Trajectory Generation for Dynamic Street Scenarios in a Frenet Frame",
@@ -719,7 +719,7 @@ PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryCpp(const Ego& ego, const
 }
 
 JMTTrajectory2d
-PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
+PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryPy(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
 {
   py::module pyPTG = py::module::import("pathplanning.ptg");
   py::dict pyTrackedVehicleMap;
@@ -751,12 +751,12 @@ PolynomialTrajectoryGenerator::Impl::GenerataTrajectoryPy(const Ego& ego, const 
 }
 
 JMTTrajectory2d
-PolynomialTrajectoryGenerator::GenerataTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
+PolynomialTrajectoryGenerator::GenerateTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap)
 {
   if (_conf.mode == "python") {
-    return _pImpl->GenerataTrajectoryPy(ego, trackedVehicleMap);
+    return _pImpl->GenerateTrajectoryPy(ego, trackedVehicleMap);
   } else if (_conf.mode == "cpp") {
-    return _pImpl->GenerataTrajectoryCpp(ego, trackedVehicleMap);
+    return _pImpl->GenerateTrajectoryCpp(ego, trackedVehicleMap);
   }
 
   throw std::runtime_error(
