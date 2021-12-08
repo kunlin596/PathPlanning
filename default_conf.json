@@ -15,7 +15,7 @@
   "lonFollowingNumTimeSteps": 20.0,
   "lonCruiseMinTime": 1.5,
   "lonCruiseMaxTime": 5.0,
-  "latMaxTime": 5.0,
+  "latMaxTime": 4.0,
   "lonWeight": 10.0,
   "latWeight": 1.0
 }
