@@ -51,8 +51,9 @@ add_library(
 
 target_link_libraries(
   common
-  PRIVATE
+  PUBLIC
   spdlog::spdlog
+  fmt
 )
 
 add_library(
@@ -109,7 +110,6 @@ target_link_libraries(
   PRIVATE
   pybind11::embed
   ${Boost_LIBRARIES}
-  fmt
   z
   ssl
   uv
