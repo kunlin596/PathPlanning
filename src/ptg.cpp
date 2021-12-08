@@ -41,7 +41,7 @@ _GroupVehicles(const TrackedVehicleMap& trackedVehicleMap)
       groupedVehicles[laneId] = std::vector<Vehicle>();
     }
     groupedVehicles[laneId].push_back(vehicle);
-    SPDLOG_INFO(" - Added vehicle {:2d} to lane {:2d}", (*(groupedVehicles[laneId].end() - 1)).GetId(), laneId);
+    SPDLOG_DEBUG(" - Added vehicle {:2d} to lane {:2d}", (*(groupedVehicles[laneId].end() - 1)).GetId(), laneId);
   }
   return groupedVehicles;
 }
@@ -92,19 +92,19 @@ _FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
   if (leadingIndex != -1) {
     leadingVehicle = vehicles[leadingIndex];
     leadingDistance = minLeadingDistance;
-    SPDLOG_INFO("On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.",
-                Map::GetLaneId(Map::GetLaneCenterD(leadingVehicle.GetKinematics(0.0)(0, 1))),
-                leadingVehicle.GetId(),
-                minLeadingDistance);
+    SPDLOG_DEBUG("On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.",
+                 Map::GetLaneId(Map::GetLaneCenterD(leadingVehicle.GetKinematics(0.0)(0, 1))),
+                 leadingVehicle.GetId(),
+                 minLeadingDistance);
   }
 
   if (followingIndex != -1) {
     followingVehicle = vehicles[followingIndex];
     followingDistance = minFollowingDistance;
-    SPDLOG_INFO("On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.",
-                Map::GetLaneId(Map::GetLaneCenterD(followingVehicle.GetKinematics(0.0)(0, 1))),
-                followingVehicle.GetId(),
-                minFollowingDistance);
+    SPDLOG_DEBUG("On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.",
+                 Map::GetLaneId(Map::GetLaneCenterD(followingVehicle.GetKinematics(0.0)(0, 1))),
+                 followingVehicle.GetId(),
+                 minFollowingDistance);
   }
 }
 } // end of anonymous namespace
