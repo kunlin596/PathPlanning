@@ -92,17 +92,17 @@ _FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
   if (leadingIndex != -1) {
     leadingVehicle = vehicles[leadingIndex];
     leadingDistance = minLeadingDistance;
-    SPDLOG_DEBUG("On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.",
-                 Map::GetLaneId(Map::GetLaneCenterD(leadingVehicle.GetKinematics(0.0)(0, 1))),
-                 leadingVehicle.GetId(),
-                 minLeadingDistance);
+    int laneid = Map::GetLaneId(leadingVehicle.GetKinematics(0.0)(0, 1));
+    SPDLOG_DEBUG(
+      "On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.", laneid, leadingVehicle.GetId(), minLeadingDistance);
   }
 
   if (followingIndex != -1) {
     followingVehicle = vehicles[followingIndex];
     followingDistance = minFollowingDistance;
-    SPDLOG_DEBUG("On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.",
-                 Map::GetLaneId(Map::GetLaneCenterD(followingVehicle.GetKinematics(0.0)(0, 1))),
+    int laneid = Map::GetLaneId(followingVehicle.GetKinematics(0.0)(0, 1));
+    SPDLOG_DEBUG("On lane {:2d}, following vehicle is {:2d}, distance {:.3f}.",
+                 laneid,
                  followingVehicle.GetId(),
                  minFollowingDistance);
   }
@@ -229,7 +229,12 @@ PolynomialTrajectoryGenerator::Impl::GenerateLatTrajectory(const LateralManeuver
       conditions.topRows<3>() = egoLatKinematics;
       conditions.bottomRows<3>() << targetD + ds, 0.0, 0.0;
       auto traj = JMT::Solve1d_6DoF(conditions, T);
-      if (traj.Validate(Map::GetRoadBoundary())) {
+      if (traj.Validate(Map::GetRoadBoundary(),
+                        _conf.maxVelocity,
+                        _conf.maxAcceleration,
+                        _conf.maxJerk,
+                        _conf.averageAcceleration,
+                        _conf.averageJerk)) {
         traj.ComputeCost(_conf.latTimeWeight, _conf.latPosWeight, _conf.latJerkWeight, _conf.latEfficiencyWeight);
       }
       trajs[i * static_cast<int>(numDsSteps) + j] = traj;
@@ -282,7 +287,12 @@ PolynomialTrajectoryGenerator::Impl::GenerateCruisingTrajectory(const Ego& ego,
       conditions.topRows<3>() = egoLonKinematics;
       conditions.bottomRows<2>() << std::min(egoLonKinematics[1] + sddot, Mph2Mps(45.0)), 0.0;
       auto traj = JMT::Solve1d_5DoF(conditions, T);
-      if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
+      if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() },
+                        _conf.maxVelocity,
+                        _conf.maxAcceleration,
+                        _conf.maxJerk,
+                        _conf.averageAcceleration,
+                        _conf.averageJerk)) {
         traj.ComputeCost(_conf.lonCruiseTimeWeight,
                          _conf.lonCruisePosWeight,
                          _conf.lonCruiseJerkWeight,
@@ -343,11 +353,17 @@ PolynomialTrajectoryGenerator::Impl::GenerateVehicleFollowingTrajectory(
     // clang-format off
     conditions.block<3, 1>(3, 0) <<
       leadingLonKinematics[0] - tau * leadingLonKinematics[1] - offset,
-      std::min(leadingLonKinematics[1] - tau * leadingLonKinematics[2], Mph2Mps(45.0)),
-      leadingLonKinematics[2];
+      std::min(leadingLonKinematics[1] - tau * leadingLonKinematics[2], _conf.maxVelocity),
+      0.0;
+      // leadingLonKinematics[2];
     // clang-format on
     auto traj = JMT::Solve1d_6DoF(conditions, T);
-    if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
+    if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() },
+                      _conf.maxVelocity,
+                      _conf.maxAcceleration,
+                      _conf.maxJerk,
+                      _conf.averageAcceleration,
+                      _conf.averageJerk)) {
       traj.ComputeCost(_conf.lonFollowingTimeWeight,
                        _conf.lonFollowingPosWeight,
                        _conf.lonFollowingJerkWeight,
@@ -408,7 +424,12 @@ PolynomialTrajectoryGenerator::Impl::GenerateStoppingTrajectory(const Ego& ego,
       conditions.block<3, 1>(0, 0) = egoLonKinematics;
       conditions.block<2, 1>(3, 0) << egoLonKinematics[1] + sddot, 0.0;
       auto traj = JMT::Solve1d_5DoF(conditions, T);
-      if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() })) {
+      if (traj.Validate({ egoLonKinematics[0], std::numeric_limits<double>::infinity() },
+                        _conf.maxVelocity,
+                        _conf.maxAcceleration,
+                        _conf.maxJerk,
+                        _conf.averageAcceleration,
+                        _conf.averageJerk)) {
         traj.ComputeCost(_conf.lonStoppingTimeWeight,
                          _conf.lonStoppingPosWeight,
                          _conf.lonStoppingJerkWeight,
