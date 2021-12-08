@@ -1,4 +1,5 @@
 #include "perception.h"
+#include "log.h"
 
 namespace pathplanning {
 
@@ -26,8 +27,9 @@ Perception::CreatePerceptions(const std::vector<std::vector<double>>& data, cons
   std::unordered_map<int, Perception> perceptions;
   for (size_t i = 0; i < data.size(); ++i) {
     const std::vector<double> d = data[i];
-    if (d[6] > 0) {
-      perceptions[d[0]] = Perception(d[0], d[1], d[2], d[3], d[4], d[5], d[6], map, time);
+    int id = static_cast<int>(d[0]);
+    if (d[6] > 0.0) {
+      perceptions[id] = Perception(id, d[1], d[2], d[3], d[4], d[5], d[6], map, time);
     }
   }
   return perceptions;

@@ -70,7 +70,7 @@ JMT::Solve1d_5DoF(const Vector5d& conditions, const double t)
   coeffs << c012[0], c012[1], c012[2], c34[0], c34[1], 0.0;
 
   JMTTrajectory1d origTraj(coeffs, s_i, s_f, t);
-  double clippedTime = std::min(2.0, t);
+  double clippedTime = std::min(3.0, t);
   Vector3d new_s_f = origTraj(clippedTime).topRows<3>();
   return JMTTrajectory1d(coeffs, s_i, new_s_f, clippedTime);
 }

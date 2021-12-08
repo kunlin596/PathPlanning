@@ -29,7 +29,7 @@ public:
   double maxJerk = 10.0;
   double averageAcceleration = 3.0;
   double averageJerk = 2.0;
-  double collisionCheckingRadius = 7.0;
+  double collisionCheckingRadius = 5.0;
 
   // Longitudinal behaviors
   double maxLaneChangingTriggerDistance = 20.0;
@@ -51,7 +51,7 @@ public:
 
   // Longitudinal vehicle following trajectory parameters
   double lonFollowingMinTime = 1.0;
-  double lonFollowingMaxTime = 10.0;
+  double lonFollowingMaxTime = 5.0;
   double lonFollowingNumTimeSteps = 20.0;
   double lonFollowingTau = 0.1;
   double lonFollowingLonOffset = 30.0;

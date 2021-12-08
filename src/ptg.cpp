@@ -343,7 +343,7 @@ PolynomialTrajectoryGenerator::Impl::GenerateVehicleFollowingTrajectory(
     // clang-format off
     conditions.block<3, 1>(3, 0) <<
       leadingLonKinematics[0] - tau * leadingLonKinematics[1] - offset,
-      std::max(leadingLonKinematics[1] - tau * leadingLonKinematics[2], Mph2Mps(45.0)),
+      std::min(leadingLonKinematics[1] - tau * leadingLonKinematics[2], Mph2Mps(45.0)),
       leadingLonKinematics[2];
     // clang-format on
     auto traj = JMT::Solve1d_6DoF(conditions, T);
