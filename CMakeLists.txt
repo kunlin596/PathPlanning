@@ -22,7 +22,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     endif()
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
-
+find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(Boost COMPONENTS program_options filesystem REQUIRED)
 
@@ -51,7 +51,7 @@ add_library(
 
 target_link_libraries(
   common
-  PUBLIC
+  PRIVATE
   spdlog::spdlog
 )
 
@@ -109,6 +109,7 @@ target_link_libraries(
   PRIVATE
   pybind11::embed
   ${Boost_LIBRARIES}
+  fmt
   z
   ssl
   uv
