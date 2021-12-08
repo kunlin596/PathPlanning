@@ -1,6 +1,6 @@
 {
   "serverPort": 4567,
-  "maxVelocity": 22.352,
+  "maxVelocity": 21,
   "simulatorTimeStep": 0.02,
   "nonEgoSearchRadius": 100,
   "maxJerk": 10.0,
