@@ -38,7 +38,23 @@ sudo chmod u+x term3_sim.x86_64
    - `previous_path_x`, and `previous_path_y` can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
 
 ## Build
-### Dependencies
+
+### Docker
+Using docker is recommended. Check this [official guide](https://docs.docker.com/engine/install/).
+
+#### Build
+```shell
+cd YOU_CLONE_PATH
+docker build -t pathplanningserver:latest .
+```
+
+#### Run
+```shell
+docker run -p 4567:4567 pathplanningserver:latest
+````
+
+### Local Build (Not Recommended)
+#### Dependencies
 * cmake >= 3.5
   * [Installation instructions](https://cmake.org/install/)
 * make >= 4.1
@@ -58,20 +74,20 @@ sudo chmod u+x term3_sim.x86_64
     git checkout e94b6e1
     ```
 
-#### macOS
+##### macOS
 TODO
 
-#### Debian/Ubuntu
+##### Debian/Ubuntu
 
 ```shell
 apt install python3-dev pybind11-dev libfmt-dev libspdlog-dev libboost-dev libgtest-dev
 ```
 
-#### Other libraries shipped with the repo
+##### Other libraries shipped with the repo
 - spline: a really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.
 - Eigen 3.3
 
-### Instructions
+#### Instructions
 ```shell
 git checkout https://github.com/kunlin596/PathPlanning.git
 cd PathPlanning
@@ -79,7 +95,7 @@ cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
 cmake --build build -j 16 --target pathplanningserver 
 ```
 
-### Run
+#### Run
 The simulator should be lauched simultaneously with the path planning server. Use the command below to lauch the path planning server.
 ```shell
 ./build/pathplanningserver --conf default_conf.json -m data/highway_map.csv --loglevel=info
