@@ -7,8 +7,8 @@
   "maxAcceleration": 8.0,
   "averageAcceleration": 3.0,
   "averageJerk": 3.0,
-  "maxLaneChangingTriggerDistance": 15,
-  "maxStoppingTriggerDistance": 20,
+  "maxLaneChangingTriggerDistance": 20,
+  "maxStoppingTriggerDistance": 5,
   "maxFollowTriggerDistance": 50,
   "lonFollowingMinTime": 1.5,
   "lonFollowingMaxTime": 20.0,
@@ -17,5 +17,5 @@
   "lonCruiseMaxTime": 5.0,
   "latMaxTime": 5.0,
   "lonWeight": 10.0,
-  "latWeight": 0.1
+  "latWeight": 1.0
 }
