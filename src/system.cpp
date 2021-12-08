@@ -88,7 +88,14 @@ System::SpinOnce(const std::string& commandString)
       Map& map = *_pMap;
       Configuration& conf = *_pConf;
 
-      ego.Update(data["x"], data["y"], data["s"], data["d"], Deg2Rad(data["yaw"]), Mph2Mps(data["speed"]), map, conf);
+      ego.Update(data["x"],
+                 data["y"],
+                 std::fmod(data["s"], Map::MAX_FRENET_S),
+                 data["d"],
+                 Deg2Rad(data["yaw"]),
+                 Mph2Mps(data["speed"]),
+                 map,
+                 conf);
 
       // Create the latest perceptions from input command
       // Velocity is already meters per seconds no need to convert
@@ -129,7 +136,6 @@ System::SpinOnce(const std::string& commandString)
       json waypointsJson;
       std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(path);
 
-      SPDLOG_DEBUG("path={}", path);
       UpdateCachedTrajectory(trajectory, path.size());
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
