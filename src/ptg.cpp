@@ -93,7 +93,7 @@ _FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
     leadingVehicle = vehicles[leadingIndex];
     leadingDistance = minLeadingDistance;
     int laneid = Map::GetLaneId(leadingVehicle.GetKinematics(0.0)(0, 1));
-    SPDLOG_DEBUG(
+    SPDLOG_INFO(
       "On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.", laneid, leadingVehicle.GetId(), minLeadingDistance);
   }
 
@@ -101,10 +101,10 @@ _FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
     followingVehicle = vehicles[followingIndex];
     followingDistance = minFollowingDistance;
     int laneid = Map::GetLaneId(followingVehicle.GetKinematics(0.0)(0, 1));
-    SPDLOG_DEBUG("On lane {:2d}, following vehicle is {:2d}, distance {:.3f}.",
-                 laneid,
-                 followingVehicle.GetId(),
-                 minFollowingDistance);
+    SPDLOG_INFO("On lane {:2d}, following vehicle is {:2d}, distance {:.3f}.",
+                laneid,
+                followingVehicle.GetId(),
+                minFollowingDistance);
   }
 }
 } // end of anonymous namespace
@@ -611,8 +611,8 @@ PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const
       // TODO: Take following vehicle in to account and implement merging behavior.
       // NOTE: The distance values for determine the behavior below is purely heuristic.
       if (leadingVehicle.GetId() != -1 and !std::isnan(leadingDistance)) {
-        if (laneId != egoLaneId and leadingDistance < maxLaneChangingTriggerDistance and
-            followingDistance < maxLaneChangingTriggerDistance) {
+        if (laneId != egoLaneId and leadingDistance < maxLaneChangingTriggerDistance or
+            (!std::isnan(followingDistance) and followingDistance < maxLaneChangingTriggerDistance)) {
           continue;
           // Too close, do nothing
         } else if (maxLaneChangingTriggerDistance < leadingDistance and leadingDistance < maxStoppingTriggerDistance) {
