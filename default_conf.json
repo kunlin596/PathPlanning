@@ -6,5 +6,8 @@
   "maxJerk": 10.0,
   "maxAcceleration": 10.0,
   "averageAcceleration": 3.0,
-  "averageJerk": 2.0
+  "averageJerk": 2.0,
+  "maxLaneChangingTriggerDistance": 20,
+  "maxStoppingTriggerDistance": 30,
+  "maxFollowTriggerDistance": 40
 }
