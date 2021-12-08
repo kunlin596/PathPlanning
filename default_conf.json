@@ -9,5 +9,5 @@
   "averageJerk": 2.0,
   "maxLaneChangingTriggerDistance": 20,
   "maxStoppingTriggerDistance": 30,
-  "maxFollowTriggerDistance": 40
+  "maxFollowTriggerDistance": 70
 }
