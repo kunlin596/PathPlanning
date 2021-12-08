@@ -44,7 +44,7 @@ public:
   JMTTrajectory2d GenerateTrajectory(const Ego& ego, const TrackedVehicleMap& trackedVehicleMap);
 
 private:
-  struct Impl;
+  class Impl;
   std::shared_ptr<Impl> _pImpl;
 
   const Map& _map;

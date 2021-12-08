@@ -41,6 +41,7 @@ _GroupVehicles(const TrackedVehicleMap& trackedVehicleMap)
       groupedVehicles[laneId] = std::vector<Vehicle>();
     }
     groupedVehicles[laneId].push_back(vehicle);
+    SPDLOG_INFO(" - Added vehicle {:2d} to lane {:2d}", (*(groupedVehicles[laneId].end() - 1)).GetId(), laneId);
   }
   return groupedVehicles;
 }
@@ -63,42 +64,50 @@ _FindLeadingFollowingVehicle(const Matrix32d& egoKinematics,
                              Vehicle& followingVehicle,
                              double& followingDistance)
 {
-  double leadingLonDiff = std::numeric_limits<double>::infinity();
-  double followingLonDiff = std::numeric_limits<double>::infinity();
+  double minLeadingDistance = std::numeric_limits<double>::infinity();
+  double minFollowingDistance = std::numeric_limits<double>::infinity();
 
-  int leadingId = -1;
-  int followingId = -1;
+  int leadingIndex = -1;
+  int followingIndex = -1;
 
   double egoLon = egoKinematics(0, 0);
+  int laneId = Map::GetLaneId(egoKinematics(0, 1));
 
   for (size_t i = 0; i < vehicles.size(); ++i) {
-    const Vehicle& vehicle = vehicles[i];
+    const auto& vehicle = vehicles[i];
     double vehicleLon = vehicle.GetKinematics(0.0)(0, 0);
-    double currLeadingLonDiff = vehicleLon - egoLon;
-    double currFollowingLonDiff = egoLon - vehicleLon;
+    double currLeadingDistance = vehicleLon - egoLon;
+    double currFollowingDistance = egoLon - vehicleLon;
 
-    if (0.0 < currLeadingLonDiff and currLeadingLonDiff < leadingLonDiff) {
-      leadingLonDiff = currLeadingLonDiff;
-      leadingId = i;
-    } else if (0.0 < currFollowingLonDiff and currFollowingLonDiff < followingLonDiff) {
-      followingLonDiff = currFollowingLonDiff;
-      followingId = i;
+    if ((0.0 < currLeadingDistance) && (currLeadingDistance < minLeadingDistance) &&
+        (currLeadingDistance < nonEgoSearchRadius)) {
+      minLeadingDistance = currLeadingDistance;
+      leadingIndex = i;
+    } else if (0.0 < currFollowingDistance and currFollowingDistance < minFollowingDistance) {
+      minFollowingDistance = currFollowingDistance;
+      followingIndex = i;
     }
   }
 
-  if (leadingId != -1 and leadingLonDiff < nonEgoSearchRadius) {
-    leadingVehicle = vehicles[leadingId];
-    leadingDistance = leadingLonDiff;
-    SPDLOG_TRACE("Found leading id {:2d}, leadingLonDiff={:7.3f}", vehicles[leadingId].GetId(), leadingLonDiff);
+  if (leadingIndex != -1) {
+    leadingVehicle = vehicles[leadingIndex];
+    leadingDistance = minLeadingDistance;
+    SPDLOG_INFO("On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.",
+                Map::GetLaneId(Map::GetLaneCenterD(leadingVehicle.GetKinematics(0.0)(0, 1))),
+                leadingVehicle.GetId(),
+                minLeadingDistance);
   }
 
-  if (followingId != -1 and followingLonDiff < nonEgoSearchRadius) {
-    followingVehicle = vehicles[followingId];
-    followingDistance = followingLonDiff;
-    SPDLOG_TRACE("Found following id {:2d}, followingLonDiff={:7.3f}", vehicles[followingId].GetId(), followingLonDiff);
+  if (followingIndex != -1) {
+    followingVehicle = vehicles[followingIndex];
+    followingDistance = minFollowingDistance;
+    SPDLOG_INFO("On lane {:2d}, leading vehicle is {:2d}, distance {:.3f}.",
+                Map::GetLaneId(Map::GetLaneCenterD(followingVehicle.GetKinematics(0.0)(0, 1))),
+                followingVehicle.GetId(),
+                minFollowingDistance);
   }
 }
-}
+} // end of anonymous namespace
 
 namespace pathplanning {
 
@@ -512,6 +521,10 @@ PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const
   SPDLOG_INFO("-------------------- Planning starting {:d} --------------------", ++_counter);
   auto egoLaneId = Map::GetLaneId(ego.GetKinematics(0.0)(0, 1));
 
+  if (std::abs(ego.GetKinematics(0.0)(1, 0)) < 1e-6) {
+    SPDLOG_WARN("Ego stopped!");
+  }
+
   // Figure out the lanes for planning
   int leftLaneId = egoLaneId - 1;
   int rightLaneId = egoLaneId + 1;
@@ -537,8 +550,8 @@ PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const
     latBehaviors[rightLaneId] = LateralManeuverType::kRightLaneChanging;
   }
 
-  // Group vehicles for longitudinal planning.
-  unordered_map<int, std::vector<Vehicle>> groupedVehicles = _GroupVehicles(trackedVehicleMap);
+  // Group vehicles per lane for longitudinal planning.
+  const unordered_map<int, std::vector<Vehicle>> groupedVehicles = _GroupVehicles(trackedVehicleMap);
 
   // Cache the leading vehicles when checking for longitudinal behaviors.
   unordered_map<int, Vehicle> leadingVehicles;
@@ -559,8 +572,8 @@ PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const
     lonBehaviors[laneId] = vector<LongitudinalManeuverType>();
 
     // If there are vehicles, find the leading vehicle and plan accordingly.
-    if (groupedVehicles.count(laneId) and !groupedVehicles[laneId].empty()) {
-      const auto& vehicles = groupedVehicles[laneId];
+    if (groupedVehicles.count(laneId) and !groupedVehicles.at(laneId).empty()) {
+      const auto& vehicles = groupedVehicles.at(laneId);
 
       Vehicle leadingVehicle;
       double leadingDistance = std::numeric_limits<double>::quiet_NaN();
@@ -576,8 +589,9 @@ PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const
 
       // TODO: Take following vehicle in to account and implement merging behavior.
       // NOTE: The distance values for determine the behavior below is purely heuristic.
-      if (!std::isnan(leadingDistance)) {
+      if (leadingVehicle.GetId() != -1 and !std::isnan(leadingDistance)) {
         if (leadingDistance < maxLaneChangingTriggerDistance) {
+          continue;
           // Too close, do nothing
         } else if (maxLaneChangingTriggerDistance < leadingDistance and leadingDistance < maxStoppingTriggerDistance) {
           // Leading vehicle is too close so need to start stopping now!
@@ -686,19 +700,22 @@ PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const
       continue;
     }
 
-    auto [collidedVehicleId, distance] = CollisionChecker::IsInCollision(traj, groupedVehicles[laneId], _conf);
-    if (collidedVehicleId != -1) {
-      const Vehicle& collidedVehicle = trackedVehicleMap.at(collidedVehicleId);
-      int collisionLaneId = Map::GetLaneId(collidedVehicle.GetKinematics(0.0)(0, 1));
-      SPDLOG_INFO("   - Planning failed for lane {:d}, trajectory is colliding with collidedVehicleId={:d}, "
-                  "distance={:7.3f}, collisionLaneId={:d}, collision lonlat=[{}], ego lonlat=[{}]",
-                  laneId,
-                  collidedVehicleId,
-                  distance,
-                  collisionLaneId,
-                  collidedVehicle.GetKinematics(0.0).topRows<1>(),
-                  ego.GetKinematics(0.0).topRows<1>());
-      continue;
+    if (groupedVehicles.count(laneId) and !groupedVehicles.at(laneId).empty()) {
+      const auto& [collidedVehicleId, distance] =
+        CollisionChecker::IsInCollision(traj, groupedVehicles.at(laneId), _conf);
+      if (collidedVehicleId != -1) {
+        const Vehicle& collidedVehicle = trackedVehicleMap.at(collidedVehicleId);
+        int collisionLaneId = Map::GetLaneId(collidedVehicle.GetKinematics(0.0)(0, 1));
+        SPDLOG_INFO("   - Planning failed for lane {:d}, trajectory is colliding with collidedVehicleId={:d}, "
+                    "distance={:7.3f}, collisionLaneId={:d}, collision lonlat=[{}], ego lonlat=[{}]",
+                    laneId,
+                    collidedVehicleId,
+                    distance,
+                    collisionLaneId,
+                    collidedVehicle.GetKinematics(0.0).topRows<1>(),
+                    ego.GetKinematics(0.0).topRows<1>());
+        continue;
+      }
     }
 
     SPDLOG_INFO("   * Planning completed for lane {:d}, cost={:7.3f}", laneId, cost);
