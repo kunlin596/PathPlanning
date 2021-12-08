@@ -108,7 +108,7 @@ target_link_libraries(
   pathplanningserver
   PRIVATE
   pybind11::embed
-  Boost::program_options
+  ${Boost_LIBRARIES}
   z
   ssl
   uv
