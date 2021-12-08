@@ -611,8 +611,9 @@ PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const
       // TODO: Take following vehicle in to account and implement merging behavior.
       // NOTE: The distance values for determine the behavior below is purely heuristic.
       if (leadingVehicle.GetId() != -1 and !std::isnan(leadingDistance)) {
-        if (laneId != egoLaneId and leadingDistance < maxLaneChangingTriggerDistance or
-            (!std::isnan(followingDistance) and followingDistance < maxLaneChangingTriggerDistance)) {
+        if (laneId != egoLaneId and
+            (leadingDistance < maxLaneChangingTriggerDistance or
+             (!std::isnan(followingDistance) and followingDistance < maxLaneChangingTriggerDistance))) {
           continue;
           // Too close, do nothing
         } else if (maxLaneChangingTriggerDistance < leadingDistance and leadingDistance < maxStoppingTriggerDistance) {
