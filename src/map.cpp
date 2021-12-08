@@ -46,7 +46,7 @@ Map::Read(const std::string& filename)
   BOOST_ASSERT(_x.size() > 0);
   BOOST_ASSERT(_y.size() > 0);
 
-  _s.push_back(_s[0]);
+  _s.push_back((_s[_s.size() - 1] + (_s[1] - _s[0])));
   _x.push_back(_x[0]);
   _y.push_back(_y[0]);
   _dx.push_back(_dx[0]);
