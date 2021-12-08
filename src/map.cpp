@@ -47,10 +47,15 @@ Map::Read(const std::string& filename)
   BOOST_ASSERT(_y.size() > 0);
 
   _s.push_back((_s[_s.size() - 1] + (_s[1] - _s[0])));
+  _s.push_back((_s[_s.size() - 1] + (_s[1] - _s[0])));
   _x.push_back(_x[0]);
+  _x.push_back(_x[1]);
   _y.push_back(_y[0]);
+  _y.push_back(_y[1]);
   _dx.push_back(_dx[0]);
+  _dx.push_back(_dx[1]);
   _dy.push_back(_dy[0]);
+  _dy.push_back(_dy[1]);
 
   // Smoothing the map waypoints
   _pImpl->sXSpline.set_points(_s, _x);
