@@ -84,7 +84,7 @@ struct JMTTrajectory1d
 
   bool Validate(const std::array<double, 2>& posBound = { std::numeric_limits<double>::quiet_NaN(),
                                                           std::numeric_limits<double>::quiet_NaN() },
-                double maxVel = Mph2Mps(45.0),
+                double maxVel = Mph2Mps(48.0),
                 double maxAcc = 8.0,
                 double maxJerk = 8.0,
                 double totalAccel = 2.0,
