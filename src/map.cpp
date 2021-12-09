@@ -46,7 +46,7 @@ Map::Read(const std::string& filename)
   BOOST_ASSERT(_x.size() > 0);
   BOOST_ASSERT(_y.size() > 0);
 
-  _s.push_back((_s[_s.size() - 1] + (_s[1] - _s[0])));
+  _s.push_back(_s[1] + _s[_s.size() - 1]);
   _x.push_back(_x[0]);
   _y.push_back(_y[0]);
   _dx.push_back(_dx[0]);
@@ -183,14 +183,14 @@ Map::GetXY(double s, double d) const
 double
 Map::GetX(double s, double d) const
 {
-  s = std::fmod(s, Map::MAX_FRENET_S);
+  s = std::fmod(s, _s[_s.size() - 1]);
   return _pImpl->sXSpline(s) + d * _pImpl->sDxSpline(s);
 }
 
 double
 Map::GetY(double s, double d) const
 {
-  s = std::fmod(s, Map::MAX_FRENET_S);
+  s = std::fmod(s, _s[_s.size() - 1]);
   return _pImpl->sYSpline(s) + d * _pImpl->sDySpline(s);
 }
 

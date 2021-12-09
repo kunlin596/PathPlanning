@@ -71,6 +71,7 @@ docker run -p 4567:4567 pathplanningserver:latest
     git checkout e94b6e1
     ```
 * [spdlog](https://github.com/gabime/spdlog) >= 1.9
+  * __Please install the latest version__
   * Install from source if you have version issue with `fmt/bundle`, otherwise install it from package manager.
     ```shell
     git clone https://github.com/gabime/spdlog.git

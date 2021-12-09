@@ -11,7 +11,7 @@ class Map:
     def __init__(self, filename):
         data = []
         with open(filename) as csvfile:
-            spamreader = csv.reader(csvfile, delimiter=' ')
+            spamreader = csv.reader(csvfile, delimiter=" ")
             for row in spamreader:
                 data.append([float(num) for num in row])
         self.data = np.asarray(data)

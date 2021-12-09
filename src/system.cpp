@@ -36,6 +36,24 @@ _EmptyControlMessage(const Waypoints& prevPath)
   return "42[\"control\"," + waypointsJson.dump() + "]";
 }
 
+void
+_EvaluateTrajectory(const JMTTrajectory2d& trajectory,
+                    const Map& map,
+                    double simulatorTimeStep,
+                    std::vector<double>& x,
+                    std::vector<double>& y)
+{
+  double currTime = 0.0;
+  while (currTime < trajectory.GetTime()) {
+    auto p = trajectory(currTime);
+    double s = p(0, 0);
+    double d = p(0, 1);
+    x.push_back(map.GetX(s, d));
+    y.push_back(map.GetY(s, d));
+    currTime += simulatorTimeStep;
+  }
+}
+
 } // namespace
 
 namespace pathplanning {
@@ -122,21 +140,15 @@ System::SpinOnce(const std::string& commandString)
         return _EmptyControlMessage(prevPath);
       }
 
-      Waypoints path;
+      std::vector<double> x;
+      std::vector<double> y;
+      _EvaluateTrajectory(trajectory, *_pMap, _pConf->simulatorTimeStep, x, y);
 
-      Matrix62d p;
-      double currTime = 0.0;
-      while (currTime < trajectory.GetTime()) {
-        p = trajectory(currTime);
-        path.push_back(_pMap->GetXY(p(0, 0), p(0, 1)));
-        currTime += _pConf->simulatorTimeStep;
-      }
-
-      // Construct result message
       json waypointsJson;
-      std::tie(waypointsJson["next_x"], waypointsJson["next_y"]) = Path::ConvertWaypointsToXY(path);
+      waypointsJson["next_x"] = x;
+      waypointsJson["next_y"] = y;
 
-      UpdateCachedTrajectory(trajectory, path.size());
+      UpdateCachedTrajectory(trajectory, x.size());
 
       msg = "42[\"control\"," + waypointsJson.dump() + "]";
     }
