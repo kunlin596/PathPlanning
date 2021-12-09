@@ -628,7 +628,7 @@ PolynomialTrajectoryGenerator::Impl::GenerateTrajectoryCpp(const Ego& ego, const
         } else if (maxStoppingTriggerDistance < leadingDistance and leadingDistance < maxFollowTriggerDistance) {
           // Leading vehicle is within a reasonable distance to be followed.
           lonBehaviors[laneId].push_back(LongitudinalManeuverType::kFollowing);
-          lonBehaviors[laneId].push_back(LongitudinalManeuverType::kStopping);
+          // lonBehaviors[laneId].push_back(LongitudinalManeuverType::kStopping);
           leadingVehicles[laneId] = leadingVehicle;
           SPDLOG_INFO("   - On lane {:d}, {:d} has a distance {:.3f} less than {:.3f}, added {:s}.",
                       laneId,
