@@ -44,7 +44,13 @@ public:
    */
   std::array<double, 2> GetSD(double x, double y, double theta) const;
 
-  // Transform from Frenet s,d coordinates to Cartesian x,y
+  // Transform from Frenet s,d coordinates to Cartesian x
+  double GetX(double s, double d) const;
+
+  // Transform from Frenet s,d coordinates to Cartesian y
+  double GetY(double s, double d) const;
+
+  // Transform from Frenet s,d coordinates to Cartesian x, y
   std::array<double, 2> GetXY(double s, double d) const;
 
   static inline int GetLaneId(double d)

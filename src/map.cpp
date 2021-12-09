@@ -47,15 +47,10 @@ Map::Read(const std::string& filename)
   BOOST_ASSERT(_y.size() > 0);
 
   _s.push_back((_s[_s.size() - 1] + (_s[1] - _s[0])));
-  _s.push_back((_s[_s.size() - 1] + (_s[1] - _s[0])));
   _x.push_back(_x[0]);
-  _x.push_back(_x[1]);
   _y.push_back(_y[0]);
-  _y.push_back(_y[1]);
   _dx.push_back(_dx[0]);
-  _dx.push_back(_dx[1]);
   _dy.push_back(_dy[0]);
-  _dy.push_back(_dy[1]);
 
   // Smoothing the map waypoints
   _pImpl->sXSpline.set_points(_s, _x);
@@ -182,8 +177,21 @@ Map::GetXY(double s, double d) const
   // double y = segY + d * std::sin(perpHeading);
 
   // return { x, y };
+  return { GetX(s, d), GetY(s, d) };
+}
+
+double
+Map::GetX(double s, double d) const
+{
   s = std::fmod(s, Map::MAX_FRENET_S);
-  return { _pImpl->sXSpline(s) + d * _pImpl->sDxSpline(s), _pImpl->sYSpline(s) + d * _pImpl->sDySpline(s) };
+  return _pImpl->sXSpline(s) + d * _pImpl->sDxSpline(s);
+}
+
+double
+Map::GetY(double s, double d) const
+{
+  s = std::fmod(s, Map::MAX_FRENET_S);
+  return _pImpl->sYSpline(s) + d * _pImpl->sDySpline(s);
 }
 
 double
@@ -204,8 +212,8 @@ ComputeFrenetVelocity(const Map& map,
                       const std::array<double, 2>& sd,
                       const double dt)
 {
-  using std::array;
   using Eigen::Vector2d;
+  using std::array;
 
   Vector2d velDir = { vel[0], vel[1] };
   double speed = velDir.norm();
