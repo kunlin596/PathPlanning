@@ -160,5 +160,8 @@ Each row contains,
 The python code is formated using `black`.
 The cpp code is formated using clang format using a slightly modified version of `Mozilla` coding standard.
 
+## Result Video
+[YouTube](https://youtu.be/_f_T_y8JZSE)
+
 ## References
 - Werling, J. Ziegler, S. Kammel, and S. Thrun, "Optimal trajectory generation for dynamic street scenarios in a frenet frame," in ICRA, 2010, pp. 987–993.
