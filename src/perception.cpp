@@ -1,5 +1,6 @@
 #include "perception.h"
 #include "log.h"
+#include "map.h"
 
 namespace pathplanning {
 
@@ -29,7 +30,7 @@ Perception::CreatePerceptions(const std::vector<std::vector<double>>& data, cons
     const std::vector<double> d = data[i];
     int id = static_cast<int>(d[0]);
     if (d[6] > 0.0) {
-      perceptions[id] = Perception(id, d[1], d[2], d[3], d[4], d[5], d[6], map, time);
+      perceptions[id] = Perception(id, d[1], d[2], d[3], d[4], std::fmod(d[5], Map::MAX_FRENET_S), d[6], map, time);
     }
   }
   return perceptions;
