@@ -23,7 +23,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 find_package(fmt REQUIRED)
-find_package(spdlog REQUIRED)
+find_package(spdlog REQUIRED 1.9)
 find_package(Boost COMPONENTS program_options filesystem REQUIRED)
 
 OPTION(USE_OPENMP "Use OpenMP" ON)
@@ -39,6 +39,7 @@ endif()
 
 find_package(Python3 COMPONENTS Development REQUIRED)
 include_directories(${Python3_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/src/)
 find_package(pybind11 REQUIRED)
 
 add_library(
@@ -46,14 +47,13 @@ add_library(
   SHARED
   src/configuration.cpp
   src/vehicle.cpp
-  src/map.cpp
-)
+  src/map.cpp)
 
 target_link_libraries(
   common
   PUBLIC
   spdlog::spdlog
-  fmt
+  fmt::fmt
 )
 
 add_library(
@@ -107,7 +107,7 @@ add_executable(
 
 target_link_libraries(
   pathplanningserver
-  PRIVATE
+  PUBLIC
   pybind11::embed
   ${Boost_LIBRARIES}
   z

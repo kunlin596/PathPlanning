@@ -41,21 +41,16 @@ sudo chmod u+x term3_sim.x86_64
 
 ## Build
 
-### Docker
+### Docker One Liner
 Using docker is recommended. Check this [official guide](https://docs.docker.com/engine/install/).
 
-#### Build
 ```shell
-cd YOU_CLONE_PATH
+cd YOUR_CLONE_PATH
 docker build -t pathplanningserver:latest .
-```
-
-#### Run
-```shell
 docker run -p 4567:4567 pathplanningserver:latest
 ````
 
-### Local Build (Not Recommended)
+### Local Build
 #### Dependencies
 * cmake >= 3.5
   * [Installation instructions](https://cmake.org/install/)
@@ -74,6 +69,13 @@ docker run -p 4567:4567 pathplanningserver:latest
     git clone https://github.com/uWebSockets/uWebSockets 
     cd uWebSockets
     git checkout e94b6e1
+    ```
+* [spdlog](https://github.com/gabime/spdlog) >= 1.9
+  * Install from source if you have version issue with `fmt/bundle`, otherwise install it from package manager.
+    ```shell
+    git clone https://github.com/gabime/spdlog.git
+    cd spdlog && mkdir build && cd build
+    cmake .. && make install
     ```
 
 ##### macOS
