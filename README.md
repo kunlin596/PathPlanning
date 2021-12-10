@@ -28,7 +28,7 @@ sudo chmod u+x term3_sim.x86_64
 ./term3_sim.x86_64
 ```
 
-#### Some Further Details 
+#### Details 
 
 1. The ego use a perfect controller and will visit every (x,y) point it recieves in the list every **0.02** seconds.
 2. The units for the `[x, y]` points are in meters and the spacing of the points determines the speed of the car.
@@ -52,45 +52,30 @@ docker run -p 4567:4567 pathplanningserver:latest
 
 ### Local Build
 #### Dependencies
-* cmake >= 3.5
-  * [Installation instructions](https://cmake.org/install/)
-* make >= 4.1
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [Install Xcode command line tools](https://developer.apple.com/xcode/features/)
-  * Windows: [Installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc/g++ is installed by default on most Linux distros
-  * Mac: [Install Xcode command line tools](https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
+* [cmake](https://cmake.org/install/) >= 3.5
 * [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `install-mac.sh`, `install-m1-mac.sh`, or `install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
     ```shell
     git clone https://github.com/uWebSockets/uWebSockets 
     cd uWebSockets
     git checkout e94b6e1
+    mkdir build && cd build && cmake .. && make install
     ```
 * [spdlog](https://github.com/gabime/spdlog) >= 1.9
-  * __Please install the latest version__
-  * Install from source if you have version issue with `fmt/bundle`, otherwise install it from package manager.
     ```shell
     git clone https://github.com/gabime/spdlog.git
-    cd spdlog && mkdir build && cd build
-    cmake .. && make install
+    cd spdlog
+    mkdir build && cd build && cmake .. && make install
     ```
-
-##### macOS
-TODO
 
 ##### Debian/Ubuntu
 
 ```shell
-sudo apt-get install python3-dev pybind11-dev libfmt-dev libspdlog-dev libboost-dev libgtest-dev
+sudo apt-get install python3-dev pybind11-dev libfmt-dev libspdlog-dev libboost-all-dev libgtest-dev
 ```
 
-##### Other libraries shipped with the repo
-- spline: a really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.
-- Eigen 3.3
+##### Third Party Libraries Included
+- [spline](http://kluge.in-chemnitz.de/opensource/spline/)
+- [Eigen 3.3](https://eigen.tuxfamily.org/)
 
 #### Instructions
 ```shell
