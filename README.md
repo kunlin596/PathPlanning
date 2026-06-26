@@ -4,7 +4,7 @@ Self-Driving Car Engineer Nanodegree Program
 |Lane Changing Example|Full Cycle (4.25 Miles) Example|
 |----|----|
 |![](./images/sample2.png)|![](./images/full_cycle.png)|
-   
+
 ### Description
 In this project, the goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit.
 
@@ -20,7 +20,7 @@ __More technical details please check [writeup](./writeup.pdf)__.
 
 ### Usage
 
-Download the Term3 Simulator which contains the Path Planning Project from the [releases tab](https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).  
+Download the Term3 Simulator which contains the Path Planning Project from the [releases tab](https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).
 
 To run the simulator on macOS/Linux,
 ```shell
@@ -28,65 +28,77 @@ sudo chmod u+x term3_sim.x86_64
 ./term3_sim.x86_64
 ```
 
-#### Details 
+#### Details
 
-1. The ego use a perfect controller and will visit every (x,y) point it recieves in the list every **0.02** seconds.
+1. The ego use a perfect controller and will visit every (x,y) point it receives in the list every **0.02** seconds.
 2. The units for the `[x, y]` points are in meters and the spacing of the points determines the speed of the car.
-3. The vector going from a point to the next point in the list dictates the angle of the car. 
+3. The vector going from a point to the next point in the list dictates the angle of the car.
 4. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration.
-5. The `[x, y]` point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3.
+5. The `[x, y]` point paths that the planner receives should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3.
    - NOTE: As this is BETA, these requirements might change. Also currently jerk is over a `0.02` second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
 6. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition.
    - `previous_path_x`, and `previous_path_y` can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
 
 ## Build
 
-### Docker One Liner
-Using docker is recommended. Check this [official guide](https://docs.docker.com/engine/install/).
+### Docker (recommended)
+Using Docker is the easiest way to get a reproducible build. See the [official guide](https://docs.docker.com/engine/install/).
 
 ```shell
-cd YOUR_CLONE_PATH
 docker build -t pathplanningserver:latest .
 docker run -p 4567:4567 pathplanningserver:latest
-````
+```
 
 ### Local Build
+
 #### Dependencies
-* [cmake](https://cmake.org/install/) >= 3.5
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-    ```shell
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    mkdir build && cd build && cmake .. && make install
-    ```
-* [spdlog](https://github.com/gabime/spdlog) >= 1.9
-    ```shell
-    git clone https://github.com/gabime/spdlog.git
-    cd spdlog
-    mkdir build && cd build && cmake .. && make install
-    ```
+
+Most dependencies come from your system package manager. **GoogleTest** and
+**Eigen** are fetched automatically at configure time when they are not found
+on the system, so the only dependency that must be built by hand is
+**uWebSockets**.
+
+* [cmake](https://cmake.org/install/) >= 3.16
 
 ##### Debian/Ubuntu
 
 ```shell
-sudo apt-get install python3-dev pybind11-dev libfmt-dev libspdlog-dev libboost-all-dev libgtest-dev
+sudo apt-get install \
+  build-essential cmake \
+  python3-dev pybind11-dev \
+  libfmt-dev libspdlog-dev libboost-all-dev \
+  libeigen3-dev libssl-dev libz-dev libuv1-dev
 ```
 
-##### Third Party Libraries Included
+##### uWebSockets
+
+The server uses the legacy uWebSockets API, so build the pinned commit:
+
+```shell
+git clone https://github.com/uWebSockets/uWebSockets
+cd uWebSockets && git checkout e94b6e1
+cmake -S . -B build && cmake --build build -j && sudo cmake --install build
+sudo ln -sf /usr/lib64/libuWS.so /usr/lib/libuWS.so   # so the linker finds it
+```
+
+> If uWebSockets/libuv are not installed, the libraries and unit tests still
+> build — only the `pathplanningserver` executable is skipped.
+
+##### Third party libraries included
 - [spline](http://kluge.in-chemnitz.de/opensource/spline/)
-- [Eigen 3.3](https://eigen.tuxfamily.org/)
+- [json](https://github.com/nlohmann/json)
 
 #### Instructions
+
 ```shell
-git checkout https://github.com/kunlin596/PathPlanning.git
+git clone https://github.com/kunlin596/PathPlanning.git
 cd PathPlanning
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
-cmake --build build -j 16 --target pathplanningserver 
+cmake --preset default
+cmake --build --preset default
 ```
 
 #### Run
-The simulator should be lauched simultaneously with the path planning server. Use the command below to lauch the path planning server.
+The simulator should be launched simultaneously with the path planning server. Use the command below to launch the path planning server.
 ```shell
 ./build/pathplanningserver --conf default_conf.json -m data/highway_map.csv --loglevel=info
 ```
@@ -96,7 +108,7 @@ The simulator should be lauched simultaneously with the path planning server. Us
 The input data to the path planner server is described as below.
 
 #### Map Data
-The map of the highway is in `data/highway_map.txt`.
+The map of the highway is in `data/highway_map.csv`.
 
 Each waypoint in the list contains `[x, y, s, dx, dy]` values. x and y are the waypoint's map coordinate position, the s value is the distance along the road to get to that waypoint in meters, the dx and dy values define the unit normal vector pointing outward of the highway loop.
 
@@ -120,7 +132,7 @@ The format is described as below,
 - previous_path_y: The previous list of y points previously given to the simulator
 ```
 
-#### Previous path's end s and d values 
+#### Previous path's end s and d values
 ```
 - end_path_s: The previous list's last point's frenet s value
 - end_path_d: The previous list's last point's frenet d value
@@ -141,9 +153,39 @@ Each row contains,
 ]
 ```
 
-## Code Style
-The python code is formated using `black`.
-The cpp code is formated using clang format using a slightly modified version of `Mozilla` coding standard.
+## Testing
+
+The unit tests (`test_math`, `test_jmt`) build alongside the libraries and do
+not require uWebSockets:
+
+```shell
+ctest --preset default
+```
+
+## Development
+
+### Python tooling
+
+The Python utilities live in `python/pathplanning`. Install them in editable
+mode and point `MAP_DATA` at the waypoint file:
+
+```shell
+pip install -e .
+export MAP_DATA=$PWD/data/highway_map.csv
+```
+
+### Formatting & linting
+
+Python is linted and formatted with [ruff](https://docs.astral.sh/ruff/); C++ is
+formatted with `clang-format` (a slightly modified `Mozilla` style, see
+`.clang-format`). Both run via [pre-commit](https://pre-commit.com/), which also
+enforces Conventional Commit messages with a mandatory scope (e.g.
+`feat(ptg): ...`):
+
+```shell
+pre-commit install      # installs the pre-commit and commit-msg hooks
+pre-commit run --all-files
+```
 
 ## Result Video
 [YouTube](https://youtu.be/_f_T_y8JZSE)
