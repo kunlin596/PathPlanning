@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
 
-MAINTAINER Kun Lin "kun.lin.596@gmail.com"
+LABEL maintainer="Kun Lin <kun.lin.596@gmail.com>"
 
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
   build-essential\
@@ -16,6 +16,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
   libgtest-dev\
   libuv1-dev\
   libssl-dev\
+  libeigen3-dev\
   libz-dev
 
 WORKDIR /opt
@@ -33,7 +34,7 @@ RUN ln -s /usr/lib64/libuWS.so /usr/lib/libuWS.so
 
 # Build planning server
 COPY ./CMakeLists.txt ./src/pathplanningserver/
-COPY ./cmakepatch.txt ./src/pathplanningserver/
+COPY ./CMakePresets.json ./src/pathplanningserver/
 COPY ./src/ ./src/pathplanningserver/src/
 
 RUN \
@@ -45,5 +46,5 @@ COPY ./data/ ./data/
 COPY ./default_conf.json ./default_conf.json
 
 # Run
-ENV PATH "${PATH}:/opt/build/pathplanningserver"
+ENV PATH="${PATH}:/opt/build/pathplanningserver"
 CMD ["pathplanningserver", "--conf", "/opt/default_conf.json", "--map", "/opt/data/highway_map.csv", "--loglevel", "info"]

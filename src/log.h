@@ -14,7 +14,7 @@
 #include <iostream>
 #include <vector>
 
-#include "Eigen-3.3/Eigen/Dense"
+#include <Eigen/Dense>
 
 // NOTE: Workaround for std array.
 

@@ -1,7 +1,7 @@
 #ifndef PATHPLANNING_MATH_H
 #define PATHPLANNING_MATH_H
 
-#include "Eigen-3.3/Eigen/Dense"
+#include <Eigen/Dense>
 #include "json.hpp"
 #include "log.h"
 

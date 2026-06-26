@@ -1,6 +1,6 @@
 #include "jmt.h"
 
-#include "Eigen-3.3/Eigen/Dense"
+#include <Eigen/Dense>
 #include "utils.h"
 
 namespace {

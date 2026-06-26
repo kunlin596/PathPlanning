@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "Eigen-3.3/Eigen/Dense"
+#include <Eigen/Dense>
 #include "configuration.h"
 #include "json.hpp"
 #include "log.h"
