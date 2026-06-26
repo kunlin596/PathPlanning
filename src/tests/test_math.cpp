@@ -8,7 +8,7 @@ using namespace Eigen;
 
 TEST(MathTest, QuinticFunctorTest)
 {
-  VectorXd coeffs;
+  VectorXd coeffs(6);
 
   QuinticFunctor func;
   coeffs << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
@@ -38,11 +38,11 @@ TEST(MathTest, LogisticTest)
 TEST(MathTest, DifferentiaionTets)
 {
 
-  VectorXd coeffs;
+  VectorXd coeffs(6);
   coeffs << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0;
 
   QuinticFunctor func5;
-  func5 = QuinticFunctor();
+  func5 = QuinticFunctor(coeffs);
   QuarticFunctor func4 = func5.Differentiate();
   EXPECT_EQ(func4.coeffs[0], 2.0);
   EXPECT_EQ(func4.coeffs[1], 6.0);
