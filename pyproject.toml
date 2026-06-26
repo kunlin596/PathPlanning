@@ -1,9 +1,30 @@
-[tool.black]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pathplanning"
+version = "0.1.0"
+description = "Frenet-frame jerk-minimized-trajectory (JMT) path planning utilities and reference implementation."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Kun Lin" }]
+dependencies = [
+  "numpy",
+  "scipy",
+  "matplotlib",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["python/pathplanning"]
+
+[tool.ruff]
 line-length = 88
-target-version = ['py38']
-include = '\.pyi?$'
-extend-exclude = '''
-# A regex preceded with ^/ will apply only to files and directories
-# in the root of the project.
-^/foo.py  # exclude a file named foo.py in the root of the project (in addition to the defaults)
-'''
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+# Black-compatible defaults.

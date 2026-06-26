@@ -1,0 +1,6 @@
+# Based on the Mozilla style with minor tweaks (see README "Code Style").
+BasedOnStyle: Mozilla
+ColumnLimit: 100
+IndentWidth: 2
+PointerAlignment: Left
+DerivePointerAlignment: false
